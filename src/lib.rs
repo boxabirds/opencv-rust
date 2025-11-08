@@ -37,6 +37,11 @@ pub mod core;
 pub mod error;
 pub mod imgcodecs;
 pub mod imgproc;
+pub mod features2d;
+pub mod video;
+pub mod ml;
+pub mod objdetect;
+pub mod photo;
 
 pub mod prelude {
     //! Convenience module that re-exports commonly used items
