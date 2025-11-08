@@ -45,6 +45,7 @@ pub mod objdetect;
 pub mod photo;
 pub mod calib3d;
 pub mod dnn;
+pub mod flann;
 
 pub mod prelude {
     //! Convenience module that re-exports commonly used items
