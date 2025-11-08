@@ -78,8 +78,8 @@ impl AKAZE {
         let mut base_image = Mat::new(image.rows(), image.cols(), 1, MatDepth::F32)?;
         for row in 0..image.rows() {
             for col in 0..image.cols() {
-                let pixel = base_image.at_mut(row, col)?;
-                pixel[0] = (image.at(row, col)?[0] as f32) / 255.0;
+                let val = (image.at(row, col)?[0] as f32) / 255.0;
+                base_image.set_f32(row, col, 0, val)?;
             }
         }
 
@@ -113,7 +113,8 @@ impl AKAZE {
                 });
 
                 if layer == self.n_octave_layers / 2 {
-                    current_image = self.half_sample(&diffused)?;
+                    // Access the image we just pushed to evolution
+                    current_image = self.half_sample(&evolution.last().unwrap().image)?;
                 }
             }
         }
@@ -140,25 +141,24 @@ impl AKAZE {
             for row in 1..result.rows() - 1 {
                 for col in 1..result.cols() - 1 {
                     let grad_mag_sq = {
-                        let dx_val = dx.at(row, col)?[0];
-                        let dy_val = dy.at(row, col)?[0];
+                        let dx_val = dx.at_f32(row, col, 0)?;
+                        let dy_val = dy.at_f32(row, col, 0)?;
                         dx_val * dx_val + dy_val * dy_val
                     };
 
                     let diffusivity = self.compute_diffusivity(grad_mag_sq, k);
 
                     // Compute divergence
-                    let center = result.at(row, col)?[0];
-                    let left = result.at(row, col - 1)?[0];
-                    let right = result.at(row, col + 1)?[0];
-                    let up = result.at(row - 1, col)?[0];
-                    let down = result.at(row + 1, col)?[0];
+                    let center = result.at_f32(row, col, 0)?;
+                    let left = result.at_f32(row, col - 1, 0)?;
+                    let right = result.at_f32(row, col + 1, 0)?;
+                    let up = result.at_f32(row - 1, col, 0)?;
+                    let down = result.at_f32(row + 1, col, 0)?;
 
                     let laplacian = left + right + up + down - 4.0 * center;
                     let update = diffusivity * laplacian * tau as f32;
 
-                    let pixel = result.at_mut(row, col)?;
-                    pixel[0] = (center + update).clamp(0.0, 1.0);
+                    result.set_f32(row, col, 0, (center + update).clamp(0.0, 1.0))?;
                 }
             }
         }
@@ -194,10 +194,9 @@ impl AKAZE {
 
         for row in 0..image.rows() {
             for col in 1..image.cols() - 1 {
-                let left = image.at(row, col - 1)?[0];
-                let right = image.at(row, col + 1)?[0];
-                let pixel = result.at_mut(row, col)?;
-                pixel[0] = (right - left) * 0.5;
+                let left = image.at_f32(row, col - 1, 0)?;
+                let right = image.at_f32(row, col + 1, 0)?;
+                result.set_f32(row, col, 0, (right - left) * 0.5)?;
             }
         }
 
@@ -209,10 +208,9 @@ impl AKAZE {
 
         for row in 1..image.rows() - 1 {
             for col in 0..image.cols() {
-                let up = image.at(row - 1, col)?[0];
-                let down = image.at(row + 1, col)?[0];
-                let pixel = result.at_mut(row, col)?;
-                pixel[0] = (down - up) * 0.5;
+                let up = image.at_f32(row - 1, col, 0)?;
+                let down = image.at_f32(row + 1, col, 0)?;
+                result.set_f32(row, col, 0, (down - up) * 0.5)?;
             }
         }
 
@@ -224,11 +222,10 @@ impl AKAZE {
 
         for row in 0..image.rows() {
             for col in 1..image.cols() - 1 {
-                let left = image.at(row, col - 1)?[0];
-                let center = image.at(row, col)?[0];
-                let right = image.at(row, col + 1)?[0];
-                let pixel = result.at_mut(row, col)?;
-                pixel[0] = left + right - 2.0 * center;
+                let left = image.at_f32(row, col - 1, 0)?;
+                let center = image.at_f32(row, col, 0)?;
+                let right = image.at_f32(row, col + 1, 0)?;
+                result.set_f32(row, col, 0, left + right - 2.0 * center)?;
             }
         }
 
@@ -240,11 +237,10 @@ impl AKAZE {
 
         for row in 1..image.rows() - 1 {
             for col in 0..image.cols() {
-                let up = image.at(row - 1, col)?[0];
-                let center = image.at(row, col)?[0];
-                let down = image.at(row + 1, col)?[0];
-                let pixel = result.at_mut(row, col)?;
-                pixel[0] = up + down - 2.0 * center;
+                let up = image.at_f32(row - 1, col, 0)?;
+                let center = image.at_f32(row, col, 0)?;
+                let down = image.at_f32(row + 1, col, 0)?;
+                result.set_f32(row, col, 0, up + down - 2.0 * center)?;
             }
         }
 
@@ -256,12 +252,11 @@ impl AKAZE {
 
         for row in 1..image.rows() - 1 {
             for col in 1..image.cols() - 1 {
-                let tl = image.at(row - 1, col - 1)?[0];
-                let tr = image.at(row - 1, col + 1)?[0];
-                let bl = image.at(row + 1, col - 1)?[0];
-                let br = image.at(row + 1, col + 1)?[0];
-                let pixel = result.at_mut(row, col)?;
-                pixel[0] = (br - bl - tr + tl) * 0.25;
+                let tl = image.at_f32(row - 1, col - 1, 0)?;
+                let tr = image.at_f32(row - 1, col + 1, 0)?;
+                let bl = image.at_f32(row + 1, col - 1, 0)?;
+                let br = image.at_f32(row + 1, col + 1, 0)?;
+                result.set_f32(row, col, 0, (br - bl - tr + tl) * 0.25)?;
             }
         }
 
@@ -277,9 +272,8 @@ impl AKAZE {
             for col in 0..new_cols {
                 let src_row = (row * 2).min(image.rows() - 1);
                 let src_col = (col * 2).min(image.cols() - 1);
-                let val = image.at(src_row, src_col)?[0];
-                let pixel = result.at_mut(row, col)?;
-                pixel[0] = val;
+                let val = image.at_f32(src_row, src_col, 0)?;
+                result.set_f32(row, col, 0, val)?;
             }
         }
 
@@ -301,9 +295,9 @@ impl AKAZE {
             for row in 5..step.image.rows() - 5 {
                 for col in 5..step.image.cols() - 5 {
                     // Compute determinant of Hessian
-                    let lxx = step.lxx.at(row, col)?[0];
-                    let lyy = step.lyy.at(row, col)?[0];
-                    let lxy = step.lxy.at(row, col)?[0];
+                    let lxx = step.lxx.at_f32(row, col, 0)?;
+                    let lyy = step.lyy.at_f32(row, col, 0)?;
+                    let lxy = step.lxy.at_f32(row, col, 0)?;
 
                     let det_hessian = lxx * lyy - lxy * lxy;
 
@@ -348,9 +342,9 @@ impl AKAZE {
                         continue;
                     }
 
-                    let lxx = evolution.lxx.at(y, x)?[0];
-                    let lyy = evolution.lyy.at(y, x)?[0];
-                    let lxy = evolution.lxy.at(y, x)?[0];
+                    let lxx = evolution.lxx.at_f32(y, x, 0)?;
+                    let lyy = evolution.lyy.at_f32(y, x, 0)?;
+                    let lxy = evolution.lxy.at_f32(y, x, 0)?;
                     let neighbor_det = lxx * lyy - lxy * lxy;
 
                     if neighbor_det > value {
@@ -372,8 +366,8 @@ impl AKAZE {
                 let y = (row as i32 + dy).max(0).min(step.lx.rows() as i32 - 1) as usize;
                 let x = (col as i32 + dx).max(0).min(step.lx.cols() as i32 - 1) as usize;
 
-                let gx = step.lx.at(y, x)?[0];
-                let gy = step.ly.at(y, x)?[0];
+                let gx = step.lx.at_f32(y, x, 0)?;
+                let gy = step.ly.at_f32(y, x, 0)?;
 
                 let mag = (gx * gx + gy * gy).sqrt();
                 let angle = gy.atan2(gx);
@@ -463,8 +457,8 @@ impl AKAZE {
                     let x2 = (col as i32 + rx2).max(0).min(step.lx.cols() as i32 - 1) as usize;
 
                     // Compare derivative responses
-                    let val1 = step.lx.at(y1, x1)?[0] + step.ly.at(y1, x1)?[0];
-                    let val2 = step.lx.at(y2, x2)?[0] + step.ly.at(y2, x2)?[0];
+                    let val1 = step.lx.at_f32(y1, x1, 0)? + step.ly.at_f32(y1, x1, 0)?;
+                    let val2 = step.lx.at_f32(y2, x2, 0)? + step.ly.at_f32(y2, x2, 0)?;
 
                     if val1 > val2 {
                         descriptor[bit_idx / 8] |= 1 << (bit_idx % 8);

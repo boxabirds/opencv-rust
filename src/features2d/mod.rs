@@ -1,16 +1,15 @@
 pub mod keypoints;
 pub mod descriptors;
 pub mod matching;
-// TODO: SIFT, AKAZE, KAZE require Mat to support f32 depth properly
-// pub mod sift;
-// pub mod akaze;
+pub mod sift_f32;
+pub mod akaze;
+pub mod kaze;
 pub mod brisk;
-// pub mod kaze;
 
 pub use keypoints::*;
 pub use descriptors::*;
 pub use matching::*;
-// pub use sift::*;
-// pub use akaze::*;
+pub use sift_f32::*;
+pub use akaze::*;
+pub use kaze::*;
 pub use brisk::*;
-// pub use kaze::*;

@@ -1,3 +1,13 @@
+pub mod hdr;
+pub mod seam_carving;
+pub mod super_resolution;
+pub mod denoising;
+
+pub use hdr::*;
+pub use seam_carving::*;
+pub use super_resolution::*;
+pub use denoising::*;
+
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 
