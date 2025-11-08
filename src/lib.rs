@@ -42,11 +42,12 @@ pub mod video;
 pub mod ml;
 pub mod objdetect;
 pub mod photo;
+pub mod calib3d;
 
 pub mod prelude {
     //! Convenience module that re-exports commonly used items
     pub use crate::core::{Mat, MatDepth, Point, Point2f, Size, Rect, Scalar};
-    pub use crate::core::types::{ColorConversionCode, InterpolationFlag, ThresholdType};
+    pub use crate::core::types::{Point3f, ColorConversionCode, InterpolationFlag, ThresholdType};
     pub use crate::error::{Error, Result};
 }
 

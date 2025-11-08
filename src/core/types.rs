@@ -48,6 +48,20 @@ impl Point2f {
     }
 }
 
+/// 3D point with floating-point coordinates
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Point3f {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+impl Point3f {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self { x, y, z }
+    }
+}
+
 /// 2D size
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Size {
