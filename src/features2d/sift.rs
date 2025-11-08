@@ -155,7 +155,7 @@ impl SIFT {
                             let scale = 1 << octave_idx;
                             let kp = KeyPoint {
                                 pt: Point::new(col as i32 * scale, row as i32 * scale),
-                                size: self.sigma * (2.0_f64).powf(scale_idx as f64 / self.n_octave_layers as f64) as f32,
+                                size: (self.sigma * (2.0_f64).powf(scale_idx as f64 / self.n_octave_layers as f64)) as f32,
                                 angle: self.compute_orientation(&pyramid[octave_idx][scale_idx], row, col)?,
                                 response: center_val as f32,
                                 octave: octave_idx as i32,

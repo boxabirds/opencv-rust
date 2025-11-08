@@ -39,6 +39,7 @@ pub mod imgcodecs;
 pub mod imgproc;
 pub mod features2d;
 pub mod video;
+pub mod videoio;
 pub mod ml;
 pub mod objdetect;
 pub mod photo;

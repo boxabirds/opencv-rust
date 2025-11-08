@@ -170,7 +170,7 @@ pub fn compute_stereo_disparity(
             }
 
             let pixel = disparity.at_mut(row, col)?;
-            pixel[0] = best_disparity as f32;
+            pixel[0] = best_disparity.abs().min(255) as u8;
         }
     }
 

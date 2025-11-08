@@ -40,8 +40,8 @@ impl CameraMatrix {
 
     /// Project a 3D point to 2D image coordinates
     pub fn project(&self, point_3d: &Point3f) -> Point {
-        let x = self.fx * point_3d.x / point_3d.z + self.cx;
-        let y = self.fy * point_3d.y / point_3d.z + self.cy;
+        let x = self.fx * point_3d.x as f64 / point_3d.z as f64 + self.cx;
+        let y = self.fy * point_3d.y as f64 / point_3d.z as f64 + self.cy;
         Point::new(x as i32, y as i32)
     }
 

@@ -236,9 +236,10 @@ pub fn warp_perspective(
 
             if src_y < src.rows() && src_x < src.cols() {
                 let src_pixel = src.at(src_y, src_x)?;
+                let num_channels = src.channels().min(dst.channels());
                 let dst_pixel = dst.at_mut(row, col)?;
 
-                for ch in 0..src.channels().min(dst.channels()) {
+                for ch in 0..num_channels {
                     dst_pixel[ch] = src_pixel[ch];
                 }
             }
