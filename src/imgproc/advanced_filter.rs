@@ -356,6 +356,296 @@ pub fn watershed(image: &Mat, markers: &mut Mat) -> Result<()> {
     Ok(())
 }
 
+/// Gabor filter for texture analysis and feature extraction
+pub fn gabor_filter(
+    src: &Mat,
+    dst: &mut Mat,
+    ksize: i32,
+    sigma: f64,
+    theta: f64,
+    lambda: f64,
+    gamma: f64,
+    psi: f64,
+) -> Result<()> {
+    if src.channels() != 1 {
+        return Err(Error::InvalidParameter(
+            "gabor_filter requires single-channel image".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
+
+    // Generate Gabor kernel
+    let kernel = generate_gabor_kernel(ksize, sigma, theta, lambda, gamma, psi);
+
+    // Apply convolution
+    let half = ksize / 2;
+
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let mut sum = 0.0f64;
+
+            for ky in -half..=half {
+                for kx in -half..=half {
+                    let y = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
+                    let x = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
+
+                    let pixel = src.at(y, x)?[0] as f64;
+                    let k_val = kernel[(ky + half) as usize][(kx + half) as usize];
+
+                    sum += pixel * k_val;
+                }
+            }
+
+            let dst_pixel = dst.at_mut(row, col)?;
+            dst_pixel[0] = sum.abs().min(255.0) as u8;
+        }
+    }
+
+    Ok(())
+}
+
+fn generate_gabor_kernel(
+    ksize: i32,
+    sigma: f64,
+    theta: f64,
+    lambda: f64,
+    gamma: f64,
+    psi: f64,
+) -> Vec<Vec<f64>> {
+    let half = ksize / 2;
+    let mut kernel = vec![vec![0.0; ksize as usize]; ksize as usize];
+
+    let sigma_x = sigma;
+    let sigma_y = sigma / gamma;
+
+    for y in -half..=half {
+        for x in -half..=half {
+            let x_theta = x as f64 * theta.cos() + y as f64 * theta.sin();
+            let y_theta = -x as f64 * theta.sin() + y as f64 * theta.cos();
+
+            let gaussian = (-(x_theta * x_theta / (2.0 * sigma_x * sigma_x)
+                + y_theta * y_theta / (2.0 * sigma_y * sigma_y)))
+                .exp();
+
+            let sinusoid = (2.0 * std::f64::consts::PI * x_theta / lambda + psi).cos();
+
+            kernel[(y + half) as usize][(x + half) as usize] = gaussian * sinusoid;
+        }
+    }
+
+    kernel
+}
+
+/// Laplacian of Gaussian (LoG) filter for blob detection
+pub fn laplacian_of_gaussian(
+    src: &Mat,
+    dst: &mut Mat,
+    ksize: i32,
+    sigma: f64,
+) -> Result<()> {
+    if src.channels() != 1 {
+        return Err(Error::InvalidParameter(
+            "laplacian_of_gaussian requires single-channel image".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
+
+    // Generate LoG kernel
+    let kernel = generate_log_kernel(ksize, sigma);
+
+    // Apply convolution
+    let half = ksize / 2;
+
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let mut sum = 0.0f64;
+
+            for ky in -half..=half {
+                for kx in -half..=half {
+                    let y = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
+                    let x = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
+
+                    let pixel = src.at(y, x)?[0] as f64;
+                    let k_val = kernel[(ky + half) as usize][(kx + half) as usize];
+
+                    sum += pixel * k_val;
+                }
+            }
+
+            let dst_pixel = dst.at_mut(row, col)?;
+            // Zero-crossing or absolute value
+            dst_pixel[0] = sum.abs().min(255.0) as u8;
+        }
+    }
+
+    Ok(())
+}
+
+fn generate_log_kernel(ksize: i32, sigma: f64) -> Vec<Vec<f64>> {
+    let half = ksize / 2;
+    let mut kernel = vec![vec![0.0; ksize as usize]; ksize as usize];
+
+    let sigma2 = sigma * sigma;
+    let sigma4 = sigma2 * sigma2;
+
+    for y in -half..=half {
+        for x in -half..=half {
+            let x2 = (x * x) as f64;
+            let y2 = (y * y) as f64;
+            let r2 = x2 + y2;
+
+            // LoG formula: -1/(π*σ^4) * (1 - r²/(2σ²)) * exp(-r²/(2σ²))
+            let gaussian = (-r2 / (2.0 * sigma2)).exp();
+            let laplacian = (1.0 - r2 / (2.0 * sigma2)) * gaussian;
+            kernel[(y + half) as usize][(x + half) as usize] =
+                -laplacian / (std::f64::consts::PI * sigma4);
+        }
+    }
+
+    kernel
+}
+
+/// Non-local means denoising
+pub fn non_local_means_denoising(
+    src: &Mat,
+    dst: &mut Mat,
+    h: f32,
+    template_window_size: i32,
+    search_window_size: i32,
+) -> Result<()> {
+    if src.depth() != MatDepth::U8 {
+        return Err(Error::UnsupportedOperation(
+            "non_local_means_denoising only supports U8 depth".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
+
+    let t_half = template_window_size / 2;
+    let s_half = search_window_size / 2;
+    let h2 = h * h;
+
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let mut sum = vec![0.0f32; src.channels()];
+            let mut weight_sum = 0.0f32;
+
+            // Search window
+            for sy in -s_half..=s_half {
+                for sx in -s_half..=s_half {
+                    let search_row = (row as i32 + sy).max(0).min(src.rows() as i32 - 1) as usize;
+                    let search_col = (col as i32 + sx).max(0).min(src.cols() as i32 - 1) as usize;
+
+                    // Compute patch distance
+                    let mut patch_dist = 0.0f32;
+                    let mut patch_count = 0;
+
+                    for ty in -t_half..=t_half {
+                        for tx in -t_half..=t_half {
+                            let r1 = (row as i32 + ty).max(0).min(src.rows() as i32 - 1) as usize;
+                            let c1 = (col as i32 + tx).max(0).min(src.cols() as i32 - 1) as usize;
+
+                            let r2 = (search_row as i32 + ty).max(0).min(src.rows() as i32 - 1) as usize;
+                            let c2 = (search_col as i32 + tx).max(0).min(src.cols() as i32 - 1) as usize;
+
+                            let p1 = src.at(r1, c1)?;
+                            let p2 = src.at(r2, c2)?;
+
+                            for ch in 0..src.channels() {
+                                let diff = p1[ch] as f32 - p2[ch] as f32;
+                                patch_dist += diff * diff;
+                            }
+                            patch_count += 1;
+                        }
+                    }
+
+                    patch_dist /= patch_count as f32;
+
+                    // Compute weight
+                    let weight = (-patch_dist / h2).exp();
+
+                    let search_pixel = src.at(search_row, search_col)?;
+                    for ch in 0..src.channels() {
+                        sum[ch] += search_pixel[ch] as f32 * weight;
+                    }
+                    weight_sum += weight;
+                }
+            }
+
+            let dst_pixel = dst.at_mut(row, col)?;
+            for ch in 0..src.channels() {
+                dst_pixel[ch] = (sum[ch] / weight_sum) as u8;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Anisotropic diffusion (Perona-Malik)
+pub fn anisotropic_diffusion(
+    src: &Mat,
+    dst: &mut Mat,
+    num_iterations: usize,
+    kappa: f32,
+    lambda: f32,
+) -> Result<()> {
+    if src.channels() != 1 {
+        return Err(Error::InvalidParameter(
+            "anisotropic_diffusion requires single-channel image".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
+
+    // Copy source to dst
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let pixel = src.at(row, col)?[0];
+            dst.at_mut(row, col)?[0] = pixel;
+        }
+    }
+
+    let kappa2 = kappa * kappa;
+
+    for _ in 0..num_iterations {
+        let current = dst.clone();
+
+        for row in 1..dst.rows() - 1 {
+            for col in 1..dst.cols() - 1 {
+                let center = current.at(row, col)?[0] as f32;
+
+                // Compute gradients to neighbors
+                let n = current.at(row - 1, col)?[0] as f32;
+                let s = current.at(row + 1, col)?[0] as f32;
+                let e = current.at(row, col + 1)?[0] as f32;
+                let w = current.at(row, col - 1)?[0] as f32;
+
+                let grad_n = n - center;
+                let grad_s = s - center;
+                let grad_e = e - center;
+                let grad_w = w - center;
+
+                // Compute diffusion coefficients (Perona-Malik type 2)
+                let c_n = 1.0 / (1.0 + (grad_n * grad_n) / kappa2);
+                let c_s = 1.0 / (1.0 + (grad_s * grad_s) / kappa2);
+                let c_e = 1.0 / (1.0 + (grad_e * grad_e) / kappa2);
+                let c_w = 1.0 / (1.0 + (grad_w * grad_w) / kappa2);
+
+                // Update pixel
+                let update = lambda * (c_n * grad_n + c_s * grad_s + c_e * grad_e + c_w * grad_w);
+                let new_val = center + update;
+
+                dst.at_mut(row, col)?[0] = new_val.max(0.0).min(255.0) as u8;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,6 +666,42 @@ mod tests {
         let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
 
         distance_transform(&src, &mut dst, DistanceType::L2, 3).unwrap();
+        assert_eq!(dst.rows(), src.rows());
+    }
+
+    #[test]
+    fn test_gabor_filter() {
+        let src = Mat::new_with_default(50, 50, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+        let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+        gabor_filter(&src, &mut dst, 21, 5.0, 0.0, 10.0, 0.5, 0.0).unwrap();
+        assert_eq!(dst.rows(), src.rows());
+    }
+
+    #[test]
+    fn test_laplacian_of_gaussian() {
+        let src = Mat::new_with_default(50, 50, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+        let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+        laplacian_of_gaussian(&src, &mut dst, 9, 1.5).unwrap();
+        assert_eq!(dst.rows(), src.rows());
+    }
+
+    #[test]
+    fn test_non_local_means() {
+        let src = Mat::new_with_default(30, 30, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+        let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+        non_local_means_denoising(&src, &mut dst, 10.0, 3, 7).unwrap();
+        assert_eq!(dst.rows(), src.rows());
+    }
+
+    #[test]
+    fn test_anisotropic_diffusion() {
+        let src = Mat::new_with_default(50, 50, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+        let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+        anisotropic_diffusion(&src, &mut dst, 5, 10.0, 0.25).unwrap();
         assert_eq!(dst.rows(), src.rows());
     }
 }
