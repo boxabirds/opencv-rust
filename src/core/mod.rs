@@ -1,4 +1,5 @@
 pub mod mat;
+pub mod mat_typed;
 pub mod types;
 pub mod operations;
 
