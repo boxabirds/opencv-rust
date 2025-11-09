@@ -1,5 +1,4 @@
 use crate::core::{Mat, MatDepth};
-use crate::core::types::Scalar;
 use crate::error::{Error, Result};
 
 /// Mixture of Gaussians (MOG2) background subtractor

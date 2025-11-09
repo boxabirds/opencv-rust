@@ -1,4 +1,4 @@
-use crate::core::{Mat, MatDepth};
+use crate::core::Mat;
 use crate::features2d::KeyPoint;
 use crate::error::{Error, Result};
 use crate::core::types::Point;
@@ -54,7 +54,7 @@ impl ORB {
         let mut all_keypoints = Vec::new();
 
         for (level, img) in pyramid.iter().enumerate() {
-            let mut keypoints = self.detect_fast_keypoints(img, level)?;
+            let keypoints = self.detect_fast_keypoints(img, level)?;
             all_keypoints.extend(keypoints);
         }
 

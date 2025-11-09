@@ -2,7 +2,6 @@ use crate::core::{Mat, MatDepth};
 use crate::features2d::KeyPoint;
 use crate::error::{Error, Result};
 use crate::core::types::Point;
-use std::f32::consts::PI;
 
 /// SIFT (Scale-Invariant Feature Transform) with f32 Mat support
 pub struct SIFTF32 {

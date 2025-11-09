@@ -1,7 +1,5 @@
 use crate::core::{Mat, MatDepth};
-use crate::error::{Error, Result};
-use std::collections::BinaryHeap;
-use std::cmp::Ordering;
+use crate::error::Result;
 
 /// Seam finder for optimal image stitching seams
 pub trait SeamFinder {

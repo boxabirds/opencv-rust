@@ -8,7 +8,7 @@ pub use seam_carving::*;
 pub use super_resolution::*;
 pub use denoising::*;
 
-use crate::core::{Mat, MatDepth};
+use crate::core::Mat;
 use crate::error::{Error, Result};
 
 /// Inpaint image using the inpainting mask

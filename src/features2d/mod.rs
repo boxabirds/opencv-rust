@@ -16,6 +16,4 @@ pub use sift_f32::*;
 pub use akaze::*;
 pub use kaze::*;
 pub use brisk::*;
-pub use orb::*;
-pub use brief::*;
 pub use freak::*;

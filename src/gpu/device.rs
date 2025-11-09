@@ -44,7 +44,7 @@ impl GpuContext {
             return GPU_CONTEXT.get().unwrap().is_some();
         }
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
@@ -57,25 +57,22 @@ impl GpuContext {
             })
             .await
         {
-            Some(a) => a,
-            None => {
+            Ok(a) => a,
+            Err(_) => {
                 let _ = GPU_CONTEXT.set(None);
                 return false;
             }
         };
 
         let (device, queue) = match adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("OpenCV-Rust GPU Device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::default(),
-                    memory_hints: Default::default(),
-                    experimental_features: Default::default(),
-                    trace: Default::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("OpenCV-Rust GPU Device"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: Default::default(),
+            })
             .await
         {
             Ok(dq) => dq,
@@ -134,17 +131,14 @@ impl GpuContext {
 
         web_sys::console::log_1(&"Requesting WebGPU device...".into());
         let (device, queue) = match adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("OpenCV-Rust GPU Device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::default(),
-                    memory_hints: Default::default(),
-                    experimental_features: Default::default(),
-                    trace: Default::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("OpenCV-Rust GPU Device"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: Default::default(),
+            })
             .await
         {
             Ok(dq) => {

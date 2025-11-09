@@ -1,7 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::features2d::KeyPoint;
 use crate::error::{Error, Result};
-use crate::core::types::{Point, Size};
+use crate::core::types::Point;
 use std::f64::consts::PI;
 
 /// AKAZE (Accelerated-KAZE) detector and descriptor

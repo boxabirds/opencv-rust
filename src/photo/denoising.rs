@@ -1,4 +1,4 @@
-use crate::core::{Mat, MatDepth};
+use crate::core::Mat;
 use crate::error::{Error, Result};
 
 /// Non-local Means Denoising for color images

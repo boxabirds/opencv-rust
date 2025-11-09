@@ -1,4 +1,4 @@
-use crate::core::{Mat, MatDepth};
+use crate::core::Mat;
 use crate::core::types::Point2f;
 use crate::error::{Error, Result};
 use crate::features2d::KeyPoint;

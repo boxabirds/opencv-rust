@@ -182,7 +182,7 @@ impl ArucoDetector {
     }
 
     fn find_contours(&self, image: &Mat) -> Result<Vec<Vec<Point>>> {
-        let mut contours = Vec::new();
+        let contours = Vec::new();
 
         // Simplified contour finding
         // In real implementation, would use proper contour detection algorithm
