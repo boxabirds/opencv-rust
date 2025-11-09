@@ -183,7 +183,7 @@ export const demos = [
     name: 'Median Blur',
     description: 'Remove salt & pepper noise with median filter',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -202,7 +202,7 @@ export const demos = [
     name: 'Bilateral Filter',
     description: 'Edge-preserving smoothing filter',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -239,7 +239,7 @@ export const demos = [
     name: 'Guided Filter',
     description: 'Edge-aware smoothing using a guide image',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -267,7 +267,7 @@ export const demos = [
     name: 'Gabor Filter',
     description: 'Texture analysis and feature extraction',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -640,7 +640,7 @@ export const demos = [
     name: 'Warp Affine',
     description: 'Apply affine transformation (translate, rotate, scale, shear)',
     category: 'transform',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -803,7 +803,7 @@ export const demos = [
     name: 'Adaptive Threshold',
     description: 'Adaptive thresholding for varying lighting',
     category: 'color',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1235,7 +1235,7 @@ export const demos = [
     name: 'Harris Corner Detection',
     description: 'Detect corners using Harris algorithm',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1281,7 +1281,7 @@ export const demos = [
     name: 'Good Features to Track',
     description: 'Shi-Tomasi corner detection',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1318,7 +1318,7 @@ export const demos = [
     name: 'FAST Keypoint Detector',
     description: 'Fast keypoint detection algorithm',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
