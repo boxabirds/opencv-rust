@@ -191,6 +191,8 @@ impl Mul<f64> for Scalar {
 pub enum ColorConversionCode {
     BgrToGray,
     RgbToGray,
+    BgraToGray,
+    RgbaToGray,
     GrayToBgr,
     GrayToRgb,
     BgrToRgb,

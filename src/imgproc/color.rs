@@ -10,9 +10,23 @@ pub fn cvt_color(src: &Mat, dst: &mut Mat, code: ColorConversionCode) -> Result<
         ));
     }
 
+    // Try GPU acceleration if available
+    #[cfg(all(feature = "gpu", not(target_arch = "wasm32")))]
+    {
+        if crate::gpu::gpu_available() {
+            if let Ok(()) = crate::gpu::ops::cvt_color_gpu(src, dst, code) {
+                return Ok(());
+            }
+        }
+    }
+
+    // CPU fallback
     match code {
         ColorConversionCode::BgrToGray | ColorConversionCode::RgbToGray => {
             bgr_to_gray(src, dst, code == ColorConversionCode::BgrToGray)
+        }
+        ColorConversionCode::BgraToGray | ColorConversionCode::RgbaToGray => {
+            rgba_to_gray(src, dst, code == ColorConversionCode::BgraToGray)
         }
         ColorConversionCode::GrayToBgr | ColorConversionCode::GrayToRgb => {
             gray_to_bgr(src, dst)
@@ -39,20 +53,100 @@ fn bgr_to_gray(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 
     *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
 
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            let pixel = src.at(row, col)?;
-            let (r, g, b) = if is_bgr {
-                (pixel[2], pixel[1], pixel[0])
-            } else {
-                (pixel[0], pixel[1], pixel[2])
-            };
+    #[cfg(feature = "rayon")]
+    {
+        use rayon::prelude::*;
+        let cols = src.cols();
+        let channels = src.channels();
 
-            // Using standard RGB to grayscale conversion weights
-            let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
+        dst.data_mut().par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
+            for col in 0..cols {
+                let src_idx = (row * cols + col) * channels;
+                let src_data = src.data();
+                let (r, g, b) = if is_bgr {
+                    (src_data[src_idx + 2], src_data[src_idx + 1], src_data[src_idx])
+                } else {
+                    (src_data[src_idx], src_data[src_idx + 1], src_data[src_idx + 2])
+                };
 
-            let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = gray;
+                // Using standard RGB to grayscale conversion weights
+                let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
+                dst_row[col] = gray;
+            }
+        });
+    }
+
+    #[cfg(not(feature = "rayon"))]
+    {
+        for row in 0..src.rows() {
+            for col in 0..src.cols() {
+                let pixel = src.at(row, col)?;
+                let (r, g, b) = if is_bgr {
+                    (pixel[2], pixel[1], pixel[0])
+                } else {
+                    (pixel[0], pixel[1], pixel[2])
+                };
+
+                // Using standard RGB to grayscale conversion weights
+                let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
+
+                let dst_pixel = dst.at_mut(row, col)?;
+                dst_pixel[0] = gray;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Convert RGBA/BGRA to grayscale (ignoring alpha channel)
+fn rgba_to_gray(src: &Mat, dst: &mut Mat, is_bgra: bool) -> Result<()> {
+    if src.channels() != 4 {
+        return Err(Error::InvalidParameter(
+            "Source must have 4 channels".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
+
+    #[cfg(feature = "rayon")]
+    {
+        use rayon::prelude::*;
+        let cols = src.cols();
+        let channels = src.channels();
+
+        dst.data_mut().par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
+            for col in 0..cols {
+                let src_idx = (row * cols + col) * channels;
+                let src_data = src.data();
+                let (r, g, b) = if is_bgra {
+                    (src_data[src_idx + 2], src_data[src_idx + 1], src_data[src_idx])
+                } else {
+                    (src_data[src_idx], src_data[src_idx + 1], src_data[src_idx + 2])
+                };
+
+                let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
+                dst_row[col] = gray;
+            }
+        });
+    }
+
+    #[cfg(not(feature = "rayon"))]
+    {
+        for row in 0..src.rows() {
+            for col in 0..src.cols() {
+                let pixel = src.at(row, col)?;
+                let (r, g, b) = if is_bgra {
+                    (pixel[2], pixel[1], pixel[0])
+                } else {
+                    (pixel[0], pixel[1], pixel[2])
+                };
+
+                let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
+
+                let dst_pixel = dst.at_mut(row, col)?;
+                dst_pixel[0] = gray;
+            }
         }
     }
 
