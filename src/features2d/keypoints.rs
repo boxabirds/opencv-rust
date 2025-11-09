@@ -1,6 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::Point;
 use crate::error::{Error, Result};
+use rayon::prelude::*;
 
 /// KeyPoint structure representing a feature point
 #[derive(Debug, Clone)]
@@ -152,7 +153,7 @@ pub fn good_features_to_track(
     Ok(filtered)
 }
 
-/// FAST (Features from Accelerated Segment Test) corner detector
+/// FAST (Features from Accelerated Segment Test) corner detector - optimized parallel version
 pub fn fast(
     src: &Mat,
     threshold: i32,
@@ -164,75 +165,89 @@ pub fn fast(
         ));
     }
 
-    let mut keypoints = Vec::new();
-
     // Bresenham circle of radius 3
-    let circle_offsets = [
+    let circle_offsets: [(i32, i32); 16] = [
         (0, -3), (1, -3), (2, -2), (3, -1),
         (3, 0), (3, 1), (2, 2), (1, 3),
         (0, 3), (-1, 3), (-2, 2), (-3, 1),
         (-3, 0), (-3, -1), (-2, -2), (-1, -3),
     ];
 
-    for row in 3..(src.rows() - 3) {
-        for col in 3..(src.cols() - 3) {
-            let center_val = src.at(row, col)?[0] as i32;
-            let threshold_upper = center_val + threshold;
-            let threshold_lower = center_val - threshold;
+    let rows = src.rows();
+    let cols = src.cols();
+    let src_data = src.data();
 
-            // Check circle pixels - duplicate to handle wraparound
-            let mut circle_values = Vec::with_capacity(32);
-            for &(dx, dy) in &circle_offsets {
-                let y = (row as i32 + dy) as usize;
-                let x = (col as i32 + dx) as usize;
-                let val = src.at(y, x)?[0] as i32;
-                circle_values.push(val);
-            }
-            // Duplicate to handle circular wraparound
-            circle_values.extend_from_slice(&circle_values.clone());
+    // Parallel row processing - collect keypoints per row
+    let keypoints: Vec<KeyPoint> = (3..(rows - 3))
+        .into_par_iter()
+        .flat_map(|row| {
+            let mut row_keypoints = Vec::new();
 
-            // Count consecutive brighter or darker pixels in doubled array
-            let mut max_consecutive_brighter = 0;
-            let mut max_consecutive_darker = 0;
-            let mut consecutive_brighter = 0;
-            let mut consecutive_darker = 0;
+            for col in 3..(cols - 3) {
+                let center_idx = row * cols + col;
+                let center_val = src_data[center_idx] as i32;
+                let threshold_upper = center_val + threshold;
+                let threshold_lower = center_val - threshold;
 
-            for &val in &circle_values {
-                if val > threshold_upper {
-                    consecutive_brighter += 1;
-                    consecutive_darker = 0;
-                    max_consecutive_brighter = max_consecutive_brighter.max(consecutive_brighter);
-                } else if val < threshold_lower {
-                    consecutive_darker += 1;
-                    consecutive_brighter = 0;
-                    max_consecutive_darker = max_consecutive_darker.max(consecutive_darker);
-                } else {
-                    consecutive_brighter = 0;
-                    consecutive_darker = 0;
+                // Sample circle pixels into fixed-size array (no heap allocation)
+                let mut circle_values = [0i32; 16];
+                for (i, &(dx, dy)) in circle_offsets.iter().enumerate() {
+                    let y = (row as i32 + dy) as usize;
+                    let x = (col as i32 + dx) as usize;
+                    let idx = y * cols + x;
+                    circle_values[i] = src_data[idx] as i32;
+                }
+
+                // Count consecutive pixels using circular indexing (no clone needed)
+                let mut max_consecutive_brighter = 0;
+                let mut max_consecutive_darker = 0;
+                let mut consecutive_brighter = 0;
+                let mut consecutive_darker = 0;
+
+                // Check doubled length by iterating with wraparound
+                for i in 0..32 {
+                    let val = circle_values[i % 16];
+
+                    if val > threshold_upper {
+                        consecutive_brighter += 1;
+                        consecutive_darker = 0;
+                        max_consecutive_brighter = max_consecutive_brighter.max(consecutive_brighter);
+                    } else if val < threshold_lower {
+                        consecutive_darker += 1;
+                        consecutive_brighter = 0;
+                        max_consecutive_darker = max_consecutive_darker.max(consecutive_darker);
+                    } else {
+                        consecutive_brighter = 0;
+                        consecutive_darker = 0;
+                    }
+                }
+
+                // Need at least 12 consecutive pixels
+                if max_consecutive_brighter >= 12 || max_consecutive_darker >= 12 {
+                    let response = (max_consecutive_brighter.max(max_consecutive_darker)) as f32;
+
+                    row_keypoints.push(KeyPoint {
+                        pt: Point::new(col as i32, row as i32),
+                        size: 7.0,
+                        angle: -1.0,
+                        response,
+                        octave: 0,
+                    });
                 }
             }
 
-            // Need at least 12 consecutive pixels
-            if max_consecutive_brighter >= 12 || max_consecutive_darker >= 12 {
-                let response = (max_consecutive_brighter.max(max_consecutive_darker)) as f32;
-
-                keypoints.push(KeyPoint {
-                    pt: Point::new(col as i32, row as i32),
-                    size: 7.0,
-                    angle: -1.0,
-                    response,
-                    octave: 0,
-                });
-            }
-        }
-    }
+            row_keypoints
+        })
+        .collect();
 
     // Non-maximum suppression
-    if nonmax_suppression {
-        keypoints = apply_non_max_suppression(&keypoints, 3);
-    }
+    let final_keypoints = if nonmax_suppression {
+        apply_non_max_suppression(&keypoints, 3)
+    } else {
+        keypoints
+    };
 
-    Ok(keypoints)
+    Ok(final_keypoints)
 }
 
 /// Apply non-maximum suppression to keypoints
