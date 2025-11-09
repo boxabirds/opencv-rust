@@ -99,14 +99,17 @@ impl GpuContext {
         // Check if already initialized
         let already_init = GPU_CONTEXT.with(|ctx| ctx.borrow().is_some());
         if already_init {
+            web_sys::console::log_1(&"GPU already initialized".into());
             return true;
         }
 
+        web_sys::console::log_1(&"Creating WebGPU instance...".into());
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
 
+        web_sys::console::log_1(&"Requesting WebGPU adapter...".into());
         let adapter = match instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -115,15 +118,18 @@ impl GpuContext {
             })
             .await
         {
-            Some(a) => a,
+            Some(a) => {
+                web_sys::console::log_1(&"✓ Adapter acquired".into());
+                a
+            },
             None => {
-                #[cfg(target_arch = "wasm32")]
-                web_sys::console::error_1(&"Failed to request WebGPU adapter - WebGPU may not be supported".into());
+                web_sys::console::error_1(&"✗ Failed to request WebGPU adapter - WebGPU may not be supported".into());
                 GPU_CONTEXT.with(|ctx| *ctx.borrow_mut() = None);
                 return false;
             }
         };
 
+        web_sys::console::log_1(&"Requesting WebGPU device...".into());
         let (device, queue) = match adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -135,10 +141,12 @@ impl GpuContext {
             )
             .await
         {
-            Ok(dq) => dq,
+            Ok(dq) => {
+                web_sys::console::log_1(&"✓ Device acquired".into());
+                dq
+            },
             Err(e) => {
-                #[cfg(target_arch = "wasm32")]
-                web_sys::console::error_1(&format!("Failed to request WebGPU device: {:?}", e).into());
+                web_sys::console::error_1(&format!("✗ Failed to request WebGPU device: {:?}", e).into());
                 GPU_CONTEXT.with(|ctx| *ctx.borrow_mut() = None);
                 return false;
             }
@@ -152,6 +160,7 @@ impl GpuContext {
 
         // Store in thread-local context
         GPU_CONTEXT.with(|context| *context.borrow_mut() = Some(ctx));
+        web_sys::console::log_1(&"✓ GPU context stored successfully".into());
         true
     }
 
