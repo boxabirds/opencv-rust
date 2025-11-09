@@ -1,6 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::{Size, InterpolationFlag, Point2f};
 use crate::error::{Error, Result};
+use rayon::prelude::*;
 
 /// Resize an image
 pub fn resize(src: &Mat, dst: &mut Mat, dsize: Size, interpolation: InterpolationFlag) -> Result<()> {
@@ -31,30 +32,41 @@ pub fn resize(src: &Mat, dst: &mut Mat, dsize: Size, interpolation: Interpolatio
     }
 }
 
-/// Nearest neighbor interpolation
+/// Nearest neighbor interpolation - optimized parallel version
 fn resize_nearest(src: &Mat, dst: &mut Mat) -> Result<()> {
     let x_ratio = src.cols() as f32 / dst.cols() as f32;
     let y_ratio = src.rows() as f32 / dst.rows() as f32;
 
-    for dst_row in 0..dst.rows() {
-        for dst_col in 0..dst.cols() {
-            let src_row = (dst_row as f32 * y_ratio) as usize;
-            let src_col = (dst_col as f32 * x_ratio) as usize;
+    let src_rows = src.rows();
+    let src_cols = src.cols();
+    let dst_cols = dst.cols();
+    let channels = src.channels();
 
-            let src_row = src_row.min(src.rows() - 1);
-            let src_col = src_col.min(src.cols() - 1);
+    // Use rayon for parallel row processing
+    rayon::scope(|_s| {
+        let src_data = src.data();
+        let dst_data = dst.data_mut();
+        let row_size = dst_cols * channels;
 
-            let src_pixel = src.at(src_row, src_col)?;
-            let dst_pixel = dst.at_mut(dst_row, dst_col)?;
+        dst_data.par_chunks_mut(row_size).enumerate().for_each(|(dst_row, dst_row_data)| {
+            for dst_col in 0..dst_cols {
+                let src_row = ((dst_row as f32 * y_ratio) as usize).min(src_rows - 1);
+                let src_col = ((dst_col as f32 * x_ratio) as usize).min(src_cols - 1);
 
-            dst_pixel.copy_from_slice(src_pixel);
-        }
-    }
+                let src_idx = (src_row * src_cols + src_col) * channels;
+                let dst_idx = dst_col * channels;
+
+                // Copy all channels at once
+                dst_row_data[dst_idx..dst_idx + channels]
+                    .copy_from_slice(&src_data[src_idx..src_idx + channels]);
+            }
+        });
+    });
 
     Ok(())
 }
 
-/// Bilinear interpolation
+/// Bilinear interpolation - optimized parallel version
 fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
     // Map corners exactly: dst pixel 0 -> src pixel 0, dst pixel (n-1) -> src pixel (m-1)
     let x_ratio = if dst.cols() > 1 {
@@ -68,40 +80,110 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
         0.0
     };
 
-    for dst_row in 0..dst.rows() {
-        for dst_col in 0..dst.cols() {
-            let src_x = dst_col as f32 * x_ratio;
-            let src_y = dst_row as f32 * y_ratio;
+    let src_rows = src.rows();
+    let src_cols = src.cols();
+    let dst_rows = dst.rows();
+    let dst_cols = dst.cols();
+    let channels = src.channels();
 
-            let x1 = src_x.floor() as usize;
-            let y1 = src_y.floor() as usize;
-            let x2 = (x1 + 1).min(src.cols() - 1);
-            let y2 = (y1 + 1).min(src.rows() - 1);
+    // Use rayon for parallel row processing (rayon is smart about thread overhead)
+    rayon::scope(|_s| {
+        let src_data = src.data();
+        let dst_data = dst.data_mut();
+        let row_size = dst_cols * channels;
 
-            let dx = src_x - x1 as f32;
-            let dy = src_y - y1 as f32;
+        dst_data.par_chunks_mut(row_size).enumerate().for_each(|(dst_row, dst_row_data)| {
+            for dst_col in 0..dst_cols {
+                let src_x = dst_col as f32 * x_ratio;
+                let src_y = dst_row as f32 * y_ratio;
 
-            let p11 = src.at(y1, x1)?;
-            let p12 = src.at(y2, x1)?;
-            let p21 = src.at(y1, x2)?;
-            let p22 = src.at(y2, x2)?;
+                let x1 = src_x.floor() as usize;
+                let y1 = src_y.floor() as usize;
+                let x2 = (x1 + 1).min(src_cols - 1);
+                let y2 = (y1 + 1).min(src_rows - 1);
 
-            let dst_pixel = dst.at_mut(dst_row, dst_col)?;
+                let dx = src_x - x1 as f32;
+                let dy = src_y - y1 as f32;
 
-            for ch in 0..src.channels() {
-                let v11 = p11[ch] as f32;
-                let v12 = p12[ch] as f32;
-                let v21 = p21[ch] as f32;
-                let v22 = p22[ch] as f32;
+                // Calculate source pixel indices
+                let idx11 = (y1 * src_cols + x1) * channels;
+                let idx12 = (y2 * src_cols + x1) * channels;
+                let idx21 = (y1 * src_cols + x2) * channels;
+                let idx22 = (y2 * src_cols + x2) * channels;
 
-                let v1 = v11 * (1.0 - dx) + v21 * dx;
-                let v2 = v12 * (1.0 - dx) + v22 * dx;
-                let v = v1 * (1.0 - dy) + v2 * dy;
+                let dst_idx = dst_col * channels;
+                let dst_pixel = &mut dst_row_data[dst_idx..dst_idx + channels];
 
-                dst_pixel[ch] = v.round() as u8;
+                // Precompute interpolation weights
+                let w1 = (1.0 - dx) * (1.0 - dy);
+                let w2 = dx * (1.0 - dy);
+                let w3 = (1.0 - dx) * dy;
+                let w4 = dx * dy;
+
+                // Manual unrolling for common channel counts
+                match channels {
+                    1 => {
+                        let v = src_data[idx11] as f32 * w1
+                            + src_data[idx21] as f32 * w2
+                            + src_data[idx12] as f32 * w3
+                            + src_data[idx22] as f32 * w4;
+                        dst_pixel[0] = v.round().clamp(0.0, 255.0) as u8;
+                    }
+                    3 => {
+                        // Process all 3 channels with precomputed weights
+                        dst_pixel[0] = (src_data[idx11] as f32 * w1
+                            + src_data[idx21] as f32 * w2
+                            + src_data[idx12] as f32 * w3
+                            + src_data[idx22] as f32 * w4)
+                            .round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[1] = (src_data[idx11 + 1] as f32 * w1
+                            + src_data[idx21 + 1] as f32 * w2
+                            + src_data[idx12 + 1] as f32 * w3
+                            + src_data[idx22 + 1] as f32 * w4)
+                            .round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[2] = (src_data[idx11 + 2] as f32 * w1
+                            + src_data[idx21 + 2] as f32 * w2
+                            + src_data[idx12 + 2] as f32 * w3
+                            + src_data[idx22 + 2] as f32 * w4)
+                            .round().clamp(0.0, 255.0) as u8;
+                    }
+                    4 => {
+                        // Process all 4 channels with precomputed weights
+                        dst_pixel[0] = (src_data[idx11] as f32 * w1
+                            + src_data[idx21] as f32 * w2
+                            + src_data[idx12] as f32 * w3
+                            + src_data[idx22] as f32 * w4)
+                            .round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[1] = (src_data[idx11 + 1] as f32 * w1
+                            + src_data[idx21 + 1] as f32 * w2
+                            + src_data[idx12 + 1] as f32 * w3
+                            + src_data[idx22 + 1] as f32 * w4)
+                            .round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[2] = (src_data[idx11 + 2] as f32 * w1
+                            + src_data[idx21 + 2] as f32 * w2
+                            + src_data[idx12 + 2] as f32 * w3
+                            + src_data[idx22 + 2] as f32 * w4)
+                            .round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[3] = (src_data[idx11 + 3] as f32 * w1
+                            + src_data[idx21 + 3] as f32 * w2
+                            + src_data[idx12 + 3] as f32 * w3
+                            + src_data[idx22 + 3] as f32 * w4)
+                            .round().clamp(0.0, 255.0) as u8;
+                    }
+                    _ => {
+                        // Generic case for other channel counts
+                        for ch in 0..channels {
+                            let v = src_data[idx11 + ch] as f32 * w1
+                                + src_data[idx21 + ch] as f32 * w2
+                                + src_data[idx12 + ch] as f32 * w3
+                                + src_data[idx22 + ch] as f32 * w4;
+                            dst_pixel[ch] = v.round().clamp(0.0, 255.0) as u8;
+                        }
+                    }
+                }
             }
-        }
-    }
+        });
+    });
 
     Ok(())
 }

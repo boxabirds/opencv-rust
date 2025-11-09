@@ -1,6 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::ThresholdType;
 use crate::error::{Error, Result};
+use rayon::prelude::*;
 
 /// Apply threshold to an image
 pub fn threshold(
@@ -18,59 +19,49 @@ pub fn threshold(
 
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
-    let thresh = thresh as u8;
-    let maxval = maxval as u8;
+    let thresh_u8 = thresh as u8;
+    let maxval_u8 = maxval as u8;
+    let rows = src.rows();
+    let cols = src.cols();
+    let channels = src.channels();
 
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            let src_pixel = src.at(row, col)?;
-            let dst_pixel = dst.at_mut(row, col)?;
+    // Parallel processing for performance
+    rayon::scope(|_s| {
+        let src_data = src.data();
+        let dst_data = dst.data_mut();
+        let row_size = cols * channels;
 
-            for ch in 0..src.channels() {
-                let value = src_pixel[ch];
+        dst_data.par_chunks_mut(row_size).enumerate().for_each(|(row, dst_row_data)| {
+            for col in 0..cols {
+                let src_idx = (row * cols + col) * channels;
+                let dst_idx = col * channels;
 
-                dst_pixel[ch] = match thresh_type {
-                    ThresholdType::Binary => {
-                        if value > thresh {
-                            maxval
-                        } else {
-                            0
+                for ch in 0..channels {
+                    let value = src_data[src_idx + ch];
+
+                    dst_row_data[dst_idx + ch] = match thresh_type {
+                        ThresholdType::Binary => {
+                            if value > thresh_u8 { maxval_u8 } else { 0 }
                         }
-                    }
-                    ThresholdType::BinaryInv => {
-                        if value > thresh {
-                            0
-                        } else {
-                            maxval
+                        ThresholdType::BinaryInv => {
+                            if value > thresh_u8 { 0 } else { maxval_u8 }
                         }
-                    }
-                    ThresholdType::Trunc => {
-                        if value > thresh {
-                            thresh
-                        } else {
-                            value
+                        ThresholdType::Trunc => {
+                            if value > thresh_u8 { thresh_u8 } else { value }
                         }
-                    }
-                    ThresholdType::ToZero => {
-                        if value > thresh {
-                            value
-                        } else {
-                            0
+                        ThresholdType::ToZero => {
+                            if value > thresh_u8 { value } else { 0 }
                         }
-                    }
-                    ThresholdType::ToZeroInv => {
-                        if value > thresh {
-                            0
-                        } else {
-                            value
+                        ThresholdType::ToZeroInv => {
+                            if value > thresh_u8 { 0 } else { value }
                         }
-                    }
-                };
+                    };
+                }
             }
-        }
-    }
+        });
+    });
 
-    Ok(thresh as f64)
+    Ok(thresh)
 }
 
 /// Apply adaptive threshold
