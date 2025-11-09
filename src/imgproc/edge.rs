@@ -165,8 +165,9 @@ pub fn canny(
     sobel(&blurred, &mut grad_x, 1, 0, 3)?;
     sobel(&blurred, &mut grad_y, 0, 1, 3)?;
 
-    // Step 3: Calculate gradient magnitude - parallel
+    // Step 3: Calculate gradient magnitude and direction together - parallel
     let mut magnitude = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
+    let mut direction = vec![0.0f32; src.rows() * src.cols()];
 
     let rows = src.rows();
     let cols = src.cols();
@@ -174,26 +175,25 @@ pub fn canny(
     let grad_y_data = grad_y.data();
     let magnitude_data = magnitude.data_mut();
 
+    // Compute both magnitude and direction in parallel (better cache locality)
     rayon::scope(|_s| {
-        magnitude_data.par_chunks_mut(cols).enumerate().for_each(|(row, mag_row)| {
-            for col in 0..cols {
-                let idx = row * cols + col;
-                let gx = grad_x_data[idx] as f32;
-                let gy = grad_y_data[idx] as f32;
+        let direction_slice = &mut direction[..];
 
-                let mag = (gx * gx + gy * gy).sqrt();
-                mag_row[col] = mag.min(255.0) as u8;
-            }
-        });
+        magnitude_data.par_chunks_mut(cols)
+            .zip(direction_slice.par_chunks_mut(cols))
+            .enumerate()
+            .for_each(|(row, (mag_row, dir_row))| {
+                for col in 0..cols {
+                    let idx = row * cols + col;
+                    let gx = grad_x_data[idx] as f32;
+                    let gy = grad_y_data[idx] as f32;
+
+                    let mag = (gx * gx + gy * gy).sqrt();
+                    mag_row[col] = mag.min(255.0) as u8;
+                    dir_row[col] = gy.atan2(gx);
+                }
+            });
     });
-
-    // Calculate direction sequentially (atan2 is fast)
-    let mut direction = vec![0.0f32; rows * cols];
-    for idx in 0..rows * cols {
-        let gx = grad_x_data[idx] as f32;
-        let gy = grad_y_data[idx] as f32;
-        direction[idx] = gy.atan2(gx);
-    }
 
     // Step 4: Non-maximum suppression - parallel
     let mut suppressed = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
@@ -201,35 +201,40 @@ pub fn canny(
     rayon::scope(|_s| {
         let suppressed_data = suppressed.data_mut();
         let magnitude_data = magnitude.data();
+        let direction_slice = &direction[..];
 
-        suppressed_data[cols..(rows-1)*cols].par_chunks_mut(cols).enumerate().for_each(|(idx, sup_row)| {
-            let row = idx + 1;
+        suppressed_data[cols..(rows-1)*cols]
+            .par_chunks_mut(cols)
+            .zip(direction_slice[cols..(rows-1)*cols].par_chunks(cols))
+            .enumerate()
+            .for_each(|(idx, (sup_row, dir_row))| {
+                let row = idx + 1;
 
-            for col in 1..cols - 1 {
-                let mag_idx = row * cols + col;
-                let mag = magnitude_data[mag_idx];
-                let angle = direction[mag_idx];
+                for col in 1..cols - 1 {
+                    let mag_idx = row * cols + col;
+                    let mag = magnitude_data[mag_idx];
+                    let angle = dir_row[col];
 
-                // Quantize angle to 0, 45, 90, 135 degrees
-                let angle_deg = (angle * 180.0 / std::f32::consts::PI + 180.0) % 180.0;
+                    // Quantize angle to 0, 45, 90, 135 degrees
+                    let angle_deg = (angle * 180.0 / std::f32::consts::PI + 180.0) % 180.0;
 
-                let (n1, n2) = if angle_deg < 22.5 || angle_deg >= 157.5 {
-                    // 0 degrees - horizontal
-                    (magnitude_data[mag_idx - 1], magnitude_data[mag_idx + 1])
-                } else if angle_deg < 67.5 {
-                    // 45 degrees
-                    (magnitude_data[mag_idx - cols + 1], magnitude_data[mag_idx + cols - 1])
-                } else if angle_deg < 112.5 {
-                    // 90 degrees - vertical
-                    (magnitude_data[mag_idx - cols], magnitude_data[mag_idx + cols])
-                } else {
-                    // 135 degrees
-                    (magnitude_data[mag_idx - cols - 1], magnitude_data[mag_idx + cols + 1])
-                };
+                    let (n1, n2) = if angle_deg < 22.5 || angle_deg >= 157.5 {
+                        // 0 degrees - horizontal
+                        (magnitude_data[mag_idx - 1], magnitude_data[mag_idx + 1])
+                    } else if angle_deg < 67.5 {
+                        // 45 degrees
+                        (magnitude_data[mag_idx - cols + 1], magnitude_data[mag_idx + cols - 1])
+                    } else if angle_deg < 112.5 {
+                        // 90 degrees - vertical
+                        (magnitude_data[mag_idx - cols], magnitude_data[mag_idx + cols])
+                    } else {
+                        // 135 degrees
+                        (magnitude_data[mag_idx - cols - 1], magnitude_data[mag_idx + cols + 1])
+                    };
 
-                sup_row[col] = if mag >= n1 && mag >= n2 { mag } else { 0 };
-            }
-        });
+                    sup_row[col] = if mag >= n1 && mag >= n2 { mag } else { 0 };
+                }
+            });
     });
 
     // Step 5: Double threshold and edge tracking by hysteresis - parallel
@@ -243,35 +248,28 @@ pub fn canny(
         let suppressed_data = suppressed.data();
 
         dst_data.par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
+            let base_idx = row * cols;
+
             for col in 0..cols {
-                let idx = row * cols + col;
-                let mag = suppressed_data[idx];
+                let mag = suppressed_data[base_idx + col];
 
                 if mag >= high_threshold {
                     dst_row[col] = 255; // Strong edge
                 } else if mag >= low_threshold {
                     // Weak edge - check if connected to strong edge in 8-neighborhood
-                    let mut connected = false;
-
-                    if row > 0 {
-                        // Check top row
-                        if col > 0 && suppressed_data[idx - cols - 1] >= high_threshold { connected = true; }
-                        if !connected && suppressed_data[idx - cols] >= high_threshold { connected = true; }
-                        if !connected && col < cols - 1 && suppressed_data[idx - cols + 1] >= high_threshold { connected = true; }
-                    }
-
-                    if !connected {
-                        // Check same row
-                        if col > 0 && suppressed_data[idx - 1] >= high_threshold { connected = true; }
-                        if !connected && col < cols - 1 && suppressed_data[idx + 1] >= high_threshold { connected = true; }
-                    }
-
-                    if !connected && row < rows - 1 {
-                        // Check bottom row
-                        if col > 0 && suppressed_data[idx + cols - 1] >= high_threshold { connected = true; }
-                        if !connected && suppressed_data[idx + cols] >= high_threshold { connected = true; }
-                        if !connected && col < cols - 1 && suppressed_data[idx + cols + 1] >= high_threshold { connected = true; }
-                    }
+                    // Optimized: Check most likely neighbors first (horizontal/vertical before diagonal)
+                    let connected =
+                        // Same row (most likely)
+                        (col > 0 && suppressed_data[base_idx + col - 1] >= high_threshold) ||
+                        (col < cols - 1 && suppressed_data[base_idx + col + 1] >= high_threshold) ||
+                        // Top/bottom (next most likely)
+                        (row > 0 && suppressed_data[base_idx - cols + col] >= high_threshold) ||
+                        (row < rows - 1 && suppressed_data[base_idx + cols + col] >= high_threshold) ||
+                        // Diagonals (less likely)
+                        (row > 0 && col > 0 && suppressed_data[base_idx - cols + col - 1] >= high_threshold) ||
+                        (row > 0 && col < cols - 1 && suppressed_data[base_idx - cols + col + 1] >= high_threshold) ||
+                        (row < rows - 1 && col > 0 && suppressed_data[base_idx + cols + col - 1] >= high_threshold) ||
+                        (row < rows - 1 && col < cols - 1 && suppressed_data[base_idx + cols + col + 1] >= high_threshold);
 
                     dst_row[col] = if connected { 255 } else { 0 };
                 } else {
