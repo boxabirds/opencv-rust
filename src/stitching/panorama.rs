@@ -367,7 +367,7 @@ fn hamming_distance(a: &[u8], b: &[u8]) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::Scalar;
+    use crate::core::{MatDepth, types::Scalar};
 
     #[test]
     fn test_panorama_stitcher_creation() {

@@ -164,7 +164,7 @@ export const demos = [
     name: 'Box Filter / Blur',
     description: 'Fast smoothing with box filter',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -183,7 +183,7 @@ export const demos = [
     name: 'Median Blur',
     description: 'Remove salt & pepper noise with median filter',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -202,7 +202,7 @@ export const demos = [
     name: 'Bilateral Filter',
     description: 'Edge-preserving smoothing filter',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -239,7 +239,7 @@ export const demos = [
     name: 'Guided Filter',
     description: 'Edge-aware smoothing using a guide image',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -267,7 +267,7 @@ export const demos = [
     name: 'Gabor Filter',
     description: 'Texture analysis and feature extraction',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -491,7 +491,7 @@ export const demos = [
     name: 'Sobel Operator',
     description: 'Gradient-based edge detection',
     category: 'edges',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -526,7 +526,7 @@ export const demos = [
     name: 'Scharr Operator',
     description: 'High-accuracy gradient computation',
     category: 'edges',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -554,7 +554,7 @@ export const demos = [
     name: 'Laplacian',
     description: 'Second derivative edge detection',
     category: 'edges',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -604,7 +604,7 @@ export const demos = [
     name: 'Flip',
     description: 'Flip image horizontally or vertically',
     category: 'transform',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -621,7 +621,7 @@ export const demos = [
     name: 'Rotate',
     description: 'Rotate image by 90, 180, or 270 degrees',
     category: 'transform',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -640,7 +640,7 @@ export const demos = [
     name: 'Warp Affine',
     description: 'Apply affine transformation (translate, rotate, scale, shear)',
     category: 'transform',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -728,7 +728,7 @@ export const demos = [
     name: 'Convert to Grayscale',
     description: 'Convert color image to grayscale',
     category: 'color',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -803,7 +803,7 @@ export const demos = [
     name: 'Adaptive Threshold',
     description: 'Adaptive thresholding for varying lighting',
     category: 'color',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1235,7 +1235,7 @@ export const demos = [
     name: 'Harris Corner Detection',
     description: 'Detect corners using Harris algorithm',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1281,7 +1281,7 @@ export const demos = [
     name: 'Good Features to Track',
     description: 'Shi-Tomasi corner detection',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1318,7 +1318,7 @@ export const demos = [
     name: 'FAST Keypoint Detector',
     description: 'Fast keypoint detection algorithm',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2460,7 +2460,7 @@ export const demos = [
     name: 'Draw Line',
     description: 'Draw a line on the image',
     category: 'drawing',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2485,7 +2485,7 @@ export const demos = [
     name: 'Draw Rectangle',
     description: 'Draw a rectangle on the image',
     category: 'drawing',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2511,7 +2511,7 @@ export const demos = [
     name: 'Draw Circle',
     description: 'Draw a circle on the image',
     category: 'drawing',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {

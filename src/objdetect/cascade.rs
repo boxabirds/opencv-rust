@@ -197,7 +197,7 @@ fn rectangles_overlap(r1: Rect, r2: Rect) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::Scalar;
+    use crate::core::{MatDepth, types::Scalar};
 
     #[test]
     fn test_integral_image() {
