@@ -56,8 +56,17 @@ fn resize_nearest(src: &Mat, dst: &mut Mat) -> Result<()> {
 
 /// Bilinear interpolation
 fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
-    let x_ratio = (src.cols() - 1) as f32 / dst.cols() as f32;
-    let y_ratio = (src.rows() - 1) as f32 / dst.rows() as f32;
+    // Map corners exactly: dst pixel 0 -> src pixel 0, dst pixel (n-1) -> src pixel (m-1)
+    let x_ratio = if dst.cols() > 1 {
+        (src.cols() - 1) as f32 / (dst.cols() - 1) as f32
+    } else {
+        0.0
+    };
+    let y_ratio = if dst.rows() > 1 {
+        (src.rows() - 1) as f32 / (dst.rows() - 1) as f32
+    } else {
+        0.0
+    };
 
     for dst_row in 0..dst.rows() {
         for dst_col in 0..dst.cols() {
