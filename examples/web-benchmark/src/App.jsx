@@ -95,11 +95,6 @@ function App() {
   };
 
   const runBenchmark = async (mode) => {
-    if (!selectedImage) {
-      alert('Please upload an image first');
-      return;
-    }
-
     if (!wasmLoaded) {
       alert('WASM module not loaded yet. Please wait...');
       return;
@@ -108,8 +103,28 @@ function App() {
     setIsRunning(true);
 
     try {
-      // Load image to ImageData
-      const imageData = await imageToImageData(selectedImage.data);
+      // Load image to ImageData (or create synthetic if none uploaded)
+      let imageData;
+      if (selectedImage) {
+        imageData = await imageToImageData(selectedImage.data);
+      } else {
+        // Create synthetic 512x512 test image
+        const width = 512, height = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Create gradient pattern
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, '#ff0000');
+        gradient.addColorStop(0.5, '#00ff00');
+        gradient.addColorStop(1, '#0000ff');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        imageData = ctx.getImageData(0, 0, width, height);
+      }
 
       // Create WASM Mat from ImageData
       const srcMat = WasmMat.fromImageData(
@@ -163,7 +178,7 @@ function App() {
           mode,
           time: avgTime.toFixed(2),
           throughput: (1000 / avgTime).toFixed(2),
-          imageSize: `${selectedImage.width}x${selectedImage.height}`,
+          imageSize: selectedImage ? `${selectedImage.width}x${selectedImage.height}` : '512x512',
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);
@@ -229,16 +244,16 @@ function App() {
             <button
               className="bench-btn cpu"
               onClick={() => runBenchmark('CPU')}
-              disabled={isRunning || !selectedImage}
+              disabled={isRunning}
             >
-              {isRunning ? '⏳ Running...' : '▶ Run CPU (WASM)'}
+              {isRunning ? '⏳ Running...' : selectedImage ? '▶ Run CPU (WASM)' : '▶ Run CPU (Synthetic)'}
             </button>
             <button
               className="bench-btn gpu"
               onClick={() => runBenchmark('GPU')}
-              disabled={isRunning || !selectedImage || !gpuAvailable}
+              disabled={isRunning || !gpuAvailable}
             >
-              {isRunning ? '⏳ Running...' : '▶ Run GPU (WebGPU)'}
+              {isRunning ? '⏳ Running...' : selectedImage ? '▶ Run GPU (WebGPU)' : '▶ Run GPU (Synthetic)'}
             </button>
             <button
               className="bench-btn both"
@@ -246,7 +261,7 @@ function App() {
                 await runBenchmark('CPU');
                 await runBenchmark('GPU');
               }}
-              disabled={isRunning || !selectedImage || !gpuAvailable}
+              disabled={isRunning || !gpuAvailable}
             >
               {isRunning ? '⏳ Running...' : '▶ Run Both'}
             </button>
