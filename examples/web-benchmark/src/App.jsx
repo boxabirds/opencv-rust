@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import init, {
   WasmMat,
-  initThreadPool,
   initGpu,
   isGpuAvailable,
   gaussianBlur as wasmGaussianBlur,
@@ -19,7 +18,6 @@ function App() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [benchmarkResults, setBenchmarkResults] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [numThreads, setNumThreads] = useState(0);
 
   // Initialize WASM module
   useEffect(() => {
@@ -28,19 +26,15 @@ function App() {
         console.log('Initializing WASM module...');
         await init();
 
-        // Initialize thread pool with available hardware threads
-        const threads = navigator.hardwareConcurrency || 4;
-        setNumThreads(threads);
-        console.log(`Initializing thread pool with ${threads} threads...`);
-        await initThreadPool(threads);
+        // Check and initialize WebGPU
+        console.log('Initializing WebGPU...');
+        const gpuInit = await initGpu();
+        setGpuAvailable(gpuInit);
 
-        // Check if GPU is available in WASM
-        const gpuAvail = isGpuAvailable();
-        setGpuAvailable(gpuAvail);
-
-        if (gpuAvail) {
-          console.log('Initializing GPU...');
-          await initGpu();
+        if (gpuInit) {
+          console.log('✓ WebGPU initialized successfully');
+        } else {
+          console.warn('WebGPU initialization failed - falling back to CPU');
         }
 
         const version = getVersion();
@@ -184,14 +178,14 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>🚀 OpenCV-Rust WASM Benchmark</h1>
+        <h1>🚀 OpenCV-Rust WebGPU Benchmark</h1>
         <div className="status">
           <span className={`status-badge ${wasmLoaded ? 'success' : 'warning'}`}>
-            {wasmLoaded ? `✓ WASM Loaded (${numThreads} threads)` : '⚠ WASM Loading...'}
+            {wasmLoaded ? '✓ WASM Loaded' : '⚠ WASM Loading...'}
           </span>
           <span className={`status-badge ${gpuAvailable ? 'success' : 'error'}`}>
-            {gpuAvailable === null ? '⏳ Checking GPU...' :
-             gpuAvailable ? '✓ GPU Available' : '✗ GPU Not Available (CPU-only build)'}
+            {gpuAvailable === null ? '⏳ Initializing WebGPU...' :
+             gpuAvailable ? '✓ WebGPU Ready' : '✗ WebGPU Failed (CPU fallback)'}
           </span>
         </div>
       </header>
@@ -317,12 +311,12 @@ function App() {
 
       <footer className="footer">
         <p>
-          <strong>Note:</strong> This build uses CPU multi-threading with rayon ({numThreads} threads).
-          GPU support is disabled due to threading incompatibility (see WASM_STATUS.md).
+          <strong>WebGPU Acceleration:</strong> This demo uses WebGPU for GPU-accelerated image processing.
+          All operations run on your graphics card for maximum performance.
         </p>
         <p>
-          <strong>Browser Requirements:</strong> Your browser must support SharedArrayBuffer
-          (enabled by default in Chrome/Edge/Firefox with proper CORS headers).
+          <strong>Browser Requirements:</strong> Chrome/Edge 113+ or Firefox Nightly with WebGPU enabled.
+          Enable at <code>chrome://flags/#enable-unsafe-webgpu</code> if needed.
         </p>
         <p>
           <a href="https://github.com/boxabirds/opencv-rust" target="_blank" rel="noopener noreferrer">

@@ -12,20 +12,12 @@ fi
 # Build for web target with WASM and threading (CPU-only, no GPU)
 echo "Compiling to WASM with rayon multi-threading..."
 RUSTFLAGS='-C target-feature=+atomics,+bulk-memory,+mutable-globals' \
-cargo +nightly build \
-    --target wasm32-unknown-unknown \
-    --no-default-features \
-    --features "rayon,wasm-bindgen,wasm-bindgen-futures,js-sys,web-sys,console_error_panic_hook,wasm-bindgen-rayon" \
-    --release \
-    -Z build-std=panic_abort,std
-
-echo ""
-echo "Running wasm-bindgen to generate JS bindings..."
-wasm-bindgen \
-    --out-dir pkg \
+wasm-pack build \
     --target web \
-    --omit-default-module-path \
-    target/wasm32-unknown-unknown/release/opencv_rust.wasm
+    --out-dir pkg \
+    --features wasm-threading \
+    --release \
+    -- -Z build-std=panic_abort,std
 
 echo ""
 echo "✓ WASM build complete! Output in ./pkg/"
