@@ -18,6 +18,7 @@ function App() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [benchmarkResults, setBenchmarkResults] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [outputImage, setOutputImage] = useState(null);
 
   // Initialize WASM module
   useEffect(() => {
@@ -94,6 +95,54 @@ function App() {
     });
   };
 
+  // Helper function to convert WasmMat to image data URL for display
+  const matToImageDataURL = (mat) => {
+    try {
+      const width = mat.cols();
+      const height = mat.rows();
+      const channels = mat.channels();
+      const data = mat.data();
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      const imageData = ctx.createImageData(width, height);
+      const pixels = imageData.data;
+
+      // Convert Mat data to RGBA
+      if (channels === 1) {
+        // Grayscale - replicate to RGB
+        for (let i = 0; i < data.length; i++) {
+          const idx = i * 4;
+          pixels[idx] = data[i];     // R
+          pixels[idx + 1] = data[i]; // G
+          pixels[idx + 2] = data[i]; // B
+          pixels[idx + 3] = 255;     // A
+        }
+      } else if (channels === 3) {
+        // BGR to RGBA
+        for (let i = 0; i < data.length; i += 3) {
+          const idx = (i / 3) * 4;
+          pixels[idx] = data[i + 2];     // R (from B)
+          pixels[idx + 1] = data[i + 1]; // G
+          pixels[idx + 2] = data[i];     // B (from R)
+          pixels[idx + 3] = 255;         // A
+        }
+      } else if (channels === 4) {
+        // RGBA - direct copy
+        pixels.set(data);
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      return canvas.toDataURL();
+    } catch (error) {
+      console.error('Failed to convert Mat to image:', error);
+      return null;
+    }
+  };
+
   const runBenchmark = async (mode) => {
     if (!selectedImage) {
       alert('Please upload an image first');
@@ -121,6 +170,7 @@ function App() {
 
       const iterations = 10;
       const start = performance.now();
+      let finalResult = null;
 
       for (let i = 0; i < iterations; i++) {
         let result;
@@ -144,14 +194,23 @@ function App() {
             throw new Error(`Unknown operation: ${selectedOperation}`);
         }
 
-        // Clean up result
-        if (result) {
+        // Keep the last result for display, free previous results
+        if (i === iterations - 1) {
+          finalResult = result;
+        } else if (result) {
           result.free();
         }
       }
 
       const end = performance.now();
       const avgTime = (end - start) / iterations;
+
+      // Convert result to image for display
+      if (finalResult) {
+        const outputDataURL = matToImageDataURL(finalResult);
+        setOutputImage(outputDataURL);
+        finalResult.free();
+      }
 
       // Clean up source mat
       srcMat.free();
@@ -255,15 +314,32 @@ function App() {
 
         <div className="main-content">
           <section className="card preview-section">
-            <h2>Image Preview</h2>
-            <div className="image-preview">
-              {selectedImage ? (
-                <img src={selectedImage.data} alt="Uploaded" />
-              ) : (
-                <div className="placeholder">
-                  <p>📷 Upload an image to begin</p>
+            <h2>Input & Output</h2>
+            <div className="image-comparison">
+              <div className="image-container">
+                <h3>Input Image</h3>
+                <div className="image-preview">
+                  {selectedImage ? (
+                    <img src={selectedImage.data} alt="Input" />
+                  ) : (
+                    <div className="placeholder">
+                      <p>📷 Upload an image to begin</p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+              <div className="image-container">
+                <h3>Output Image</h3>
+                <div className="image-preview">
+                  {outputImage ? (
+                    <img src={outputImage} alt="Output" />
+                  ) : (
+                    <div className="placeholder">
+                      <p>🎯 Run benchmark to see results</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </section>
 
