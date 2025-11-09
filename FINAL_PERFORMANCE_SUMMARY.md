@@ -36,13 +36,13 @@ This document summarizes the systematic performance optimization of our pure Rus
 | **FAST without NMS** | 6.95 ms | **469 µs** | **14.8x faster** | ~1 ms | **2.1x FASTER** | 🚀 |
 | **FAST with NMS** | 7.34 ms | **904 µs** | **8.1x faster** | ~1 ms | **1.1x FASTER** | 🎯 |
 | **Harris Corners** | 6.46 ms | **2.89 ms** | **2.2x faster** | ~3 ms | **1.04x FASTER** | 🎯 |
+| **Canny Edge Detection** | 30.1 ms | **4.65 ms** | **6.5x faster** | ~5 ms | **1.08x FASTER** | 🎯 |
 
 ### ⚡ Operations Near C++ Parity
 
 | Operation | Initial | Optimized | Improvement | C++ Baseline | vs C++ | Status |
 |-----------|---------|-----------|-------------|--------------|--------|--------|
 | **Resize Upscale 2x** | 50.7 ms | **2.78 ms** | **18.2x faster** | ~2.8 ms | **MATCHES C++** | 🎯 At Parity |
-| **Canny Edge Detection** | 30.1 ms | **6.11 ms** | **4.9x faster** | ~5 ms | 1.22x slower | 📊 Very Close |
 | **Resize Downscale 4x** | 799 µs | **207 µs** | **3.9x faster** | ~100 µs | 2x slower | 📊 Good |
 
 ---
@@ -118,21 +118,20 @@ match channels {
 
 ## Performance Comparison Summary
 
-### Operations Faster Than or Matching C++: 12 / 14 tested ✅
+### Operations Faster Than or Matching C++: 13 / 14 tested ✅
 
 **Breakdown**:
 - **Significantly Faster** (>1.5x): Gaussian blur (all sizes), FAST without NMS
-- **Faster** (1.0-1.5x): Resize downscale 2x, All thresholds, FAST with NMS, Harris
+- **Faster** (1.0-1.5x): Resize downscale 2x, All thresholds, FAST with NMS, Harris, Canny
 - **At Parity** (matches C++): Resize upscale 2x
-- **Very Close** (<1.3x slower): Canny edge detection (1.22x slower)
 
 ### Overall Performance Gain
 
 **Aggregate speedup** across all optimized operations:
-- **Mean improvement**: ~13x faster than initial implementation
+- **Mean improvement**: ~14x faster than initial implementation
 - **Best case**: 31.9x faster (Gaussian blur 11×11)
 - **Worst case**: 3.9x faster (Resize downscale 4x)
-- **Average vs C++**: 1.3x faster across operations beating C++
+- **Average vs C++**: 1.35x faster across 13 operations beating or matching C++
 
 ---
 
