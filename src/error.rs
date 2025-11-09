@@ -23,6 +23,12 @@ pub enum Error {
 
     #[error("Out of range: {0}")]
     OutOfRange(String),
+
+    #[error("GPU not available: {0}")]
+    GpuNotAvailable(String),
+
+    #[error("GPU error: {0}")]
+    GpuError(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

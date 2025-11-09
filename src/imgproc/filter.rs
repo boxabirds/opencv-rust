@@ -1,6 +1,8 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::Size;
 use crate::error::{Error, Result};
+
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 /// Apply Gaussian blur to an image
@@ -17,11 +19,28 @@ pub fn gaussian_blur(src: &Mat, dst: &mut Mat, ksize: Size, sigma_x: f64) -> Res
         ));
     }
 
+    // Try GPU acceleration if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() && ksize.width == ksize.height {
+            if let Ok(()) = crate::gpu::ops::gaussian_blur_gpu(src, dst, ksize, sigma_x) {
+                return Ok(());
+            }
+            // Fall through to CPU on GPU failure
+        }
+    }
+
+    // CPU implementation (fallback or default)
+    gaussian_blur_cpu(src, dst, ksize, sigma_x)
+}
+
+/// CPU implementation of Gaussian blur
+fn gaussian_blur_cpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma_x: f64) -> Result<()> {
     let kernel = create_gaussian_kernel(ksize, sigma_x)?;
     apply_separable_filter(src, dst, &kernel, &kernel)
 }
 
-/// Apply box blur (simple averaging)
+/// Apply box blur (simple averaging) - optimized with separable filter
 pub fn blur(src: &Mat, dst: &mut Mat, ksize: Size) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(
@@ -29,39 +48,14 @@ pub fn blur(src: &Mat, dst: &mut Mat, ksize: Size) -> Result<()> {
         ));
     }
 
-    *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
+    // Box filter is separable - create uniform kernel
+    let kernel_x: Vec<f32> = vec![1.0 / ksize.width as f32; ksize.width as usize];
+    let kernel_y: Vec<f32> = vec![1.0 / ksize.height as f32; ksize.height as usize];
 
-    let half_w = ksize.width / 2;
-    let half_h = ksize.height / 2;
-    let kernel_size = (ksize.width * ksize.height) as f32;
-
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            let mut sums = vec![0f32; src.channels()];
-
-            for ky in -half_h..=half_h {
-                for kx in -half_w..=half_w {
-                    let r = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
-                    let c = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
-
-                    let pixel = src.at(r, c)?;
-                    for ch in 0..src.channels() {
-                        sums[ch] += pixel[ch] as f32;
-                    }
-                }
-            }
-
-            let dst_pixel = dst.at_mut(row, col)?;
-            for ch in 0..src.channels() {
-                dst_pixel[ch] = (sums[ch] / kernel_size) as u8;
-            }
-        }
-    }
-
-    Ok(())
+    apply_separable_filter(src, dst, &kernel_x, &kernel_y)
 }
 
-/// Apply median blur
+/// Apply median blur - optimized with rayon parallelization
 pub fn median_blur(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(
@@ -75,34 +69,56 @@ pub fn median_blur(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
         ));
     }
 
+    if ksize > 21 {
+        return Err(Error::InvalidParameter(
+            "Kernel size must be <= 21 for median blur".to_string(),
+        ));
+    }
+
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
+    let rows = src.rows();
+    let cols = src.cols();
+    let channels = src.channels();
     let half = ksize / 2;
     let kernel_area = (ksize * ksize) as usize;
 
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            for ch in 0..src.channels() {
-                let mut values = Vec::with_capacity(kernel_area);
+    // Use rayon::scope to safely share references
+    rayon::scope(|_s| {
+        let dst_data = dst.data_mut();
+        let src_data = src.data();
+        let row_size = cols * channels;
 
-                for ky in -half..=half {
-                    for kx in -half..=half {
-                        let r = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
-                        let c = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
+        dst_data.par_chunks_mut(row_size).enumerate().for_each(|(row, dst_row)| {
+            // Stack array for kernel values (max 21x21 = 441 elements)
+            let mut values = [0u8; 441];
 
-                        let pixel = src.at(r, c)?;
-                        values.push(pixel[ch]);
+            for col in 0..cols {
+                for ch in 0..channels {
+                    let mut count = 0;
+
+                    // Collect values from kernel window
+                    for ky in -half..=half {
+                        let r = (row as i32 + ky).max(0).min(rows as i32 - 1) as usize;
+                        for kx in -half..=half {
+                            let c = (col as i32 + kx).max(0).min(cols as i32 - 1) as usize;
+
+                            let src_idx = (r * cols + c) * channels + ch;
+                            values[count] = src_data[src_idx];
+                            count += 1;
+                        }
                     }
+
+                    // Sort and find median
+                    values[..kernel_area].sort_unstable();
+                    let median = values[kernel_area / 2];
+
+                    let dst_idx = col * channels + ch;
+                    dst_row[dst_idx] = median;
                 }
-
-                values.sort_unstable();
-                let median = values[kernel_area / 2];
-
-                let dst_pixel = dst.at_mut(row, col)?;
-                dst_pixel[ch] = median;
             }
-        }
-    }
+        });
+    });
 
     Ok(())
 }
