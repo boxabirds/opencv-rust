@@ -4,15 +4,15 @@ Interactive web-based benchmark for testing opencv-rust performance with WebGPU 
 
 ## Status
 
-🚧 **Work in Progress**: This demo is a placeholder structure. WASM bindings are not yet implemented.
+✅ **Fully Functional**: WASM bindings with WebGPU acceleration are implemented and working!
 
-## Features (Planned)
+## Features
 
-- 📤 Upload and process images in the browser
-- ⚡ Compare CPU (WASM) vs GPU (WebGPU) performance
-- 📊 Real-time performance metrics and charts
-- 🎨 Visual before/after comparison
-- 📥 Export benchmark results
+- 📤 Upload and process images in the browser ✅
+- ⚡ Compare CPU (WASM) vs GPU (WebGPU) performance ✅
+- 📊 Real-time performance metrics and results table ✅
+- 🎨 Image preview ✅
+- 🚀 Four operations: Gaussian Blur (GPU-accelerated), Resize, Threshold, Canny
 
 ## Requirements
 
@@ -99,17 +99,16 @@ bun run preview
 └──────┘ └──────┘
 ```
 
-## Building WASM Module (Future)
+## Building WASM Module
 
-When WASM support is complete, build with:
+The WASM module with WebGPU support is already built! To rebuild:
 
 ```bash
 # From opencv-rust root
-wasm-pack build --features wasm --target web
+./build-wasm-gpu.sh
 
-# Link to web demo
-cd examples/web-benchmark
-ln -s ../../pkg opencv-rust-wasm
+# The pkg/ directory contains the compiled WASM module
+# The web demo automatically references it via ../../../pkg/
 ```
 
 ## Performance Tips
@@ -136,10 +135,11 @@ console.log('WebGPU:', !!navigator.gpu);
 
 ### WASM Not Loading
 
-**Future**: When WASM is implemented, check:
-- WASM module built correctly
-- CORS headers configured
-- Module path correct in package.json
+If you see errors loading the WASM module:
+- Ensure `./build-wasm-gpu.sh` was run from the project root
+- Check that `pkg/` directory exists with `opencv_rust_bg.wasm`
+- Verify the import path in App.jsx points to `../../../pkg/opencv_rust.js`
+- Run `npm run build` to verify the build succeeds
 
 ### Slow Performance
 
@@ -164,15 +164,19 @@ console.log('WebGPU:', !!navigator.gpu);
 - ⚠️ Requires Rust toolchain
 - ⚠️ Platform-specific builds
 
-## Next Steps
+## Current Limitations & Future Enhancements
 
-- [ ] Implement WASM bindings for opencv-rust
-- [ ] Add WebGPU compute shader compilation
+**GPU Acceleration:**
+- ✅ Gaussian Blur - GPU-accelerated with WebGPU compute shaders
+- ⚠️ Resize, Threshold, Canny - CPU fallback (GPU infrastructure in place, needs implementation)
+
+**Future Enhancements:**
+- [ ] Add more GPU-accelerated operations
 - [ ] Create performance charts (Chart.js/D3)
-- [ ] Add side-by-side image comparison
+- [ ] Add side-by-side before/after image comparison
 - [ ] Support batch processing
 - [ ] Export results to CSV/JSON
-- [ ] Add more operations (Canny, Resize, Threshold)
+- [ ] Add more operations (HOG, feature detection, etc.)
 
 ## Resources
 
