@@ -142,7 +142,8 @@ impl GpuContext {
                     memory_hints: Default::default(),
                     experimental_features: Default::default(),
                     trace: Default::default(),
-                }
+                },
+                None,
             )
             .await
         {
