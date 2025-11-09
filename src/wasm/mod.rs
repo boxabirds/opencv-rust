@@ -123,7 +123,7 @@ impl WasmMat {
     }
 }
 
-/// Gaussian blur operation (WASM-compatible, GPU-accelerated if available)
+/// Gaussian blur operation (WASM-compatible, GPU disabled in WASM)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = gaussianBlur)]
 pub fn gaussian_blur_wasm(
@@ -139,26 +139,10 @@ pub fn gaussian_blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::gaussian_blur_gpu(
-                &src.inner,
-                &mut dst,
-                Size::new(ksize as i32, ksize as i32),
-                sigma,
-            ) {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    // Fall back to CPU
-                    web_sys::console::log_1(&"GPU blur failed, falling back to CPU".into());
-                }
-            }
-        }
-    }
+    // GPU disabled in WASM - synchronous GPU operations don't work in WASM
+    // TODO: Make async WASM bindings to support GPU
 
-    // CPU fallback
+    // CPU implementation
     crate::imgproc::gaussian_blur(
         &src.inner,
         &mut dst,
@@ -170,7 +154,7 @@ pub fn gaussian_blur_wasm(
     Ok(WasmMat { inner: dst })
 }
 
-/// Resize operation (WASM-compatible, GPU-accelerated if available)
+/// Resize operation (WASM-compatible, GPU disabled in WASM)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = resize)]
 pub fn resize_wasm(
@@ -181,21 +165,9 @@ pub fn resize_wasm(
     let mut dst = Mat::new(dst_height, dst_width, src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::resize_gpu(&src.inner, &mut dst, dst_width, dst_height) {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    // Fall back to CPU
-                    web_sys::console::log_1(&"GPU resize failed, falling back to CPU".into());
-                }
-            }
-        }
-    }
+    // GPU disabled in WASM - synchronous GPU operations don't work in WASM
 
-    // CPU fallback
+    // CPU implementation
     crate::imgproc::resize(
         &src.inner,
         &mut dst,
@@ -207,7 +179,7 @@ pub fn resize_wasm(
     Ok(WasmMat { inner: dst })
 }
 
-/// Threshold operation (WASM-compatible, GPU-accelerated if available)
+/// Threshold operation (WASM-compatible, GPU disabled in WASM)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = threshold)]
 pub fn threshold_wasm(
@@ -223,26 +195,9 @@ pub fn threshold_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::threshold_gpu(
-                &src.inner,
-                &mut dst,
-                thresh as u8,
-                max_val as u8,
-            ) {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    // Fall back to CPU
-                    web_sys::console::log_1(&"GPU threshold failed, falling back to CPU".into());
-                }
-            }
-        }
-    }
+    // GPU disabled in WASM - synchronous GPU operations don't work in WASM
 
-    // CPU fallback - convert to grayscale if needed
+    // CPU implementation - convert to grayscale if needed
     let gray = if src.inner.channels() > 1 {
         let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -272,7 +227,7 @@ pub fn threshold_wasm(
     Ok(WasmMat { inner: dst })
 }
 
-/// Canny edge detection (WASM-compatible, GPU-accelerated if available)
+/// Canny edge detection (WASM-compatible, GPU disabled in WASM)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = canny)]
 pub fn canny_wasm(
@@ -288,21 +243,9 @@ pub fn canny_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::canny_gpu(&src.inner, &mut dst, threshold1, threshold2) {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    // Fall back to CPU
-                    web_sys::console::log_1(&"GPU canny failed, falling back to CPU".into());
-                }
-            }
-        }
-    }
+    // GPU disabled in WASM - synchronous GPU operations don't work in WASM
 
-    // CPU fallback - convert to grayscale if needed
+    // CPU implementation - convert to grayscale if needed
     let gray = if src.inner.channels() > 1 {
         let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
