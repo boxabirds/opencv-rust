@@ -21,7 +21,7 @@ pub fn wasm_init() {
 
 /// Initialize rayon thread pool for multi-threading
 /// This must be called from JavaScript before using any parallel operations
-#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen-rayon"))]
 #[wasm_bindgen]
 pub fn init_thread_pool(num_threads: usize) -> Result<(), JsValue> {
     wasm_bindgen_rayon::init_thread_pool(num_threads);
@@ -231,7 +231,7 @@ pub fn canny_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::canny(&gray, &mut dst, threshold1, threshold2, 3)
+    crate::imgproc::canny(&gray, &mut dst, threshold1, threshold2)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })

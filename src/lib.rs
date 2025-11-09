@@ -52,7 +52,7 @@ pub mod shape;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
-#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 pub mod wasm;
 
 pub mod prelude {

@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import init, {
+  WasmMat,
+  initThreadPool,
+  initGpu,
+  isGpuAvailable,
+  gaussianBlur as wasmGaussianBlur,
+  resize as wasmResize,
+  threshold as wasmThreshold,
+  canny as wasmCanny,
+  getVersion
+} from '../../../pkg/opencv_rust.js';
 
 function App() {
   const [gpuAvailable, setGpuAvailable] = useState(null);
@@ -8,25 +19,40 @@ function App() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [benchmarkResults, setBenchmarkResults] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [numThreads, setNumThreads] = useState(0);
 
-  // Check WebGPU availability
+  // Initialize WASM module
   useEffect(() => {
-    const checkGPU = async () => {
-      if (!navigator.gpu) {
-        setGpuAvailable(false);
-        return;
-      }
-
+    const initWasm = async () => {
       try {
-        const adapter = await navigator.gpu.requestAdapter();
-        setGpuAvailable(!!adapter);
+        console.log('Initializing WASM module...');
+        await init();
+
+        // Initialize thread pool with available hardware threads
+        const threads = navigator.hardwareConcurrency || 4;
+        setNumThreads(threads);
+        console.log(`Initializing thread pool with ${threads} threads...`);
+        await initThreadPool(threads);
+
+        // Check if GPU is available in WASM
+        const gpuAvail = isGpuAvailable();
+        setGpuAvailable(gpuAvail);
+
+        if (gpuAvail) {
+          console.log('Initializing GPU...');
+          await initGpu();
+        }
+
+        const version = getVersion();
+        console.log(`OpenCV-Rust WASM loaded! Version: ${version}`);
+        setWasmLoaded(true);
       } catch (error) {
-        console.error('GPU check failed:', error);
-        setGpuAvailable(false);
+        console.error('Failed to initialize WASM:', error);
+        setWasmLoaded(false);
       }
     };
 
-    checkGPU();
+    initWasm();
   }, []);
 
   const operations = [
@@ -56,27 +82,85 @@ function App() {
     }
   };
 
+  // Helper function to load image to canvas and get ImageData
+  const imageToImageData = async (imageSrc) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        resolve(imageData);
+      };
+      img.onerror = reject;
+      img.src = imageSrc;
+    });
+  };
+
   const runBenchmark = async (mode) => {
     if (!selectedImage) {
       alert('Please upload an image first');
       return;
     }
 
+    if (!wasmLoaded) {
+      alert('WASM module not loaded yet. Please wait...');
+      return;
+    }
+
     setIsRunning(true);
 
     try {
-      // Simulate benchmark (replace with actual WASM calls)
+      // Load image to ImageData
+      const imageData = await imageToImageData(selectedImage.data);
+
+      // Create WASM Mat from ImageData
+      const srcMat = WasmMat.fromImageData(
+        imageData.data,
+        imageData.width,
+        imageData.height,
+        4  // RGBA
+      );
+
       const iterations = 10;
       const start = performance.now();
 
       for (let i = 0; i < iterations; i++) {
-        // TODO: Call WASM function
-        // await opencv_rust.gaussian_blur(imageData);
-        await new Promise(resolve => setTimeout(resolve, 10)); // Simulate work
+        let result;
+
+        switch (selectedOperation) {
+          case 'gaussian_blur':
+            result = wasmGaussianBlur(srcMat, 5, 1.5);
+            break;
+          case 'resize':
+            const newWidth = Math.floor(imageData.width * 0.5);
+            const newHeight = Math.floor(imageData.height * 0.5);
+            result = wasmResize(srcMat, newWidth, newHeight);
+            break;
+          case 'threshold':
+            result = wasmThreshold(srcMat, 128, 255);
+            break;
+          case 'canny':
+            result = wasmCanny(srcMat, 50, 150);
+            break;
+          default:
+            throw new Error(`Unknown operation: ${selectedOperation}`);
+        }
+
+        // Clean up result
+        if (result) {
+          result.free();
+        }
       }
 
       const end = performance.now();
       const avgTime = (end - start) / iterations;
+
+      // Clean up source mat
+      srcMat.free();
 
       setBenchmarkResults(prev => [
         ...prev,
@@ -100,14 +184,14 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>🚀 OpenCV-Rust WebGPU Benchmark</h1>
+        <h1>🚀 OpenCV-Rust WASM Benchmark</h1>
         <div className="status">
+          <span className={`status-badge ${wasmLoaded ? 'success' : 'warning'}`}>
+            {wasmLoaded ? `✓ WASM Loaded (${numThreads} threads)` : '⚠ WASM Loading...'}
+          </span>
           <span className={`status-badge ${gpuAvailable ? 'success' : 'error'}`}>
             {gpuAvailable === null ? '⏳ Checking GPU...' :
-             gpuAvailable ? '✓ WebGPU Available' : '✗ WebGPU Not Available'}
-          </span>
-          <span className={`status-badge ${wasmLoaded ? 'success' : 'warning'}`}>
-            {wasmLoaded ? '✓ WASM Loaded' : '⚠ WASM Not Loaded'}
+             gpuAvailable ? '✓ GPU Available' : '✗ GPU Not Available (CPU-only build)'}
           </span>
         </div>
       </header>
@@ -233,8 +317,12 @@ function App() {
 
       <footer className="footer">
         <p>
-          <strong>Note:</strong> This demo requires WebGPU support.
-          Enable it in Chrome/Edge at <code>chrome://flags/#enable-unsafe-webgpu</code>
+          <strong>Note:</strong> This build uses CPU multi-threading with rayon ({numThreads} threads).
+          GPU support is disabled due to threading incompatibility (see WASM_STATUS.md).
+        </p>
+        <p>
+          <strong>Browser Requirements:</strong> Your browser must support SharedArrayBuffer
+          (enabled by default in Chrome/Edge/Firefox with proper CORS headers).
         </p>
         <p>
           <a href="https://github.com/boxabirds/opencv-rust" target="_blank" rel="noopener noreferrer">
