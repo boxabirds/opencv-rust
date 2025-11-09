@@ -1,6 +1,8 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::Point;
 use crate::error::{Error, Result};
+
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 /// KeyPoint structure representing a feature point

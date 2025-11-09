@@ -1,5 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
+
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 /// Calculate Sobel derivatives

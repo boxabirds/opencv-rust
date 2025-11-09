@@ -1,6 +1,8 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::ThresholdType;
 use crate::error::{Error, Result};
+
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 /// Apply threshold to an image

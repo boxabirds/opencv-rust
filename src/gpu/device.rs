@@ -18,28 +18,42 @@ static GPU_CONTEXT: OnceLock<Option<GpuContext>> = OnceLock::new();
 impl GpuContext {
     /// Initialize GPU context synchronously (native only)
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn init() -> Option<&'static GpuContext> {
-        GPU_CONTEXT.get_or_init(|| {
-            pollster::block_on(Self::init_async())
-        }).as_ref()
+    pub fn init() -> bool {
+        if GPU_CONTEXT.get().is_some() {
+            return GPU_CONTEXT.get().unwrap().is_some();
+        }
+        pollster::block_on(Self::init_async())
     }
 
     /// Initialize GPU context asynchronously (works for WASM and native)
-    pub async fn init_async() -> Option<GpuContext> {
+    /// Returns true if initialization succeeded
+    pub async fn init_async() -> bool {
+        // Check if already initialized
+        if GPU_CONTEXT.get().is_some() {
+            return GPU_CONTEXT.get().unwrap().is_some();
+        }
+
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
 
-        let adapter = instance
+        let adapter = match instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: None,
                 force_fallback_adapter: false,
             })
-            .await?;
+            .await
+        {
+            Some(a) => a,
+            None => {
+                let _ = GPU_CONTEXT.set(None);
+                return false;
+            }
+        };
 
-        let (device, queue) = adapter
+        let (device, queue) = match adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: Some("OpenCV-Rust GPU Device"),
@@ -49,13 +63,23 @@ impl GpuContext {
                 None,
             )
             .await
-            .ok()?;
+        {
+            Ok(dq) => dq,
+            Err(_) => {
+                let _ = GPU_CONTEXT.set(None);
+                return false;
+            }
+        };
 
-        Some(GpuContext {
+        let ctx = GpuContext {
             device,
             queue,
             adapter,
-        })
+        };
+
+        // Store in global context
+        let _ = GPU_CONTEXT.set(Some(ctx));
+        true
     }
 
     /// Get the global GPU context if initialized

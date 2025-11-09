@@ -9,6 +9,9 @@ repository = "https://github.com/boxabirds/opencv-rust"
 keywords = ["opencv", "computer-vision", "image-processing"]
 categories = ["multimedia::images", "computer-vision"]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 image = "0.24"
 ndarray = "0.15"
@@ -23,12 +26,27 @@ futures = { version = "0.3", optional = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
-web-sys = { version = "0.3", features = ["Window", "Navigator", "Gpu"], optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Navigator",
+    "Gpu",
+    "GpuAdapter",
+    "GpuDevice",
+    "GpuQueue",
+    "GpuBuffer",
+    "GpuTexture",
+    "ImageData",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "console",
+], optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
 
 [features]
 default = ["rayon"]
 gpu = ["wgpu", "pollster", "bytemuck", "futures"]
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "web-sys", "gpu"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys", "web-sys", "console_error_panic_hook", "gpu"]
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
