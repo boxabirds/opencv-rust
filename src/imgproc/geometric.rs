@@ -120,55 +120,37 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                 let w3 = (1.0 - dx) * dy;
                 let w4 = dx * dy;
 
-                // Manual unrolling for common channel counts
+                // Manual unrolling for common channel counts - optimized
                 match channels {
                     1 => {
                         let v = src_data[idx11] as f32 * w1
                             + src_data[idx21] as f32 * w2
                             + src_data[idx12] as f32 * w3
                             + src_data[idx22] as f32 * w4;
-                        dst_pixel[0] = v.round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[0] = (v + 0.5) as u8; // Fast rounding via add 0.5
                     }
                     3 => {
-                        // Process all 3 channels with precomputed weights
-                        dst_pixel[0] = (src_data[idx11] as f32 * w1
-                            + src_data[idx21] as f32 * w2
-                            + src_data[idx12] as f32 * w3
-                            + src_data[idx22] as f32 * w4)
-                            .round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[1] = (src_data[idx11 + 1] as f32 * w1
-                            + src_data[idx21 + 1] as f32 * w2
-                            + src_data[idx12 + 1] as f32 * w3
-                            + src_data[idx22 + 1] as f32 * w4)
-                            .round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[2] = (src_data[idx11 + 2] as f32 * w1
-                            + src_data[idx21 + 2] as f32 * w2
-                            + src_data[idx12 + 2] as f32 * w3
-                            + src_data[idx22 + 2] as f32 * w4)
-                            .round().clamp(0.0, 255.0) as u8;
+                        // Optimized 3-channel: process inline with minimal conversions
+                        #[inline(always)]
+                        fn interp(v11: u8, v21: u8, v12: u8, v22: u8, w1: f32, w2: f32, w3: f32, w4: f32) -> u8 {
+                            (v11 as f32 * w1 + v21 as f32 * w2 + v12 as f32 * w3 + v22 as f32 * w4 + 0.5) as u8
+                        }
+
+                        dst_pixel[0] = interp(src_data[idx11], src_data[idx21], src_data[idx12], src_data[idx22], w1, w2, w3, w4);
+                        dst_pixel[1] = interp(src_data[idx11 + 1], src_data[idx21 + 1], src_data[idx12 + 1], src_data[idx22 + 1], w1, w2, w3, w4);
+                        dst_pixel[2] = interp(src_data[idx11 + 2], src_data[idx21 + 2], src_data[idx12 + 2], src_data[idx22 + 2], w1, w2, w3, w4);
                     }
                     4 => {
-                        // Process all 4 channels with precomputed weights
-                        dst_pixel[0] = (src_data[idx11] as f32 * w1
-                            + src_data[idx21] as f32 * w2
-                            + src_data[idx12] as f32 * w3
-                            + src_data[idx22] as f32 * w4)
-                            .round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[1] = (src_data[idx11 + 1] as f32 * w1
-                            + src_data[idx21 + 1] as f32 * w2
-                            + src_data[idx12 + 1] as f32 * w3
-                            + src_data[idx22 + 1] as f32 * w4)
-                            .round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[2] = (src_data[idx11 + 2] as f32 * w1
-                            + src_data[idx21 + 2] as f32 * w2
-                            + src_data[idx12 + 2] as f32 * w3
-                            + src_data[idx22 + 2] as f32 * w4)
-                            .round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[3] = (src_data[idx11 + 3] as f32 * w1
-                            + src_data[idx21 + 3] as f32 * w2
-                            + src_data[idx12 + 3] as f32 * w3
-                            + src_data[idx22 + 3] as f32 * w4)
-                            .round().clamp(0.0, 255.0) as u8;
+                        // Optimized 4-channel
+                        #[inline(always)]
+                        fn interp(v11: u8, v21: u8, v12: u8, v22: u8, w1: f32, w2: f32, w3: f32, w4: f32) -> u8 {
+                            (v11 as f32 * w1 + v21 as f32 * w2 + v12 as f32 * w3 + v22 as f32 * w4 + 0.5) as u8
+                        }
+
+                        dst_pixel[0] = interp(src_data[idx11], src_data[idx21], src_data[idx12], src_data[idx22], w1, w2, w3, w4);
+                        dst_pixel[1] = interp(src_data[idx11 + 1], src_data[idx21 + 1], src_data[idx12 + 1], src_data[idx22 + 1], w1, w2, w3, w4);
+                        dst_pixel[2] = interp(src_data[idx11 + 2], src_data[idx21 + 2], src_data[idx12 + 2], src_data[idx22 + 2], w1, w2, w3, w4);
+                        dst_pixel[3] = interp(src_data[idx11 + 3], src_data[idx21 + 3], src_data[idx12 + 3], src_data[idx22 + 3], w1, w2, w3, w4);
                     }
                     _ => {
                         // Generic case for other channel counts
@@ -177,7 +159,7 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                                 + src_data[idx21 + ch] as f32 * w2
                                 + src_data[idx12 + ch] as f32 * w3
                                 + src_data[idx22 + ch] as f32 * w4;
-                            dst_pixel[ch] = v.round().clamp(0.0, 255.0) as u8;
+                            dst_pixel[ch] = (v + 0.5) as u8; // Fast rounding
                         }
                     }
                 }

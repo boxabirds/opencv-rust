@@ -232,50 +232,54 @@ pub fn canny(
         });
     });
 
-    // Step 5: Double threshold and edge tracking by hysteresis
+    // Step 5: Double threshold and edge tracking by hysteresis - parallel
     *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
 
-    let low_threshold = threshold1;
-    let high_threshold = threshold2;
+    let low_threshold = threshold1 as u8;
+    let high_threshold = threshold2 as u8;
 
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            let mag = suppressed.at(row, col)?[0] as f64;
-            let dst_pixel = dst.at_mut(row, col)?;
+    rayon::scope(|_s| {
+        let dst_data = dst.data_mut();
+        let suppressed_data = suppressed.data();
 
-            if mag >= high_threshold {
-                dst_pixel[0] = 255; // Strong edge
-            } else if mag >= low_threshold {
-                // Weak edge - check if connected to strong edge
-                let mut connected = false;
-                for dy in -1..=1 {
-                    for dx in -1..=1 {
-                        if dy == 0 && dx == 0 {
-                            continue;
-                        }
+        dst_data.par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
+            for col in 0..cols {
+                let idx = row * cols + col;
+                let mag = suppressed_data[idx];
 
-                        let ny = row as i32 + dy;
-                        let nx = col as i32 + dx;
+                if mag >= high_threshold {
+                    dst_row[col] = 255; // Strong edge
+                } else if mag >= low_threshold {
+                    // Weak edge - check if connected to strong edge in 8-neighborhood
+                    let mut connected = false;
 
-                        if ny >= 0 && ny < src.rows() as i32 && nx >= 0 && nx < src.cols() as i32 {
-                            let neighbor = suppressed.at(ny as usize, nx as usize)?[0] as f64;
-                            if neighbor >= high_threshold {
-                                connected = true;
-                                break;
-                            }
-                        }
+                    if row > 0 {
+                        // Check top row
+                        if col > 0 && suppressed_data[idx - cols - 1] >= high_threshold { connected = true; }
+                        if !connected && suppressed_data[idx - cols] >= high_threshold { connected = true; }
+                        if !connected && col < cols - 1 && suppressed_data[idx - cols + 1] >= high_threshold { connected = true; }
                     }
-                    if connected {
-                        break;
+
+                    if !connected {
+                        // Check same row
+                        if col > 0 && suppressed_data[idx - 1] >= high_threshold { connected = true; }
+                        if !connected && col < cols - 1 && suppressed_data[idx + 1] >= high_threshold { connected = true; }
                     }
+
+                    if !connected && row < rows - 1 {
+                        // Check bottom row
+                        if col > 0 && suppressed_data[idx + cols - 1] >= high_threshold { connected = true; }
+                        if !connected && suppressed_data[idx + cols] >= high_threshold { connected = true; }
+                        if !connected && col < cols - 1 && suppressed_data[idx + cols + 1] >= high_threshold { connected = true; }
+                    }
+
+                    dst_row[col] = if connected { 255 } else { 0 };
+                } else {
+                    dst_row[col] = 0; // Not an edge
                 }
-
-                dst_pixel[0] = if connected { 255 } else { 0 };
-            } else {
-                dst_pixel[0] = 0; // Not an edge
             }
-        }
-    }
+        });
+    });
 
     Ok(())
 }
