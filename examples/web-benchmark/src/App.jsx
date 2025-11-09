@@ -127,18 +127,18 @@ function App() {
 
         switch (selectedOperation) {
           case 'gaussian_blur':
-            result = wasmGaussianBlur(srcMat, 5, 1.5);
+            result = await wasmGaussianBlur(srcMat, 5, 1.5);
             break;
           case 'resize':
             const newWidth = Math.floor(imageData.width * 0.5);
             const newHeight = Math.floor(imageData.height * 0.5);
-            result = wasmResize(srcMat, newWidth, newHeight);
+            result = await wasmResize(srcMat, newWidth, newHeight);
             break;
           case 'threshold':
-            result = wasmThreshold(srcMat, 128, 255);
+            result = await wasmThreshold(srcMat, 128, 255);
             break;
           case 'canny':
-            result = wasmCanny(srcMat, 50, 150);
+            result = await wasmCanny(srcMat, 50, 150);
             break;
           default:
             throw new Error(`Unknown operation: ${selectedOperation}`);
