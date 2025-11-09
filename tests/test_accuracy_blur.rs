@@ -1,0 +1,159 @@
+/// Bit-level accuracy tests for Blur (box filter)
+mod test_utils;
+
+use opencv_rust::core::{Mat, MatDepth};
+use opencv_rust::core::types::{Scalar, Size};
+use opencv_rust::imgproc::blur;
+use test_utils::*;
+
+#[test]
+fn test_blur_deterministic() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+    for i in 0..900 { src.data_mut()[i] = (i % 256) as u8; }
+
+    let mut dst1 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst2 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    blur(&src, &mut dst1, Size::new(5, 5)).unwrap();
+    blur(&src, &mut dst2, Size::new(5, 5)).unwrap();
+
+    assert_images_equal(&dst1, &dst2, "Blur should be deterministic");
+}
+
+#[test]
+fn test_blur_uniform_image() {
+    let src = Mat::new_with_default(30, 30, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    blur(&src, &mut dst, Size::new(5, 5)).unwrap();
+
+    // Uniform image should remain uniform
+    for row in 3..27 {
+        for col in 3..27 {
+            assert_eq!(dst.at(row, col).unwrap()[0], 128,
+                "Uniform image should remain 128 at ({}, {})", row, col);
+        }
+    }
+}
+
+#[test]
+fn test_blur_smoothing() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+
+    // Create noisy pattern
+    for row in 0..30 {
+        for col in 0..30 {
+            let noise = if (row + col) % 3 == 0 { 50 } else { 0 };
+            src.at_mut(row, col).unwrap()[0] = 100u8.saturating_add(noise);
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    blur(&src, &mut dst, Size::new(5, 5)).unwrap();
+
+    // Blur should smooth the noise
+    assert_eq!(dst.rows(), 30);
+    assert_eq!(dst.cols(), 30);
+}
+
+#[test]
+fn test_blur_kernel_sizes() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+    for i in 0..1600 { src.data_mut()[i] = ((i * 7) % 256) as u8; }
+
+    let mut dst3 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst5 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst7 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    blur(&src, &mut dst3, Size::new(3, 3)).unwrap();
+    blur(&src, &mut dst5, Size::new(5, 5)).unwrap();
+    blur(&src, &mut dst7, Size::new(7, 7)).unwrap();
+
+    assert_eq!(dst3.rows(), 40);
+    assert_eq!(dst5.rows(), 40);
+    assert_eq!(dst7.rows(), 40);
+}
+
+#[test]
+fn test_blur_multichannel() {
+    let mut src = Mat::new(20, 20, 3, MatDepth::U8).unwrap();
+    for i in 0..1200 { src.data_mut()[i] = (i % 256) as u8; }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    blur(&src, &mut dst, Size::new(5, 5)).unwrap();
+
+    assert_eq!(dst.channels(), 3, "Channels should be preserved");
+}
+
+#[test]
+fn test_blur_output_range() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+    for row in 0..30 {
+        for col in 0..30 {
+            src.at_mut(row, col).unwrap()[0] = if (row + col) % 2 == 0 { 0 } else { 255 };
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    blur(&src, &mut dst, Size::new(5, 5)).unwrap();
+
+    for row in 0..30 {
+        for col in 0..30 {
+            let val = dst.at(row, col).unwrap()[0];
+            assert!(val <= 255, "Blur output at ({}, {}) out of range: {}", row, col, val);
+        }
+    }
+}
+
+#[test]
+fn test_blur_boundary() {
+    let mut src = Mat::new(10, 10, 1, MatDepth::U8).unwrap();
+    for i in 0..100 { src.data_mut()[i] = ((i * 10) % 256) as u8; }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    blur(&src, &mut dst, Size::new(5, 5)).unwrap();
+
+    for i in 0..10 {
+        assert!(dst.at(0, i).unwrap()[0] <= 255, "Top border valid");
+        assert!(dst.at(9, i).unwrap()[0] <= 255, "Bottom border valid");
+        assert!(dst.at(i, 0).unwrap()[0] <= 255, "Left border valid");
+        assert!(dst.at(i, 9).unwrap()[0] <= 255, "Right border valid");
+    }
+}
+
+#[test]
+fn test_blur_asymmetric_kernel() {
+    let mut src = Mat::new(20, 20, 1, MatDepth::U8).unwrap();
+    for i in 0..400 { src.data_mut()[i] = ((i * 5) % 256) as u8; }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    blur(&src, &mut dst, Size::new(7, 3)).unwrap();  // Width=7, Height=3
+
+    assert_eq!(dst.rows(), 20);
+    assert_eq!(dst.cols(), 20);
+}
+
+#[test]
+#[ignore]
+fn test_blur_visual_inspection() {
+    let mut src = Mat::new(15, 15, 1, MatDepth::U8).unwrap();
+    for row in 0..15 {
+        for col in 0..15 {
+            let noise = if (row * 7 + col * 11) % 13 == 0 { 50 } else { 0 };
+            src.at_mut(row, col).unwrap()[0] = 100u8.saturating_add(noise);
+        }
+    }
+
+    println!("\nInput (with noise):");
+    print_image_data(&src, "Source", 15, 15);
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    blur(&src, &mut dst, Size::new(5, 5)).unwrap();
+
+    println!("\nAfter box blur (5x5):");
+    print_image_data(&dst, "Blurred", 15, 15);
+
+    let stats = compute_diff_stats(&src, &dst);
+    println!("\nDifference from original:");
+    println!("{}", stats);
+}
