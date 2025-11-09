@@ -225,6 +225,16 @@ impl Mat {
         self.cols
     }
 
+    /// Get width (same as cols, opencv-rust compatible)
+    pub fn width(&self) -> usize {
+        self.cols
+    }
+
+    /// Get height (same as rows, opencv-rust compatible)
+    pub fn height(&self) -> usize {
+        self.rows
+    }
+
     pub fn channels(&self) -> usize {
         self.channels
     }
