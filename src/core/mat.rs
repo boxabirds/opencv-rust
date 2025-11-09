@@ -34,7 +34,9 @@ impl MatDepth {
 
 impl Mat {
     /// Create a new Mat with given dimensions and channels
-    pub fn new(rows: usize, cols: usize, channels: usize, depth: MatDepth) -> Result<Self> {
+    ///
+    /// This is the opencv-rust compatible constructor
+    pub fn new_rows_cols(rows: usize, cols: usize, channels: usize, depth: MatDepth) -> Result<Self> {
         if rows == 0 || cols == 0 {
             return Err(Error::InvalidDimensions(
                 "Rows and columns must be greater than 0".to_string(),
@@ -53,7 +55,32 @@ impl Mat {
         })
     }
 
-    /// Create a Mat filled with a scalar value
+    /// Create a new Mat with given dimensions and channels
+    ///
+    /// Convenience alias for new_rows_cols
+    pub fn new(rows: usize, cols: usize, channels: usize, depth: MatDepth) -> Result<Self> {
+        Self::new_rows_cols(rows, cols, channels, depth)
+    }
+
+    /// Create a new Mat from Size
+    pub fn new_size(size: Size, channels: usize, depth: MatDepth) -> Result<Self> {
+        Self::new_rows_cols(size.height as usize, size.width as usize, channels, depth)
+    }
+
+    /// Create a Mat filled with a scalar value (opencv-rust compatible name)
+    pub fn new_rows_cols_with_default(
+        rows: usize,
+        cols: usize,
+        channels: usize,
+        depth: MatDepth,
+        value: Scalar,
+    ) -> Result<Self> {
+        let mut mat = Self::new_rows_cols(rows, cols, channels, depth)?;
+        mat.set_to(value)?;
+        Ok(mat)
+    }
+
+    /// Create a Mat filled with a scalar value (convenience alias)
     pub fn new_with_default(
         rows: usize,
         cols: usize,
@@ -61,9 +88,23 @@ impl Mat {
         depth: MatDepth,
         value: Scalar,
     ) -> Result<Self> {
-        let mut mat = Self::new(rows, cols, channels, depth)?;
-        mat.set_to(value)?;
-        Ok(mat)
+        Self::new_rows_cols_with_default(rows, cols, channels, depth, value)
+    }
+
+    /// Create a Mat filled with a scalar value from Size
+    pub fn new_size_with_default(
+        size: Size,
+        channels: usize,
+        depth: MatDepth,
+        value: Scalar,
+    ) -> Result<Self> {
+        Self::new_rows_cols_with_default(
+            size.height as usize,
+            size.width as usize,
+            channels,
+            depth,
+            value,
+        )
     }
 
     /// Create a Mat from raw data
@@ -92,6 +133,85 @@ impl Mat {
         })
     }
 
+    /// Create a Mat from a slice (copies the data)
+    pub fn from_slice(
+        slice: &[u8],
+        rows: usize,
+        cols: usize,
+        channels: usize,
+        depth: MatDepth,
+    ) -> Result<Self> {
+        Self::from_raw(slice.to_vec(), rows, cols, channels, depth)
+    }
+
+    /// Create a Mat from a byte slice
+    pub fn from_bytes(
+        bytes: &[u8],
+        rows: usize,
+        cols: usize,
+        channels: usize,
+        depth: MatDepth,
+    ) -> Result<Self> {
+        Self::from_slice(bytes, rows, cols, channels, depth)
+    }
+
+    /// Create a zero-filled matrix
+    pub fn zeros(rows: usize, cols: usize, channels: usize, depth: MatDepth) -> Result<Self> {
+        Self::new_rows_cols(rows, cols, channels, depth)
+    }
+
+    /// Create a zero-filled matrix from Size
+    pub fn zeros_size(size: Size, channels: usize, depth: MatDepth) -> Result<Self> {
+        Self::new_size(size, channels, depth)
+    }
+
+    /// Create a one-filled matrix
+    pub fn ones(rows: usize, cols: usize, channels: usize, depth: MatDepth) -> Result<Self> {
+        Self::new_rows_cols_with_default(rows, cols, channels, depth, Scalar::all(1.0))
+    }
+
+    /// Create a one-filled matrix from Size
+    pub fn ones_size(size: Size, channels: usize, depth: MatDepth) -> Result<Self> {
+        Self::new_size_with_default(size, channels, depth, Scalar::all(1.0))
+    }
+
+    /// Create an identity matrix
+    pub fn eye(rows: usize, cols: usize, depth: MatDepth) -> Result<Self> {
+        let mut mat = Self::zeros(rows, cols, 1, depth)?;
+
+        let min_dim = rows.min(cols);
+        for i in 0..min_dim {
+            match depth {
+                MatDepth::U8 => {
+                    let pixel = mat.at_mut(i, i)?;
+                    pixel[0] = 1;
+                }
+                MatDepth::U16 => {
+                    let pixel = mat.at_mut(i, i)?;
+                    pixel[0] = 1;
+                    pixel[1] = 0;
+                }
+                MatDepth::F32 => {
+                    let pixel = mat.at_mut(i, i)?;
+                    let bytes = 1.0f32.to_ne_bytes();
+                    pixel[..4].copy_from_slice(&bytes);
+                }
+                MatDepth::F64 => {
+                    let pixel = mat.at_mut(i, i)?;
+                    let bytes = 1.0f64.to_ne_bytes();
+                    pixel[..8].copy_from_slice(&bytes);
+                }
+            }
+        }
+
+        Ok(mat)
+    }
+
+    /// Create an identity matrix from Size
+    pub fn eye_size(size: Size, depth: MatDepth) -> Result<Self> {
+        Self::eye(size.height as usize, size.width as usize, depth)
+    }
+
     /// Get dimensions
     pub fn size(&self) -> Size {
         Size::new(self.cols as i32, self.rows as i32)
@@ -115,6 +235,51 @@ impl Mat {
 
     pub fn is_empty(&self) -> bool {
         self.rows == 0 || self.cols == 0
+    }
+
+    /// Get element size in bytes
+    pub fn elem_size(&self) -> usize {
+        self.channels * self.depth.size()
+    }
+
+    /// Get element size for a single channel in bytes
+    pub fn elem_size1(&self) -> usize {
+        self.depth.size()
+    }
+
+    /// Get total number of elements
+    pub fn total(&self) -> usize {
+        self.rows * self.cols
+    }
+
+    /// Get the type identifier (combining depth and channels)
+    /// Returns a value compatible with OpenCV's type system
+    pub fn type_(&self) -> i32 {
+        // OpenCV type encoding: ((depth) + ((channels-1) << 3))
+        let depth_val = match self.depth {
+            MatDepth::U8 => 0,
+            MatDepth::U16 => 2,
+            MatDepth::F32 => 5,
+            MatDepth::F64 => 6,
+        };
+        depth_val + ((self.channels - 1) << 3) as i32
+    }
+
+    /// Get number of dimensions (always 2 for this implementation)
+    pub fn dims(&self) -> i32 {
+        2
+    }
+
+    /// Check if matrix data is stored continuously
+    /// Returns true if there are no gaps between rows
+    pub fn is_continuous(&self) -> bool {
+        // In our implementation, data is always stored continuously
+        true
+    }
+
+    /// Get the number of bytes each row occupies
+    pub fn step1(&self) -> usize {
+        self.cols * self.elem_size()
     }
 
     /// Get raw data
@@ -213,7 +378,7 @@ impl Mat {
             return Err(Error::OutOfRange("ROI exceeds matrix dimensions".to_string()));
         }
 
-        let mut result = Mat::new(h, w, self.channels, self.depth)?;
+        let mut result = Mat::new_rows_cols(h, w, self.channels, self.depth)?;
 
         for row in 0..h {
             for col in 0..w {
@@ -224,6 +389,44 @@ impl Mat {
         }
 
         Ok(result)
+    }
+
+    /// Create a mutable region of interest (ROI)
+    /// Note: This returns a new Mat, not a view, as we don't support shared mutable views
+    pub fn roi_mut(&mut self, rect: Rect) -> Result<Mat> {
+        self.roi(rect)
+    }
+
+    /// Extract a row range
+    pub fn rowscols(&self, row_start: usize, row_end: usize, col_start: usize, col_end: usize) -> Result<Mat> {
+        if row_end > self.rows || col_end > self.cols {
+            return Err(Error::OutOfRange("Row/column range exceeds matrix dimensions".to_string()));
+        }
+
+        let rect = Rect::new(
+            col_start as i32,
+            row_start as i32,
+            (col_end - col_start) as i32,
+            (row_end - row_start) as i32,
+        );
+        self.roi(rect)
+    }
+
+    /// Extract a mutable row range
+    pub fn rowscols_mut(&mut self, row_start: usize, row_end: usize, col_start: usize, col_end: usize) -> Result<Mat> {
+        self.rowscols(row_start, row_end, col_start, col_end)
+    }
+
+    /// Copy this matrix to another matrix
+    pub fn copy_to(&self, dst: &mut Mat) -> Result<()> {
+        if self.rows != dst.rows || self.cols != dst.cols || self.channels != dst.channels || self.depth != dst.depth {
+            return Err(Error::InvalidDimensions(
+                "Source and destination matrices must have the same dimensions".to_string(),
+            ));
+        }
+
+        dst.data.copy_from_slice(&self.data);
+        Ok(())
     }
 
     /// Clone the matrix
