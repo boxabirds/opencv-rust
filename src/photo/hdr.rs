@@ -258,7 +258,7 @@ impl TonemapDrago {
 
                     let ld = if lw > 0.0 {
                         let c1 = (lw / lw_max).ln() / (lw_max).ln();
-                        let c2 = (2.0 + 8.0 * ((lw / lw_max).powf(bias_power)));
+                        let c2 = 2.0 + 8.0 * ((lw / lw_max).powf(bias_power));
                         let c3 = c1.ln() / c2.ln();
                         c3 / (10.0_f32).ln()
                     } else {

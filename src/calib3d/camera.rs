@@ -137,7 +137,7 @@ pub fn calibrate_camera(
     let f = (width.max(height)) as f64;
 
     let mut camera = CameraMatrix::new(f, f, cx, cy);
-    let mut dist = DistortionCoefficients::zero();
+    let dist = DistortionCoefficients::zero();
 
     // Levenberg-Marquardt optimization
     let max_iterations = 50;
@@ -148,7 +148,7 @@ pub fn calibrate_camera(
         let mut num_points = 0;
 
         // Compute reprojection error and gradients
-        let mut jacobian = vec![vec![0.0; 9]; 0]; // 4 camera params + 5 distortion params
+        let jacobian = vec![vec![0.0; 9]; 0]; // 4 camera params + 5 distortion params
         let mut residuals = Vec::new();
 
         for (obj_pts, img_pts) in object_points.iter().zip(image_points.iter()) {

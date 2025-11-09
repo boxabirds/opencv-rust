@@ -1,5 +1,5 @@
 use crate::core::{Mat, MatDepth};
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Seam carving for content-aware image resizing
 pub struct SeamCarver {

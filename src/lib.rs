@@ -11,6 +11,9 @@
 //! - **Image I/O**: Reading and writing images in various formats
 //! - **Image Processing**: Color conversion, filtering, geometric transformations
 //! - **Thresholding**: Binary and adaptive thresholding
+
+// Allow unused code - many modules have stub/incomplete implementations
+#![allow(unused)]
 //!
 //! ## Example
 //!

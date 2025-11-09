@@ -1,5 +1,5 @@
 use crate::core::{Mat, MatDepth};
-use crate::core::types::{Rect, Point};
+use crate::core::types::Rect;
 use crate::error::{Error, Result};
 
 /// CAMShift (Continuously Adaptive Mean Shift) tracker

@@ -1,4 +1,4 @@
-use crate::core::{Mat, MatDepth};
+use crate::core::Mat;
 use crate::core::types::Point;
 use crate::error::{Error, Result};
 use crate::features2d::KeyPoint;
@@ -32,7 +32,7 @@ impl BRIEF {
     }
 
     fn generate_test_pairs(&mut self) {
-        use std::f64::consts::PI;
+        
 
         // Simple pseudo-random generator for reproducibility
         let mut rng = SimpleRng::new(42);

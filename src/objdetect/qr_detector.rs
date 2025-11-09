@@ -1,5 +1,5 @@
-use crate::core::{Mat, MatDepth};
-use crate::core::types::{Point, Point2f};
+use crate::core::Mat;
+use crate::core::types::Point2f;
 use crate::error::{Error, Result};
 
 /// QR Code detector

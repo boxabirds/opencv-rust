@@ -1,5 +1,5 @@
-use crate::core::{Mat, MatDepth};
-use crate::error::{Error, Result};
+use crate::core::Mat;
+use crate::error::Result;
 
 /// Super resolution using bicubic interpolation with edge enhancement
 pub struct SuperResolutionBicubic {

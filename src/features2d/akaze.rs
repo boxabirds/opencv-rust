@@ -1,7 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::features2d::KeyPoint;
 use crate::error::{Error, Result};
-use crate::core::types::{Point, Size};
+use crate::core::types::Point;
 use std::f64::consts::PI;
 
 /// AKAZE (Accelerated-KAZE) detector and descriptor
@@ -26,10 +26,10 @@ pub enum DescriptorType {
 
 #[derive(Debug, Clone, Copy)]
 pub enum DiffusivityType {
-    PM_G1,  // Perona-Malik, g1 = exp(-|dL|^2/k^2)
-    PM_G2,  // Perona-Malik, g2 = 1/(1 + dL^2/k^2)
-    WEICKERT, // Weickert diffusivity
-    CHARBONNIER, // Charbonnier diffusivity
+    PmG1,  // Perona-Malik, g1 = exp(-|dL|^2/k^2)
+    PmG2,  // Perona-Malik, g2 = 1/(1 + dL^2/k^2)
+    Weickert, // Weickert diffusivity
+    Charbonnier, // Charbonnier diffusivity
 }
 
 impl AKAZE {
@@ -41,7 +41,7 @@ impl AKAZE {
             threshold: 0.001,
             n_octaves: 4,
             n_octave_layers: 4,
-            diffusivity: DiffusivityType::PM_G2,
+            diffusivity: DiffusivityType::PmG2,
         }
     }
 
@@ -169,13 +169,13 @@ impl AKAZE {
     fn compute_diffusivity(&self, grad_mag_sq: f32, k: f64) -> f32 {
         let k_sq = (k * k) as f32;
         match self.diffusivity {
-            DiffusivityType::PM_G1 => {
+            DiffusivityType::PmG1 => {
                 (-grad_mag_sq / k_sq).exp()
             }
-            DiffusivityType::PM_G2 => {
+            DiffusivityType::PmG2 => {
                 1.0 / (1.0 + grad_mag_sq / k_sq)
             }
-            DiffusivityType::WEICKERT => {
+            DiffusivityType::Weickert => {
                 let lambda = 0.5;
                 if grad_mag_sq == 0.0 {
                     1.0
@@ -183,7 +183,7 @@ impl AKAZE {
                     1.0 - (-(lambda / grad_mag_sq).powf(4.0)).exp()
                 }
             }
-            DiffusivityType::CHARBONNIER => {
+            DiffusivityType::Charbonnier => {
                 1.0 / (1.0 + grad_mag_sq / k_sq).sqrt()
             }
         }

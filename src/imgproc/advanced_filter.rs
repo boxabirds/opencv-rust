@@ -121,34 +121,34 @@ pub fn guided_filter(
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
     // Compute mean of guide image
-    let mut mean_I = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
-    box_filter(guide, &mut mean_I, radius)?;
+    let mut mean_i = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
+    box_filter(guide, &mut mean_i, radius)?;
 
     // Compute mean of source image
     let mut mean_p = Mat::new(src.rows(), src.cols(), src.channels(), MatDepth::U8)?;
     box_filter(src, &mut mean_p, radius)?;
 
     // Compute correlation of guide
-    let mut corr_I = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
+    let mut corr_i = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
     for row in 0..guide.rows() {
         for col in 0..guide.cols() {
             let val = guide.at(row, col)?[0] as f64;
-            let corr_pixel = corr_I.at_mut(row, col)?;
+            let corr_pixel = corr_i.at_mut(row, col)?;
             corr_pixel[0] = ((val * val) / 255.0) as u8;
         }
     }
-    let mut mean_II = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
-    box_filter(&corr_I, &mut mean_II, radius)?;
+    let mut mean_ii = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
+    box_filter(&corr_i, &mut mean_ii, radius)?;
 
     // Compute variance
-    let mut var_I = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
+    let mut var_i = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
     for row in 0..guide.rows() {
         for col in 0..guide.cols() {
-            let mean_val = mean_I.at(row, col)?[0] as f64;
-            let mean_sq = mean_II.at(row, col)?[0] as f64;
+            let mean_val = mean_i.at(row, col)?[0] as f64;
+            let mean_sq = mean_ii.at(row, col)?[0] as f64;
             let variance = mean_sq - (mean_val * mean_val) / 255.0;
 
-            let var_pixel = var_I.at_mut(row, col)?;
+            let var_pixel = var_i.at_mut(row, col)?;
             var_pixel[0] = variance.max(0.0) as u8;
         }
     }
@@ -156,8 +156,8 @@ pub fn guided_filter(
     // Compute coefficients a and b
     for row in 0..src.rows() {
         for col in 0..src.cols() {
-            let var = var_I.at(row, col)?[0] as f64;
-            let mean_guide = mean_I.at(row, col)?[0] as f64;
+            let var = var_i.at(row, col)?[0] as f64;
+            let mean_guide = mean_i.at(row, col)?[0] as f64;
 
             let a = var / (var + eps);
             let mean_src = mean_p.at(row, col)?[0] as f64;

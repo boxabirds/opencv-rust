@@ -1,5 +1,4 @@
 use crate::core::types::{Point, Rect};
-use crate::error::{Error, Result};
 
 /// Compute perimeter of a contour
 pub fn arc_length(contour: &[Point], closed: bool) -> f64 {

@@ -1,4 +1,4 @@
-use crate::core::{Mat, MatDepth};
+use crate::core::Mat;
 use crate::core::types::Rect;
 use crate::error::{Error, Result};
 
