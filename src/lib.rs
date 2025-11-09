@@ -52,6 +52,9 @@ pub mod shape;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
+pub mod wasm;
+
 pub mod prelude {
     //! Convenience module that re-exports commonly used items
     pub use crate::core::{Mat, MatDepth, Point, Point2f, Size, Rect, Scalar};

@@ -1,6 +1,8 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::{Size, InterpolationFlag, Point2f};
 use crate::error::{Error, Result};
+
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 /// Resize an image

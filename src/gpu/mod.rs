@@ -15,7 +15,7 @@ pub use device::GpuContext;
 /// Initialize GPU context (native only - blocks)
 #[cfg(all(feature = "gpu", not(target_arch = "wasm32")))]
 pub fn init_gpu() -> bool {
-    GpuContext::init().is_some()
+    GpuContext::init()
 }
 
 /// Check if GPU is available

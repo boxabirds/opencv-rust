@@ -37,10 +37,6 @@ pub fn gaussian_blur_gpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> R
         ));
     }
 
-    let ctx = GpuContext::get().ok_or_else(|| {
-        Error::GpuNotAvailable("GPU context not initialized".to_string())
-    })?;
-
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
     let kernel_size = ksize.width as usize;
@@ -49,8 +45,13 @@ pub fn gaussian_blur_gpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> R
     // Execute horizontal and vertical passes using intermediate buffer
     // (avoids borrow checker issue with dst being both source and destination)
     let mut temp = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
-    execute_blur_pass(ctx, src, &mut temp, &kernel_weights, sigma, true)?;
-    execute_blur_pass(ctx, &temp, dst, &kernel_weights, sigma, false)?;
+
+    GpuContext::with_gpu(|ctx| {
+        execute_blur_pass(ctx, src, &mut temp, &kernel_weights, sigma, true)?;
+        execute_blur_pass(ctx, &temp, dst, &kernel_weights, sigma, false)?;
+        Ok::<(), Error>(())
+    })
+    .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))??;
 
     Ok(())
 }
