@@ -1,6 +1,8 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::Size;
 use crate::error::{Error, Result};
+
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 /// Apply Gaussian blur to an image
@@ -17,6 +19,23 @@ pub fn gaussian_blur(src: &Mat, dst: &mut Mat, ksize: Size, sigma_x: f64) -> Res
         ));
     }
 
+    // Try GPU acceleration if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() && ksize.width == ksize.height {
+            if let Ok(()) = crate::gpu::ops::gaussian_blur_gpu(src, dst, ksize, sigma_x) {
+                return Ok(());
+            }
+            // Fall through to CPU on GPU failure
+        }
+    }
+
+    // CPU implementation (fallback or default)
+    gaussian_blur_cpu(src, dst, ksize, sigma_x)
+}
+
+/// CPU implementation of Gaussian blur
+fn gaussian_blur_cpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma_x: f64) -> Result<()> {
     let kernel = create_gaussian_kernel(ksize, sigma_x)?;
     apply_separable_filter(src, dst, &kernel, &kernel)
 }

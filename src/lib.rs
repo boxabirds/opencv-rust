@@ -49,6 +49,9 @@ pub mod flann;
 pub mod stitching;
 pub mod shape;
 
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
 pub mod prelude {
     //! Convenience module that re-exports commonly used items
     pub use crate::core::{Mat, MatDepth, Point, Point2f, Size, Rect, Scalar};
