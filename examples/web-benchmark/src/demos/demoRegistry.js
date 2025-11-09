@@ -492,6 +492,357 @@ export const demos = [
     ]
   },
 
+  // ========== HISTOGRAM ==========
+  {
+    id: 'hist_equalize',
+    name: 'Histogram Equalization',
+    description: 'Improve contrast using histogram equalization',
+    category: 'histogram',
+    implemented: false,
+    gpuAccelerated: false,
+    params: []
+  },
+  {
+    id: 'hist_calc',
+    name: 'Calculate Histogram',
+    description: 'Calculate and display image histogram',
+    category: 'histogram',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'bins',
+        name: 'Number of Bins',
+        type: 'slider',
+        min: 16,
+        max: 256,
+        step: 16,
+        default: 256
+      }
+    ]
+  },
+
+  // ========== CONTOURS ==========
+  {
+    id: 'find_contours',
+    name: 'Find Contours',
+    description: 'Detect and draw contours in image',
+    category: 'contours',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'mode',
+        name: 'Retrieval Mode',
+        type: 'select',
+        options: ['External', 'List', 'Tree'],
+        default: 'External'
+      }
+    ]
+  },
+  {
+    id: 'contour_area',
+    name: 'Contour Area',
+    description: 'Calculate and filter contours by area',
+    category: 'contours',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'minArea',
+        name: 'Minimum Area',
+        type: 'slider',
+        min: 0,
+        max: 10000,
+        step: 100,
+        default: 100
+      }
+    ]
+  },
+
+  // ========== FEATURES ==========
+  {
+    id: 'harris_corners',
+    name: 'Harris Corner Detection',
+    description: 'Detect corners using Harris algorithm',
+    category: 'features',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'blockSize',
+        name: 'Block Size',
+        type: 'slider',
+        min: 2,
+        max: 31,
+        step: 1,
+        default: 2
+      },
+      {
+        id: 'ksize',
+        name: 'Sobel Kernel',
+        type: 'select',
+        options: [3, 5, 7],
+        default: 3
+      }
+    ]
+  },
+  {
+    id: 'sift',
+    name: 'SIFT Features',
+    description: 'Scale-Invariant Feature Transform',
+    category: 'features',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'nfeatures',
+        name: 'Max Features',
+        type: 'slider',
+        min: 0,
+        max: 500,
+        step: 50,
+        default: 0
+      }
+    ]
+  },
+
+  // ========== HOUGH ==========
+  {
+    id: 'hough_lines',
+    name: 'Hough Line Detection',
+    description: 'Detect straight lines using Hough transform',
+    category: 'hough',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'threshold',
+        name: 'Threshold',
+        type: 'slider',
+        min: 50,
+        max: 200,
+        step: 10,
+        default: 100
+      }
+    ]
+  },
+  {
+    id: 'hough_circles',
+    name: 'Hough Circle Detection',
+    description: 'Detect circles using Hough transform',
+    category: 'hough',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'minRadius',
+        name: 'Min Radius',
+        type: 'slider',
+        min: 5,
+        max: 100,
+        step: 5,
+        default: 10
+      },
+      {
+        id: 'maxRadius',
+        name: 'Max Radius',
+        type: 'slider',
+        min: 10,
+        max: 200,
+        step: 10,
+        default: 100
+      }
+    ]
+  },
+
+  // ========== DETECTION ==========
+  {
+    id: 'face_detect',
+    name: 'Face Detection',
+    description: 'Detect faces using Haar Cascade',
+    category: 'detection',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'scaleFactor',
+        name: 'Scale Factor',
+        type: 'slider',
+        min: 1.1,
+        max: 2.0,
+        step: 0.1,
+        default: 1.3
+      }
+    ]
+  },
+  {
+    id: 'qr_detect',
+    name: 'QR Code Detection',
+    description: 'Detect and decode QR codes',
+    category: 'detection',
+    implemented: false,
+    gpuAccelerated: false,
+    params: []
+  },
+
+  // ========== VIDEO ==========
+  {
+    id: 'optical_flow',
+    name: 'Optical Flow',
+    description: 'Calculate optical flow between frames',
+    category: 'video',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'method',
+        name: 'Method',
+        type: 'select',
+        options: ['Lucas-Kanade', 'Farneback'],
+        default: 'Farneback'
+      }
+    ]
+  },
+  {
+    id: 'background_sub',
+    name: 'Background Subtraction',
+    description: 'Separate foreground from background',
+    category: 'video',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'history',
+        name: 'History',
+        type: 'slider',
+        min: 50,
+        max: 500,
+        step: 50,
+        default: 200
+      }
+    ]
+  },
+
+  // ========== CALIBRATION ==========
+  {
+    id: 'camera_calib',
+    name: 'Camera Calibration',
+    description: 'Calibrate camera using checkerboard',
+    category: 'calibration',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'patternWidth',
+        name: 'Pattern Width',
+        type: 'slider',
+        min: 5,
+        max: 15,
+        step: 1,
+        default: 9
+      },
+      {
+        id: 'patternHeight',
+        name: 'Pattern Height',
+        type: 'slider',
+        min: 5,
+        max: 15,
+        step: 1,
+        default: 6
+      }
+    ]
+  },
+
+  // ========== ML ==========
+  {
+    id: 'kmeans',
+    name: 'K-Means Clustering',
+    description: 'Color quantization using K-Means',
+    category: 'ml',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'k',
+        name: 'Number of Clusters',
+        type: 'slider',
+        min: 2,
+        max: 16,
+        step: 1,
+        default: 8
+      }
+    ]
+  },
+  {
+    id: 'svm_train',
+    name: 'SVM Training',
+    description: 'Train Support Vector Machine',
+    category: 'ml',
+    implemented: false,
+    gpuAccelerated: false,
+    params: []
+  },
+
+  // ========== PHOTO ==========
+  {
+    id: 'denoise',
+    name: 'Denoising',
+    description: 'Remove noise from photos',
+    category: 'photo',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'h',
+        name: 'Filter Strength',
+        type: 'slider',
+        min: 1,
+        max: 20,
+        step: 1,
+        default: 10
+      }
+    ]
+  },
+  {
+    id: 'inpaint',
+    name: 'Inpainting',
+    description: 'Remove objects and fill gaps',
+    category: 'photo',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'radius',
+        name: 'Inpaint Radius',
+        type: 'slider',
+        min: 1,
+        max: 20,
+        step: 1,
+        default: 3
+      }
+    ]
+  },
+
+  // ========== STITCHING ==========
+  {
+    id: 'panorama',
+    name: 'Panorama Stitching',
+    description: 'Stitch multiple images into panorama',
+    category: 'stitching',
+    implemented: false,
+    gpuAccelerated: false,
+    params: [
+      {
+        id: 'mode',
+        name: 'Stitching Mode',
+        type: 'select',
+        options: ['Panorama', 'Scan'],
+        default: 'Panorama'
+      }
+    ]
+  },
+
   // ========== DRAWING ==========
   {
     id: 'draw_line',

@@ -20,8 +20,10 @@ export default function DemoControls() {
 
   if (!demo || demo.params.length === 0) {
     return (
-      <div className="demo-controls">
-        <p className="no-params">No parameters for this operation</p>
+      <div className="card bg-dark text-light">
+        <div className="card-body">
+          <p className="text-center text-light mb-0">No parameters for this operation</p>
+        </div>
       </div>
     );
   }
@@ -32,10 +34,12 @@ export default function DemoControls() {
     switch (param.type) {
       case 'slider':
         return (
-          <div key={param.id} className="control-group">
-            <label>
-              <span className="control-label">{param.name}</span>
-              <span className="control-value">{value}</span>
+          <div key={param.id} className="mb-3">
+            <label className="form-label">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-light">{param.name}</span>
+                <span className="badge bg-secondary">{value}</span>
+              </div>
             </label>
             <input
               type="range"
@@ -44,24 +48,24 @@ export default function DemoControls() {
               step={param.step}
               value={value}
               onChange={(e) => setDemoParam(param.id, parseFloat(e.target.value))}
-              className="slider"
+              className="form-range"
             />
             {param.description && (
-              <p className="control-description">{param.description}</p>
+              <p className="text-muted small mt-1 mb-0">{param.description}</p>
             )}
           </div>
         );
 
       case 'select':
         return (
-          <div key={param.id} className="control-group">
-            <label>
-              <span className="control-label">{param.name}</span>
+          <div key={param.id} className="mb-3">
+            <label className="form-label text-light">
+              {param.name}
             </label>
             <select
               value={value}
               onChange={(e) => setDemoParam(param.id, e.target.value)}
-              className="select"
+              className="form-select bg-dark text-light border-secondary"
             >
               {param.options.map((option) => (
                 <option key={option} value={option}>
@@ -70,26 +74,29 @@ export default function DemoControls() {
               ))}
             </select>
             {param.description && (
-              <p className="control-description">{param.description}</p>
+              <p className="text-muted small mt-1 mb-0">{param.description}</p>
             )}
           </div>
         );
 
       case 'color':
         return (
-          <div key={param.id} className="control-group">
-            <label>
-              <span className="control-label">{param.name}</span>
-              <span className="control-value">{value}</span>
+          <div key={param.id} className="mb-3">
+            <label className="form-label">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-light">{param.name}</span>
+                <span className="badge bg-secondary">{value}</span>
+              </div>
             </label>
             <input
               type="color"
               value={value}
               onChange={(e) => setDemoParam(param.id, e.target.value)}
-              className="color-picker"
+              className="form-control form-control-color bg-dark border-secondary"
+              style={{ width: '100%', height: '40px' }}
             />
             {param.description && (
-              <p className="control-description">{param.description}</p>
+              <p className="text-muted small mt-1 mb-0">{param.description}</p>
             )}
           </div>
         );
@@ -100,13 +107,15 @@ export default function DemoControls() {
   };
 
   return (
-    <div className="demo-controls">
-      <div className="demo-header">
-        <h3>{demo.name}</h3>
-        <p className="demo-description">{demo.description}</p>
-      </div>
-      <div className="controls-grid">
-        {demo.params.map(renderParam)}
+    <div className="card bg-dark text-light">
+      <div className="card-body">
+        <div className="mb-4">
+          <h3 className="card-title h5">{demo.name}</h3>
+          <p className="text-muted mb-0">{demo.description}</p>
+        </div>
+        <div>
+          {demo.params.map(renderParam)}
+        </div>
       </div>
     </div>
   );

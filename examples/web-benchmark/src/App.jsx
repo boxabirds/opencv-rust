@@ -20,8 +20,6 @@ import InputOutput from './components/InputOutput';
 import PerformanceMetrics from './components/PerformanceMetrics';
 import History from './components/History';
 
-import './App.css';
-
 function App() {
   const {
     wasmLoaded,
@@ -187,49 +185,60 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <h1>OpenCV-Rust Interactive Demos</h1>
-          <div className="header-status">
-            <span className={`status-badge ${wasmLoaded ? 'success' : 'warning'}`}>
-              {wasmLoaded ? '✓ WASM Ready' : '⏳ Loading...'}
-            </span>
-            <span className={`status-badge ${gpuAvailable ? 'success' : 'warning'}`}>
-              {gpuAvailable === null ? '⏳ GPU Init...' :
-               gpuAvailable ? '✓ WebGPU' : '⚠ CPU Only'}
-            </span>
+    <div className="d-flex flex-column vh-100 bg-dark text-light">
+      {/* Header */}
+      <header className="bg-secondary border-bottom border-primary py-3">
+        <div className="container-fluid">
+          <div className="d-flex justify-content-between align-items-center">
+            <h1 className="h3 mb-0 text-primary">OpenCV-Rust Interactive Demos</h1>
+            <div className="d-flex gap-2">
+              <span className={`badge ${wasmLoaded ? 'bg-success' : 'bg-warning'}`}>
+                {wasmLoaded ? '✓ WASM Ready' : '⏳ Loading...'}
+              </span>
+              <span className={`badge ${gpuAvailable ? 'bg-success' : 'bg-warning'}`}>
+                {gpuAvailable === null ? '⏳ GPU Init...' :
+                 gpuAvailable ? '✓ WebGPU' : '⚠ CPU Only'}
+              </span>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="app-content">
-        <Sidebar />
+      {/* Main Content */}
+      <div className="container-fluid flex-grow-1 overflow-hidden">
+        <div className="row h-100">
+          {/* Sidebar */}
+          <div className="col-md-3 col-lg-2 bg-secondary border-end border-dark p-0 overflow-auto">
+            <Sidebar />
+          </div>
 
-        <main className="main-panel">
-          <section className="controls-section">
-            <DemoControls />
-          </section>
+          {/* Main Panel */}
+          <main className="col-md-9 col-lg-10 p-4 overflow-auto">
+            <div className="mb-4">
+              <DemoControls />
+            </div>
 
-          <section className="io-section">
-            <InputOutput onProcess={processImage} />
-          </section>
+            <div className="mb-4">
+              <InputOutput onProcess={processImage} />
+            </div>
 
-          <section className="metrics-section">
-            <PerformanceMetrics />
-          </section>
+            <div className="mb-4">
+              <PerformanceMetrics />
+            </div>
 
-          <section className="history-section-container">
-            <History />
-          </section>
-        </main>
+            <div>
+              <History />
+            </div>
+          </main>
+        </div>
       </div>
 
-      <footer className="app-footer">
-        <p>
+      {/* Footer */}
+      <footer className="bg-secondary border-top border-dark py-2 text-center">
+        <small className="text-muted">
           OpenCV-Rust v{wasmLoaded && getVersion()} • Pure Rust Image Processing •
           {gpuAvailable ? ' WebGPU Accelerated' : ' CPU Mode'}
-        </p>
+        </small>
       </footer>
     </div>
   );
