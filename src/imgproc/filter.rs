@@ -147,55 +147,145 @@ fn apply_separable_filter(
     kernel_x: &[f32],
     kernel_y: &[f32],
 ) -> Result<()> {
+    let rows = src.rows();
+    let cols = src.cols();
+    let channels = src.channels();
+
     // First apply horizontal kernel
-    let temp = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
-    let mut temp = temp;
+    let mut temp = Mat::new(rows, cols, channels, src.depth())?;
 
     let half_x = kernel_x.len() / 2;
 
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            let mut sums = vec![0f32; src.channels()];
+    // Horizontal pass - use unsafe for performance
+    unsafe {
+        for row in 0..rows {
+            for col in 0..cols {
+                // Use fixed-size array instead of Vec - supports up to 4 channels (RGBA)
+                let mut sums = [0f32; 4];
 
-            for (i, &k) in kernel_x.iter().enumerate() {
-                let offset = i as i32 - half_x as i32;
-                let c = (col as i32 + offset).max(0).min(src.cols() as i32 - 1) as usize;
+                for (i, &k) in kernel_x.iter().enumerate() {
+                    let offset = i as i32 - half_x as i32;
+                    let c = (col as i32 + offset).max(0).min(cols as i32 - 1) as usize;
 
-                let pixel = src.at(row, c)?;
-                for ch in 0..src.channels() {
-                    sums[ch] += pixel[ch] as f32 * k;
+                    let pixel = src.at_unchecked(row, c);
+
+                    // Manually unroll for common cases
+                    match channels {
+                        1 => {
+                            sums[0] += pixel[0] as f32 * k;
+                        }
+                        3 => {
+                            sums[0] += pixel[0] as f32 * k;
+                            sums[1] += pixel[1] as f32 * k;
+                            sums[2] += pixel[2] as f32 * k;
+                        }
+                        4 => {
+                            sums[0] += pixel[0] as f32 * k;
+                            sums[1] += pixel[1] as f32 * k;
+                            sums[2] += pixel[2] as f32 * k;
+                            sums[3] += pixel[3] as f32 * k;
+                        }
+                        _ => {
+                            for ch in 0..channels {
+                                sums[ch] += pixel[ch] as f32 * k;
+                            }
+                        }
+                    }
                 }
-            }
 
-            let temp_pixel = temp.at_mut(row, col)?;
-            for ch in 0..src.channels() {
-                temp_pixel[ch] = sums[ch].round().min(255.0).max(0.0) as u8;
+                let temp_pixel = temp.at_mut_unchecked(row, col);
+
+                // Clamp and convert - unrolled for common cases
+                match channels {
+                    1 => {
+                        temp_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                    }
+                    3 => {
+                        temp_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                        temp_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
+                        temp_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
+                    }
+                    4 => {
+                        temp_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                        temp_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
+                        temp_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
+                        temp_pixel[3] = sums[3].round().clamp(0.0, 255.0) as u8;
+                    }
+                    _ => {
+                        for ch in 0..channels {
+                            temp_pixel[ch] = sums[ch].round().clamp(0.0, 255.0) as u8;
+                        }
+                    }
+                }
             }
         }
     }
 
     // Then apply vertical kernel
-    *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
+    *dst = Mat::new(rows, cols, channels, src.depth())?;
 
     let half_y = kernel_y.len() / 2;
 
-    for row in 0..temp.rows() {
-        for col in 0..temp.cols() {
-            let mut sums = vec![0f32; temp.channels()];
+    // Vertical pass - use unsafe for performance
+    unsafe {
+        for row in 0..rows {
+            for col in 0..cols {
+                let mut sums = [0f32; 4];
 
-            for (i, &k) in kernel_y.iter().enumerate() {
-                let offset = i as i32 - half_y as i32;
-                let r = (row as i32 + offset).max(0).min(temp.rows() as i32 - 1) as usize;
+                for (i, &k) in kernel_y.iter().enumerate() {
+                    let offset = i as i32 - half_y as i32;
+                    let r = (row as i32 + offset).max(0).min(rows as i32 - 1) as usize;
 
-                let pixel = temp.at(r, col)?;
-                for ch in 0..temp.channels() {
-                    sums[ch] += pixel[ch] as f32 * k;
+                    let pixel = temp.at_unchecked(r, col);
+
+                    // Manually unroll for common cases
+                    match channels {
+                        1 => {
+                            sums[0] += pixel[0] as f32 * k;
+                        }
+                        3 => {
+                            sums[0] += pixel[0] as f32 * k;
+                            sums[1] += pixel[1] as f32 * k;
+                            sums[2] += pixel[2] as f32 * k;
+                        }
+                        4 => {
+                            sums[0] += pixel[0] as f32 * k;
+                            sums[1] += pixel[1] as f32 * k;
+                            sums[2] += pixel[2] as f32 * k;
+                            sums[3] += pixel[3] as f32 * k;
+                        }
+                        _ => {
+                            for ch in 0..channels {
+                                sums[ch] += pixel[ch] as f32 * k;
+                            }
+                        }
+                    }
                 }
-            }
 
-            let dst_pixel = dst.at_mut(row, col)?;
-            for ch in 0..temp.channels() {
-                dst_pixel[ch] = sums[ch].round().min(255.0).max(0.0) as u8;
+                let dst_pixel = dst.at_mut_unchecked(row, col);
+
+                // Clamp and convert - unrolled for common cases
+                match channels {
+                    1 => {
+                        dst_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                    }
+                    3 => {
+                        dst_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
+                    }
+                    4 => {
+                        dst_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
+                        dst_pixel[3] = sums[3].round().clamp(0.0, 255.0) as u8;
+                    }
+                    _ => {
+                        for ch in 0..channels {
+                            dst_pixel[ch] = sums[ch].round().clamp(0.0, 255.0) as u8;
+                        }
+                    }
+                }
             }
         }
     }

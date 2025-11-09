@@ -154,6 +154,30 @@ impl Mat {
         Ok(&mut self.data[idx..end])
     }
 
+    /// Get pixel value at (row, col) without bounds checking
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that row < rows and col < cols
+    #[inline(always)]
+    pub unsafe fn at_unchecked(&self, row: usize, col: usize) -> &[u8] {
+        let idx = (row * self.cols + col) * self.channels * self.depth.size();
+        let end = idx + self.channels * self.depth.size();
+        self.data.get_unchecked(idx..end)
+    }
+
+    /// Get mutable pixel value at (row, col) without bounds checking
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that row < rows and col < cols
+    #[inline(always)]
+    pub unsafe fn at_mut_unchecked(&mut self, row: usize, col: usize) -> &mut [u8] {
+        let idx = (row * self.cols + col) * self.channels * self.depth.size();
+        let end = idx + self.channels * self.depth.size();
+        self.data.get_unchecked_mut(idx..end)
+    }
+
     /// Set all pixels to a scalar value
     pub fn set_to(&mut self, value: Scalar) -> Result<()> {
         if self.depth != MatDepth::U8 {
