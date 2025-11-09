@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 /// Artificial Neural Network (Multi-Layer Perceptron)
-pub struct ANN_MLP {
+pub struct AnnMlp {
     layer_sizes: Vec<usize>,
     weights: Vec<Vec<Vec<f64>>>,
     biases: Vec<Vec<f64>>,
@@ -19,7 +19,7 @@ pub enum ActivationFunction {
     LeakyReLU,
 }
 
-impl ANN_MLP {
+impl AnnMlp {
     /// Create new neural network with specified layer sizes
     pub fn new(layer_sizes: Vec<usize>) -> Self {
         if layer_sizes.len() < 2 {
@@ -290,14 +290,14 @@ mod tests {
 
     #[test]
     fn test_ann_creation() {
-        let ann = ANN_MLP::new(vec![2, 4, 1]);
+        let ann = AnnMlp::new(vec![2, 4, 1]);
         assert_eq!(ann.layer_sizes, vec![2, 4, 1]);
         assert_eq!(ann.weights.len(), 2);
     }
 
     #[test]
     fn test_ann_forward_pass() {
-        let ann = ANN_MLP::new(vec![2, 3, 1]);
+        let ann = AnnMlp::new(vec![2, 3, 1]);
         let input = vec![0.5, 0.3];
         let result = ann.predict(&input);
         assert!(result.is_ok());
@@ -306,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_ann_training() {
-        let mut ann = ANN_MLP::new(vec![2, 4, 1]);
+        let mut ann = AnnMlp::new(vec![2, 4, 1]);
 
         // XOR problem
         let inputs = vec![
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_activation_functions() {
-        let ann = ANN_MLP::new(vec![2, 3, 1]);
+        let ann = AnnMlp::new(vec![2, 3, 1]);
 
         assert!((ann.activate(0.0) - 0.5).abs() < 0.01); // Sigmoid at 0
         assert!(ann.activate(10.0) > 0.9); // Sigmoid at large positive
@@ -334,14 +334,14 @@ mod tests {
 
     #[test]
     fn test_set_learning_rate() {
-        let mut ann = ANN_MLP::new(vec![2, 3, 1]);
+        let mut ann = AnnMlp::new(vec![2, 3, 1]);
         ann.set_learning_rate(0.1);
         assert_eq!(ann.learning_rate, 0.1);
     }
 
     #[test]
     fn test_set_activation() {
-        let mut ann = ANN_MLP::new(vec![2, 3, 1]);
+        let mut ann = AnnMlp::new(vec![2, 3, 1]);
         ann.set_activation_function(ActivationFunction::ReLU);
         assert_eq!(ann.activation, ActivationFunction::ReLU);
     }
