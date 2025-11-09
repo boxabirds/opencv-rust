@@ -1,6 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::core::types::Size;
 use crate::error::{Error, Result};
+use rayon::prelude::*;
 
 /// Apply Gaussian blur to an image
 pub fn gaussian_blur(src: &Mat, dst: &mut Mat, ksize: Size, sigma_x: f64) -> Result<()> {
@@ -140,7 +141,7 @@ fn create_gaussian_kernel(ksize: Size, sigma: f64) -> Result<Vec<f32>> {
     Ok(kernel)
 }
 
-/// Apply separable filter (for efficiency)
+/// Apply separable filter (for efficiency) - parallel version
 fn apply_separable_filter(
     src: &Mat,
     dst: &mut Mat,
@@ -151,25 +152,30 @@ fn apply_separable_filter(
     let cols = src.cols();
     let channels = src.channels();
 
-    // First apply horizontal kernel
+    // First apply horizontal kernel - PARALLEL
     let mut temp = Mat::new(rows, cols, channels, src.depth())?;
 
     let half_x = kernel_x.len() / 2;
 
-    // Horizontal pass - use unsafe for performance
-    unsafe {
-        for row in 0..rows {
+    // Use rayon::scope to safely share references
+    rayon::scope(|s| {
+        let temp_data = temp.data_mut();
+        let src_data = src.data();
+
+        // Split temp data into rows for parallel processing
+        let row_size = cols * channels;
+
+        temp_data.par_chunks_mut(row_size).enumerate().for_each(|(row, temp_row)| {
             for col in 0..cols {
-                // Use fixed-size array instead of Vec - supports up to 4 channels (RGBA)
                 let mut sums = [0f32; 4];
 
                 for (i, &k) in kernel_x.iter().enumerate() {
                     let offset = i as i32 - half_x as i32;
                     let c = (col as i32 + offset).max(0).min(cols as i32 - 1) as usize;
 
-                    let pixel = src.at_unchecked(row, c);
+                    let src_idx = (row * cols + c) * channels;
+                    let pixel = &src_data[src_idx..src_idx + channels];
 
-                    // Manually unroll for common cases
                     match channels {
                         1 => {
                             sums[0] += pixel[0] as f32 * k;
@@ -193,9 +199,9 @@ fn apply_separable_filter(
                     }
                 }
 
-                let temp_pixel = temp.at_mut_unchecked(row, col);
+                let temp_idx = col * channels;
+                let temp_pixel = &mut temp_row[temp_idx..temp_idx + channels];
 
-                // Clamp and convert - unrolled for common cases
                 match channels {
                     1 => {
                         temp_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
@@ -218,17 +224,22 @@ fn apply_separable_filter(
                     }
                 }
             }
-        }
-    }
+        });
+    });
 
-    // Then apply vertical kernel
+    // Then apply vertical kernel - PARALLEL
     *dst = Mat::new(rows, cols, channels, src.depth())?;
 
     let half_y = kernel_y.len() / 2;
 
-    // Vertical pass - use unsafe for performance
-    unsafe {
-        for row in 0..rows {
+    // Vertical pass
+    rayon::scope(|s| {
+        let dst_data = dst.data_mut();
+        let temp_data = temp.data();
+
+        let row_size = cols * channels;
+
+        dst_data.par_chunks_mut(row_size).enumerate().for_each(|(row, dst_row)| {
             for col in 0..cols {
                 let mut sums = [0f32; 4];
 
@@ -236,9 +247,9 @@ fn apply_separable_filter(
                     let offset = i as i32 - half_y as i32;
                     let r = (row as i32 + offset).max(0).min(rows as i32 - 1) as usize;
 
-                    let pixel = temp.at_unchecked(r, col);
+                    let temp_idx = (r * cols + col) * channels;
+                    let pixel = &temp_data[temp_idx..temp_idx + channels];
 
-                    // Manually unroll for common cases
                     match channels {
                         1 => {
                             sums[0] += pixel[0] as f32 * k;
@@ -262,9 +273,9 @@ fn apply_separable_filter(
                     }
                 }
 
-                let dst_pixel = dst.at_mut_unchecked(row, col);
+                let dst_idx = col * channels;
+                let dst_pixel = &mut dst_row[dst_idx..dst_idx + channels];
 
-                // Clamp and convert - unrolled for common cases
                 match channels {
                     1 => {
                         dst_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
@@ -287,8 +298,8 @@ fn apply_separable_filter(
                     }
                 }
             }
-        }
-    }
+        });
+    });
 
     Ok(())
 }
