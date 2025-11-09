@@ -347,6 +347,7 @@ impl BackgroundSubtractorKNN {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::{MatDepth, types::Scalar};
 
     #[test]
     fn test_mog2_background_subtraction() {

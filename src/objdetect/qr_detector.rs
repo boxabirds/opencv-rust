@@ -256,7 +256,7 @@ struct FinderPattern {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::Scalar;
+    use crate::core::{MatDepth, types::Scalar};
 
     #[test]
     fn test_qr_detector_creation() {

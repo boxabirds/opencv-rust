@@ -340,7 +340,7 @@ pub fn total_variation_denoise(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::Scalar;
+    use crate::core::{MatDepth, types::Scalar};
 
     #[test]
     fn test_nl_means_colored() {

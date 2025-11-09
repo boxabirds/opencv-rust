@@ -181,7 +181,7 @@ fn calculate_patch_distance(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::Scalar;
+    use crate::core::{MatDepth, types::Scalar};
 
     #[test]
     fn test_inpaint() {

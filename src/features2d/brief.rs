@@ -173,7 +173,7 @@ impl SimpleRng {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::{Scalar, Point};
+    use crate::core::{MatDepth, types::{Scalar, Point}};
 
     #[test]
     fn test_brief_descriptor() {

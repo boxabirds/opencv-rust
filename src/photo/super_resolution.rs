@@ -290,7 +290,7 @@ impl SuperResolutionBP {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::Scalar;
+    use crate::core::{MatDepth, types::Scalar};
 
     #[test]
     fn test_super_resolution_bicubic() {
