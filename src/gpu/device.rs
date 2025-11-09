@@ -1,6 +1,9 @@
 #[cfg(feature = "gpu")]
 use wgpu;
 
+#[cfg(all(feature = "gpu", target_arch = "wasm32"))]
+use web_sys;
+
 #[cfg(feature = "gpu")]
 pub struct GpuContext {
     pub device: wgpu::Device,
@@ -102,11 +105,13 @@ impl GpuContext {
             return true;
         }
 
+        // Create instance with browser-specific backends
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
+            backends: wgpu::Backends::BROWSER_WEBGPU,
             ..Default::default()
         });
 
+        // Request adapter - this can fail if WebGPU not available
         let adapter = match instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -117,11 +122,13 @@ impl GpuContext {
         {
             Some(a) => a,
             None => {
+                // Mark as failed
                 GPU_CONTEXT.with(|ctx| *ctx.borrow_mut() = None);
                 return false;
             }
         };
 
+        // Request device
         let (device, queue) = match adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -134,7 +141,9 @@ impl GpuContext {
             .await
         {
             Ok(dq) => dq,
-            Err(_) => {
+            Err(e) => {
+                // Log error for debugging
+                web_sys::console::error_1(&format!("Failed to request device: {:?}", e).into());
                 GPU_CONTEXT.with(|ctx| *ctx.borrow_mut() = None);
                 return false;
             }

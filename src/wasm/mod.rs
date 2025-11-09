@@ -33,13 +33,25 @@ pub fn init_thread_pool(num_threads: usize) -> Result<(), JsValue> {
 #[cfg(all(target_arch = "wasm32", feature = "gpu"))]
 #[wasm_bindgen(js_name = initGpu)]
 pub async fn init_gpu_wasm() -> bool {
+    // Wrap in a catch to handle any wasm-bindgen async issues
+    match async_init_gpu_impl().await {
+        Ok(success) => success,
+        Err(e) => {
+            web_sys::console::error_1(&format!("GPU initialization error: {:?}", e).into());
+            false
+        }
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu"))]
+async fn async_init_gpu_impl() -> Result<bool, JsValue> {
     let success = crate::gpu::device::GpuContext::init_async().await;
     if success {
         web_sys::console::log_1(&"✓ GPU initialized successfully".into());
     } else {
         web_sys::console::log_1(&"⚠ GPU not available, falling back to CPU".into());
     }
-    success
+    Ok(success)
 }
 
 #[cfg(all(target_arch = "wasm32", not(feature = "gpu")))]
