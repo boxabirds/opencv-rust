@@ -13,11 +13,13 @@ struct ThresholdParams {
     channels: u32,
     threshold: u32,
     max_value: u32,
-    _padding: [u32; 3],
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
 }
 
-/// GPU-accelerated binary threshold
-pub fn threshold_gpu(src: &Mat, dst: &mut Mat, thresh: u8, max_value: u8) -> Result<()> {
+/// GPU-accelerated binary threshold (async version)
+pub async fn threshold_gpu_async(src: &Mat, dst: &mut Mat, thresh: u8, max_value: u8) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(
             "GPU threshold only supports U8 depth".to_string(),
@@ -26,25 +28,58 @@ pub fn threshold_gpu(src: &Mat, dst: &mut Mat, thresh: u8, max_value: u8) -> Res
 
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
-    GpuContext::with_gpu(|ctx| {
-        execute_threshold(ctx, src, dst, thresh, max_value)
-    })
-    .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))??;
-
-    Ok(())
+    execute_threshold(src, dst, thresh, max_value).await
 }
 
-fn execute_threshold(
-    ctx: &GpuContext,
+#[cfg(not(target_arch = "wasm32"))]
+pub fn threshold_gpu(src: &Mat, dst: &mut Mat, thresh: u8, max_value: u8) -> Result<()> {
+    pollster::block_on(threshold_gpu_async(src, dst, thresh, max_value))
+}
+
+async fn execute_threshold(
     src: &Mat,
     dst: &mut Mat,
     thresh: u8,
     max_value: u8,
 ) -> Result<()> {
+    // Get GPU context with platform-specific approach
+    #[cfg(not(target_arch = "wasm32"))]
+    let ctx = GpuContext::get()
+        .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
     let width = src.cols() as u32;
     let height = src.rows() as u32;
     let channels = src.channels() as u32;
 
+    #[cfg(target_arch = "wasm32")]
+    {
+        // For WASM, clone device and queue before async operations (they're Arc'd internally)
+        let (device, queue) = GpuContext::with_gpu(|ctx| (ctx.device.clone(), ctx.queue.clone()))
+            .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
+        let temp_ctx = GpuContext {
+            device,
+            queue,
+            adapter: unsafe { std::mem::zeroed() }, // Not needed for compute operations
+        };
+
+        return execute_threshold_impl(&temp_ctx, src, dst, thresh, max_value, width, height, channels).await;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    return execute_threshold_impl(ctx, src, dst, thresh, max_value, width, height, channels).await;
+}
+
+async fn execute_threshold_impl(
+    ctx: &GpuContext,
+    src: &Mat,
+    dst: &mut Mat,
+    thresh: u8,
+    max_value: u8,
+    width: u32,
+    height: u32,
+    channels: u32,
+) -> Result<()> {
     // Create shader module
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Threshold Shader"),
@@ -77,7 +112,9 @@ fn execute_threshold(
         channels,
         threshold: thresh as u32,
         max_value: max_value as u32,
-        _padding: [0; 3],
+        _pad0: 0,
+        _pad1: 0,
+        _pad2: 0,
     };
 
     let params_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -208,8 +245,14 @@ fn execute_threshold(
 
     #[cfg(target_arch = "wasm32")]
     {
-        // In WASM, we can use a simpler synchronous pattern
-        buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
+        // In WASM, properly await the buffer mapping
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).ok();
+        });
+        receiver.await
+            .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
+            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
     }
 
     // Copy data to output Mat

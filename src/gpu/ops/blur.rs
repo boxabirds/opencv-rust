@@ -14,11 +14,13 @@ struct GaussianParams {
     channels: u32,
     kernel_size: u32,
     sigma: f32,
-    _padding: [u32; 3],
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
 }
 
-/// GPU-accelerated Gaussian blur using separable filter
-pub fn gaussian_blur_gpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> Result<()> {
+/// GPU-accelerated Gaussian blur using separable filter (async version)
+pub async fn gaussian_blur_gpu_async(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(
             "GPU gaussian_blur only supports U8 depth".to_string(),
@@ -41,19 +43,19 @@ pub fn gaussian_blur_gpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> R
 
     let kernel_size = ksize.width as usize;
     let kernel_weights = create_gaussian_kernel(kernel_size, sigma);
-
-    // Execute horizontal and vertical passes using intermediate buffer
-    // (avoids borrow checker issue with dst being both source and destination)
     let mut temp = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
-    GpuContext::with_gpu(|ctx| {
-        execute_blur_pass(ctx, src, &mut temp, &kernel_weights, sigma, true)?;
-        execute_blur_pass(ctx, &temp, dst, &kernel_weights, sigma, false)?;
-        Ok::<(), Error>(())
-    })
-    .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))??;
+    // Execute blur passes (context is obtained internally)
+    execute_blur_pass(src, &mut temp, &kernel_weights, sigma, true).await?;
+    execute_blur_pass(&temp, dst, &kernel_weights, sigma, false).await?;
 
     Ok(())
+}
+
+/// GPU-accelerated Gaussian blur using separable filter (sync wrapper for native)
+#[cfg(not(target_arch = "wasm32"))]
+pub fn gaussian_blur_gpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> Result<()> {
+    pollster::block_on(gaussian_blur_gpu_async(src, dst, ksize, sigma))
 }
 
 fn create_gaussian_kernel(size: usize, sigma: f64) -> Vec<f32> {
@@ -82,19 +84,54 @@ fn create_gaussian_kernel(size: usize, sigma: f64) -> Vec<f32> {
     kernel
 }
 
-fn execute_blur_pass(
-    ctx: &GpuContext,
+async fn execute_blur_pass(
     src: &Mat,
     dst: &mut Mat,
     kernel_weights: &[f32],
     sigma: f64,
     is_horizontal: bool,
 ) -> Result<()> {
+    // Get GPU context with platform-specific approach
+    #[cfg(not(target_arch = "wasm32"))]
+    let ctx = GpuContext::get()
+        .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
     let width = src.cols() as u32;
     let height = src.rows() as u32;
     let channels = src.channels() as u32;
     let kernel_size = kernel_weights.len() as u32;
 
+    #[cfg(target_arch = "wasm32")]
+    {
+        // For WASM, clone device and queue before async operations (they're Arc'd internally)
+        let (device, queue) = GpuContext::with_gpu(|ctx| (ctx.device.clone(), ctx.queue.clone()))
+            .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
+        let temp_ctx = GpuContext {
+            device,
+            queue,
+            adapter: unsafe { std::mem::zeroed() }, // Not needed for compute operations
+        };
+
+        return execute_blur_pass_impl(&temp_ctx, src, dst, kernel_weights, sigma, is_horizontal, width, height, channels, kernel_size).await;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    return execute_blur_pass_impl(ctx, src, dst, kernel_weights, sigma, is_horizontal, width, height, channels, kernel_size).await;
+}
+
+async fn execute_blur_pass_impl(
+    ctx: &GpuContext,
+    src: &Mat,
+    dst: &mut Mat,
+    kernel_weights: &[f32],
+    sigma: f64,
+    is_horizontal: bool,
+    width: u32,
+    height: u32,
+    channels: u32,
+    kernel_size: u32,
+) -> Result<()> {
     // Create shader module
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Gaussian Blur Shader"),
@@ -127,7 +164,9 @@ fn execute_blur_pass(
         channels,
         kernel_size,
         sigma: sigma as f32,
-        _padding: [0; 3],
+        _pad0: 0,
+        _pad1: 0,
+        _pad2: 0,
     };
 
     let params_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -286,8 +325,14 @@ fn execute_blur_pass(
 
     #[cfg(target_arch = "wasm32")]
     {
-        // In WASM, we can use a simpler synchronous pattern
-        buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
+        // In WASM, properly await the buffer mapping
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).ok();
+        });
+        receiver.await
+            .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
+            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
     }
 
     // Copy data to output Mat

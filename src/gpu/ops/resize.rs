@@ -13,11 +13,13 @@ struct ResizeParams {
     dst_width: u32,
     dst_height: u32,
     channels: u32,
-    _padding: [u32; 3],
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
 }
 
-/// GPU-accelerated bilinear resize
-pub fn resize_gpu(src: &Mat, dst: &mut Mat, dst_width: usize, dst_height: usize) -> Result<()> {
+/// GPU-accelerated bilinear resize (async version)
+pub async fn resize_gpu_async(src: &Mat, dst: &mut Mat, dst_width: usize, dst_height: usize) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(
             "GPU resize only supports U8 depth".to_string(),
@@ -26,21 +28,55 @@ pub fn resize_gpu(src: &Mat, dst: &mut Mat, dst_width: usize, dst_height: usize)
 
     *dst = Mat::new(dst_height, dst_width, src.channels(), src.depth())?;
 
-    GpuContext::with_gpu(|ctx| {
-        execute_resize(ctx, src, dst)
-    })
-    .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))??;
-
-    Ok(())
+    execute_resize(src, dst).await
 }
 
-fn execute_resize(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> Result<()> {
+#[cfg(not(target_arch = "wasm32"))]
+pub fn resize_gpu(src: &Mat, dst: &mut Mat, dst_width: usize, dst_height: usize) -> Result<()> {
+    pollster::block_on(resize_gpu_async(src, dst, dst_width, dst_height))
+}
+
+async fn execute_resize(src: &Mat, dst: &mut Mat) -> Result<()> {
+    // Get GPU context with platform-specific approach
+    #[cfg(not(target_arch = "wasm32"))]
+    let ctx = GpuContext::get()
+        .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
     let src_width = src.cols() as u32;
     let src_height = src.rows() as u32;
     let dst_width = dst.cols() as u32;
     let dst_height = dst.rows() as u32;
     let channels = src.channels() as u32;
 
+    #[cfg(target_arch = "wasm32")]
+    {
+        // For WASM, clone device and queue before async operations (they're Arc'd internally)
+        let (device, queue) = GpuContext::with_gpu(|ctx| (ctx.device.clone(), ctx.queue.clone()))
+            .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
+        let temp_ctx = GpuContext {
+            device,
+            queue,
+            adapter: unsafe { std::mem::zeroed() }, // Not needed for compute operations
+        };
+
+        return execute_resize_impl(&temp_ctx, src, dst, src_width, src_height, dst_width, dst_height, channels).await;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    return execute_resize_impl(ctx, src, dst, src_width, src_height, dst_width, dst_height, channels).await;
+}
+
+async fn execute_resize_impl(
+    ctx: &GpuContext,
+    src: &Mat,
+    dst: &mut Mat,
+    src_width: u32,
+    src_height: u32,
+    dst_width: u32,
+    dst_height: u32,
+    channels: u32,
+) -> Result<()> {
     // Create shader module
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Resize Shader"),
@@ -73,7 +109,9 @@ fn execute_resize(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> Result<()> {
         dst_width,
         dst_height,
         channels,
-        _padding: [0; 3],
+        _pad0: 0,
+        _pad1: 0,
+        _pad2: 0,
     };
 
     let params_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -204,8 +242,14 @@ fn execute_resize(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> Result<()> {
 
     #[cfg(target_arch = "wasm32")]
     {
-        // In WASM, we can use a simpler synchronous pattern
-        buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
+        // In WASM, properly await the buffer mapping
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).ok();
+        });
+        receiver.await
+            .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
+            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
     }
 
     // Copy data to output Mat

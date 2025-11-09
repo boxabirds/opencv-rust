@@ -143,12 +143,12 @@ pub async fn gaussian_blur_wasm(
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::gaussian_blur_gpu(
+            match crate::gpu::ops::gaussian_blur_gpu_async(
                 &src.inner,
                 &mut dst,
                 Size::new(ksize as i32, ksize as i32),
                 sigma,
-            ) {
+            ).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU blur failed, falling back to CPU".into());
@@ -184,7 +184,7 @@ pub async fn resize_wasm(
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::resize_gpu(&src.inner, &mut dst, dst_width, dst_height) {
+            match crate::gpu::ops::resize_gpu_async(&src.inner, &mut dst, dst_width, dst_height).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU resize failed, falling back to CPU".into());
@@ -225,12 +225,12 @@ pub async fn threshold_wasm(
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::threshold_gpu(
+            match crate::gpu::ops::threshold_gpu_async(
                 &src.inner,
                 &mut dst,
                 thresh as u8,
                 max_val as u8,
-            ) {
+            ).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU threshold failed, falling back to CPU".into());
@@ -289,7 +289,7 @@ pub async fn canny_wasm(
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::canny_gpu(&src.inner, &mut dst, threshold1, threshold2) {
+            match crate::gpu::ops::canny_gpu_async(&src.inner, &mut dst, threshold1, threshold2).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU canny failed, falling back to CPU".into());
