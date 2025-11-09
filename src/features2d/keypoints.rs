@@ -180,28 +180,35 @@ pub fn fast(
             let threshold_upper = center_val + threshold;
             let threshold_lower = center_val - threshold;
 
-            // Count consecutive brighter or darker pixels
-            let mut num_brighter = 0;
-            let mut num_darker = 0;
-            let mut max_consecutive_brighter = 0;
-            let mut max_consecutive_darker = 0;
-
+            // Check circle pixels - duplicate to handle wraparound
+            let mut circle_values = Vec::with_capacity(32);
             for &(dx, dy) in &circle_offsets {
                 let y = (row as i32 + dy) as usize;
                 let x = (col as i32 + dx) as usize;
                 let val = src.at(y, x)?[0] as i32;
+                circle_values.push(val);
+            }
+            // Duplicate to handle circular wraparound
+            circle_values.extend_from_slice(&circle_values.clone());
 
+            // Count consecutive brighter or darker pixels in doubled array
+            let mut max_consecutive_brighter = 0;
+            let mut max_consecutive_darker = 0;
+            let mut consecutive_brighter = 0;
+            let mut consecutive_darker = 0;
+
+            for &val in &circle_values {
                 if val > threshold_upper {
-                    num_brighter += 1;
-                    max_consecutive_brighter = max_consecutive_brighter.max(num_brighter);
-                    num_darker = 0;
+                    consecutive_brighter += 1;
+                    consecutive_darker = 0;
+                    max_consecutive_brighter = max_consecutive_brighter.max(consecutive_brighter);
                 } else if val < threshold_lower {
-                    num_darker += 1;
-                    max_consecutive_darker = max_consecutive_darker.max(num_darker);
-                    num_brighter = 0;
+                    consecutive_darker += 1;
+                    consecutive_brighter = 0;
+                    max_consecutive_darker = max_consecutive_darker.max(consecutive_darker);
                 } else {
-                    num_brighter = 0;
-                    num_darker = 0;
+                    consecutive_brighter = 0;
+                    consecutive_darker = 0;
                 }
             }
 

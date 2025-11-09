@@ -29,6 +29,8 @@ pub struct SVM {
     support_vectors: Vec<Vec<f64>>,
     alpha: Vec<f64>,
     b: f64,
+    // For linear SVM, store weight vector directly
+    w: Vec<f64>,
 }
 
 impl SVM {
@@ -42,6 +44,7 @@ impl SVM {
             support_vectors: Vec::new(),
             alpha: Vec::new(),
             b: 0.0,
+            w: Vec::new(),
         }
     }
 
@@ -54,19 +57,65 @@ impl SVM {
         }
 
         let n = samples.len();
+        let dim = samples[0].len();
 
         // Initialize alpha values
         self.alpha = vec![0.0; n];
         self.b = 0.0;
 
-        // Simplified training: just store support vectors
-        // In a full implementation, we would use SMO algorithm
+        // Store support vectors
         self.support_vectors = samples.to_vec();
 
-        // For linear SVM, calculate simple weights
+        // For linear SVM, compute weight vector directly from class centroids
         if self.kernel_type == SVMKernelType::Linear {
+            // Compute centroids for each class
+            let mut centroid_pos = vec![0.0; dim];
+            let mut centroid_neg = vec![0.0; dim];
+            let mut count_pos = 0;
+            let mut count_neg = 0;
+
+            for (i, &label) in labels.iter().enumerate() {
+                if label > 0.0 {
+                    for j in 0..dim {
+                        centroid_pos[j] += samples[i][j];
+                    }
+                    count_pos += 1;
+                } else {
+                    for j in 0..dim {
+                        centroid_neg[j] += samples[i][j];
+                    }
+                    count_neg += 1;
+                }
+            }
+
+            // Average centroids
+            for j in 0..dim {
+                centroid_pos[j] /= count_pos as f64;
+                centroid_neg[j] /= count_neg as f64;
+            }
+
+            // Weight vector points from negative to positive class
+            self.w = vec![0.0; dim];
+            for j in 0..dim {
+                self.w[j] = centroid_pos[j] - centroid_neg[j];
+            }
+
+            // Normalize weight vector
+            let w_norm: f64 = self.w.iter().map(|x| x * x).sum::<f64>().sqrt();
+            if w_norm > 0.0 {
+                for j in 0..dim {
+                    self.w[j] /= w_norm;
+                }
+            }
+
+            // Bias is the midpoint between centroids projected onto w
+            let pos_proj: f64 = self.w.iter().zip(&centroid_pos).map(|(w, x)| w * x).sum();
+            let neg_proj: f64 = self.w.iter().zip(&centroid_neg).map(|(w, x)| w * x).sum();
+            self.b = -(pos_proj + neg_proj) / 2.0;
+
+            // Set alpha values (not used for linear prediction, but kept for compatibility)
             for (i, label) in labels.iter().enumerate() {
-                self.alpha[i] = if *label > 0.0 { 1.0 } else { -1.0 };
+                self.alpha[i] = label.signum();
             }
         } else {
             // For other kernels, use simple initialization
@@ -86,12 +135,19 @@ impl SVM {
             ));
         }
 
-        let mut sum = self.b;
-
-        for (i, sv) in self.support_vectors.iter().enumerate() {
-            let k = self.kernel(sample, sv);
-            sum += self.alpha[i] * k;
-        }
+        let sum = if self.kernel_type == SVMKernelType::Linear && !self.w.is_empty() {
+            // For linear SVM, use weight vector directly: w·x + b
+            let dot: f64 = self.w.iter().zip(sample.iter()).map(|(w, x)| w * x).sum();
+            dot + self.b
+        } else {
+            // For non-linear kernels, use kernel trick
+            let mut sum = self.b;
+            for (i, sv) in self.support_vectors.iter().enumerate() {
+                let k = self.kernel(sample, sv);
+                sum += self.alpha[i] * k;
+            }
+            sum
+        };
 
         Ok(sum.signum())
     }
@@ -104,12 +160,19 @@ impl SVM {
             ));
         }
 
-        let mut sum = self.b;
-
-        for (i, sv) in self.support_vectors.iter().enumerate() {
-            let k = self.kernel(sample, sv);
-            sum += self.alpha[i] * k;
-        }
+        let sum = if self.kernel_type == SVMKernelType::Linear && !self.w.is_empty() {
+            // For linear SVM, use weight vector directly: w·x + b
+            let dot: f64 = self.w.iter().zip(sample.iter()).map(|(w, x)| w * x).sum();
+            dot + self.b
+        } else {
+            // For non-linear kernels, use kernel trick
+            let mut sum = self.b;
+            for (i, sv) in self.support_vectors.iter().enumerate() {
+                let k = self.kernel(sample, sv);
+                sum += self.alpha[i] * k;
+            }
+            sum
+        };
 
         Ok((sum.signum(), sum.abs()))
     }

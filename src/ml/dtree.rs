@@ -320,11 +320,11 @@ impl DecisionTree {
 
     fn node_depth(&self, node: &TreeNode) -> usize {
         match (&node.left, &node.right) {
-            (None, None) => 1,
+            (None, None) => 0, // Leaf has depth 0
             (Some(left), Some(right)) => {
                 1 + self.node_depth(left).max(self.node_depth(right))
             }
-            _ => 1,
+            _ => 0, // Should not happen, but treat as leaf
         }
     }
 

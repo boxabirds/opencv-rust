@@ -292,7 +292,8 @@ impl BackgroundSubtractorKNN {
                 let is_background = avg_dist < self.dist2_threshold as f32;
 
                 // Update samples
-                if learning_rate > 0.0 {
+                // learning_rate: -1 = automatic, 0 = no learning, >0 = manual rate
+                if learning_rate != 0.0 {
                     let idx = self.sample_idx[row][col];
                     self.samples[row][col][idx % max_samples] = intensity;
                     self.sample_idx[row][col] = (idx + 1) % max_samples;

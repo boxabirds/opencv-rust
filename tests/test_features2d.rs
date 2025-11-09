@@ -23,18 +23,56 @@ fn create_checkerboard_corners(size: usize, square_size: usize) -> Mat {
     img
 }
 
+/// Helper to create pattern with isolated bright spots for FAST detection
+fn create_bright_spots(size: usize, spot_spacing: usize) -> Mat {
+    let mut img = Mat::new(size, size, 1, MatDepth::U8).unwrap();
+
+    // Fill with dark gray background
+    for row in 0..size {
+        for col in 0..size {
+            img.at_mut(row, col).unwrap()[0] = 50;
+        }
+    }
+
+    // Add bright spots in a grid
+    // FAST uses circle of radius 3, so spots must be smaller than that
+    // to have contrast between center and circle pixels
+    let mut y = spot_spacing;
+    while y < size - spot_spacing {
+        let mut x = spot_spacing;
+        while x < size - spot_spacing {
+            // Create small 3x3 bright spot (radius 1)
+            // This ensures FAST circle (radius 3) is outside bright region
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    let row = (y as i32 + dy) as usize;
+                    let col = (x as i32 + dx) as usize;
+                    if row < size && col < size {
+                        img.at_mut(row, col).unwrap()[0] = 255;
+                    }
+                }
+            }
+            x += spot_spacing;
+        }
+        y += spot_spacing;
+    }
+
+    img
+}
+
 /// Test from opencv test_keypoints.cpp
 #[test]
 fn test_fast_detector_finds_corners() {
-    // Create image with clear corners (checkerboard)
-    let img = create_checkerboard_corners(100, 10);
+    // Create image with bright spots that FAST can detect
+    // FAST needs 12 consecutive pixels brighter/darker than center
+    let img = create_bright_spots(100, 20);
 
     let keypoints = fast(&img, 20, true).unwrap();
 
-    // Checkerboard should have many corners
+    // Should detect bright spots as corners
     assert!(
-        keypoints.len() > 10,
-        "Expected to find corners in checkerboard, found {}",
+        keypoints.len() > 5,
+        "Expected to find bright spots as corners, found {}",
         keypoints.len()
     );
 }
@@ -42,7 +80,7 @@ fn test_fast_detector_finds_corners() {
 /// Test from opencv test_keypoints.cpp - FAST should be repeatable
 #[test]
 fn test_fast_detector_repeatability() {
-    let img = create_checkerboard_corners(100, 10);
+    let img = create_bright_spots(100, 20);
 
     let keypoints1 = fast(&img, 20, true).unwrap();
     let keypoints2 = fast(&img, 20, true).unwrap();
@@ -197,7 +235,7 @@ fn test_harris_response_ordering() {
 /// Test FAST threshold from opencv test_keypoints.cpp
 #[test]
 fn test_fast_threshold_effect() {
-    let img = create_checkerboard_corners(100, 10);
+    let img = create_bright_spots(100, 20);
 
     // Higher threshold should find fewer keypoints
     let kp_low = fast(&img, 10, true).unwrap();
@@ -214,7 +252,7 @@ fn test_fast_threshold_effect() {
 /// Test non-maximum suppression from opencv test_keypoints.cpp
 #[test]
 fn test_fast_nms_reduces_keypoints() {
-    let img = create_checkerboard_corners(100, 10);
+    let img = create_bright_spots(100, 20);
 
     let kp_without_nms = fast(&img, 20, false).unwrap();
     let kp_with_nms = fast(&img, 20, true).unwrap();

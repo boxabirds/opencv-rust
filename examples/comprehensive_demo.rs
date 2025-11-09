@@ -5,7 +5,8 @@ use opencv_rust::imgproc::{
     find_contours, contour_area, bounding_rect, RetrievalMode, ChainApproxMode,
     calc_hist, equalize_hist, line, rectangle, circle
 };
-use opencv_rust::features2d::{harris_corners, good_features_to_track, fast, ORB};
+use opencv_rust::features2d::{harris_corners, good_features_to_track, fast};
+use opencv_rust::features2d::orb::ORB;
 use opencv_rust::ml::kmeans;
 
 fn main() -> Result<()> {

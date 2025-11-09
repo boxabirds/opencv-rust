@@ -55,7 +55,12 @@ pub fn calc_optical_flow_pyr_lk(
                 }
 
                 // Calculate SSD between windows
-                let error = window_ssd(prev_img, next_img, pt, new_pt, half_win)?;
+                let ssd_error = window_ssd(prev_img, next_img, pt, new_pt, half_win)?;
+
+                // Add small distance penalty to prefer points closer to original
+                // This prevents drift when multiple points have similar SSD
+                let dist = ((dx * dx + dy * dy) as f64).sqrt();
+                let error = ssd_error + dist * 0.1;
 
                 if error < best_error {
                     best_error = error;
@@ -110,6 +115,12 @@ pub fn calc_optical_flow_farneback(
     if prev.channels() != 1 || next.channels() != 1 {
         return Err(Error::InvalidParameter(
             "Farneback requires grayscale images".to_string(),
+        ));
+    }
+
+    if prev.rows() != next.rows() || prev.cols() != next.cols() {
+        return Err(Error::InvalidDimensions(
+            "Images must have same dimensions".to_string(),
         ));
     }
 
