@@ -127,13 +127,13 @@ impl Mat {
     }
 
     /// Get pixel value at (row, col)
+    /// Panics if index is out of bounds
     pub fn at(&self, row: usize, col: usize) -> Result<&[u8]> {
-        if row >= self.rows || col >= self.cols {
-            return Err(Error::OutOfRange(format!(
-                "Index ({}, {}) out of range for {}x{} matrix",
-                row, col, self.rows, self.cols
-            )));
-        }
+        assert!(
+            row < self.rows && col < self.cols,
+            "Index ({}, {}) out of range for {}x{} matrix",
+            row, col, self.rows, self.cols
+        );
 
         let idx = (row * self.cols + col) * self.channels * self.depth.size();
         let end = idx + self.channels * self.depth.size();
@@ -141,13 +141,13 @@ impl Mat {
     }
 
     /// Get mutable pixel value at (row, col)
+    /// Panics if index is out of bounds
     pub fn at_mut(&mut self, row: usize, col: usize) -> Result<&mut [u8]> {
-        if row >= self.rows || col >= self.cols {
-            return Err(Error::OutOfRange(format!(
-                "Index ({}, {}) out of range for {}x{} matrix",
-                row, col, self.rows, self.cols
-            )));
-        }
+        assert!(
+            row < self.rows && col < self.cols,
+            "Index ({}, {}) out of range for {}x{} matrix",
+            row, col, self.rows, self.cols
+        );
 
         let idx = (row * self.cols + col) * self.channels * self.depth.size();
         let end = idx + self.channels * self.depth.size();

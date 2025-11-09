@@ -148,44 +148,54 @@ impl Mat {
     }
 
     /// Convert Mat from one depth to another
+    /// Normalizes between integer and floating-point types:
+    /// - U8/U16 → F32/F64: divides by max value (255 or 65535)
+    /// - F32/F64 → U8/U16: multiplies by max value (255 or 65535) and rounds
     pub fn convert_to(&self, target_depth: crate::core::MatDepth) -> Result<Mat> {
         if self.depth() == target_depth {
             return Ok(self.clone_mat());
         }
 
+        use crate::core::MatDepth;
         let mut result = Mat::new(self.rows(), self.cols(), self.channels(), target_depth)?;
 
         for row in 0..self.rows() {
             for col in 0..self.cols() {
                 for ch in 0..self.channels() {
-                    let value = match self.depth() {
-                        crate::core::MatDepth::U8 => {
-                            self.at(row, col)?[ch] as f64
+                    // Read value and normalize to 0.0-1.0 range if integer type
+                    let normalized_value = match self.depth() {
+                        MatDepth::U8 => {
+                            (self.at(row, col)?[ch] as f64) / 255.0
                         }
-                        crate::core::MatDepth::U16 => {
-                            self.at_u16(row, col, ch)? as f64
+                        MatDepth::U16 => {
+                            (self.at_u16(row, col, ch)? as f64) / 65535.0
                         }
-                        crate::core::MatDepth::F32 => {
+                        MatDepth::F32 => {
                             self.at_f32(row, col, ch)? as f64
                         }
-                        crate::core::MatDepth::F64 => {
+                        MatDepth::F64 => {
                             self.at_f64(row, col, ch)?
                         }
                     };
 
+                    // Write value, denormalizing from 0.0-1.0 if converting to integer type
                     match target_depth {
-                        crate::core::MatDepth::U8 => {
+                        MatDepth::U8 => {
                             let pixel = result.at_mut(row, col)?;
-                            pixel[ch] = value.clamp(0.0, 255.0) as u8;
+                            // Multiply by 255 and round for F32/F64 → U8
+                            let scaled = (normalized_value * 255.0).round();
+                            pixel[ch] = scaled.clamp(0.0, 255.0) as u8;
                         }
-                        crate::core::MatDepth::U16 => {
-                            result.set_u16(row, col, ch, value.clamp(0.0, 65535.0) as u16)?;
+                        MatDepth::U16 => {
+                            // Multiply by 65535 and round for F32/F64 → U16
+                            let scaled = (normalized_value * 65535.0).round();
+                            result.set_u16(row, col, ch, scaled.clamp(0.0, 65535.0) as u16)?;
                         }
-                        crate::core::MatDepth::F32 => {
-                            result.set_f32(row, col, ch, value as f32)?;
+                        MatDepth::F32 => {
+                            result.set_f32(row, col, ch, normalized_value as f32)?;
                         }
-                        crate::core::MatDepth::F64 => {
-                            result.set_f64(row, col, ch, value)?;
+                        MatDepth::F64 => {
+                            result.set_f64(row, col, ch, normalized_value)?;
                         }
                     }
                 }
@@ -240,18 +250,20 @@ mod tests {
         let mat_f32 = mat_u8.convert_to(MatDepth::F32).unwrap();
         let val = mat_f32.at_f32(1, 1, 0).unwrap();
 
-        assert_eq!(val, 128.0);
+        // Should normalize 128 → ~0.5
+        assert!((val - 0.5019).abs() < 0.01, "128 should normalize to ~0.5");
     }
 
     #[test]
     fn test_convert_f32_to_u8() {
         let mut mat_f32 = Mat::new(3, 3, 1, MatDepth::F32).unwrap();
-        mat_f32.set_f32(1, 1, 0, 200.5).unwrap();
+        mat_f32.set_f32(1, 1, 0, 0.7843).unwrap();  // 0.7843 * 255 ≈ 200
 
         let mat_u8 = mat_f32.convert_to(MatDepth::U8).unwrap();
         let val = mat_u8.at(1, 1).unwrap()[0];
 
-        assert_eq!(val, 200);
+        // Should denormalize ~0.7843 → 200
+        assert!((val as i32 - 200).abs() <= 1, "~0.7843 should denormalize to ~200");
     }
 
     #[test]
