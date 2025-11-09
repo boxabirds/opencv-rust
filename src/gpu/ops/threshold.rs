@@ -154,8 +154,9 @@ fn execute_threshold(
         label: Some("Threshold Pipeline"),
         layout: Some(&pipeline_layout),
         module: &shader,
-        entry_point: "threshold_binary",
+        entry_point: Some("threshold_binary"),
         compilation_options: Default::default(),
+        cache: None,
     });
 
     // Create command encoder and execute
@@ -200,7 +201,6 @@ fn execute_threshold(
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             sender.send(result).ok();
         });
-        ctx.device.poll(wgpu::Maintain::Poll);
         pollster::block_on(receiver)
             .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
             .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
@@ -210,7 +210,6 @@ fn execute_threshold(
     {
         // In WASM, we can use a simpler synchronous pattern
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
-        ctx.device.poll(wgpu::Maintain::Poll);
     }
 
     // Copy data to output Mat

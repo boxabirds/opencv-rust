@@ -70,6 +70,9 @@ impl GpuContext {
                     label: Some("OpenCV-Rust GPU Device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
+                    memory_hints: Default::default(),
+                    experimental_features: Default::default(),
+                    trace: Default::default(),
                 },
                 None,
             )
@@ -104,7 +107,7 @@ impl GpuContext {
         }
 
         web_sys::console::log_1(&"Creating WebGPU instance...".into());
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
@@ -118,12 +121,12 @@ impl GpuContext {
             })
             .await
         {
-            Some(a) => {
+            Ok(a) => {
                 web_sys::console::log_1(&"✓ Adapter acquired".into());
                 a
             },
-            None => {
-                web_sys::console::error_1(&"✗ Failed to request WebGPU adapter - WebGPU may not be supported".into());
+            Err(e) => {
+                web_sys::console::error_1(&format!("✗ Failed to request WebGPU adapter: {:?}", e).into());
                 GPU_CONTEXT.with(|ctx| *ctx.borrow_mut() = None);
                 return false;
             }
@@ -136,8 +139,10 @@ impl GpuContext {
                     label: Some("OpenCV-Rust GPU Device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
-                },
-                None,
+                    memory_hints: Default::default(),
+                    experimental_features: Default::default(),
+                    trace: Default::default(),
+                }
             )
             .await
         {
