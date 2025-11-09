@@ -270,17 +270,25 @@ fn execute_blur_pass(
 
     // Read back results
     let buffer_slice = staging_buffer.slice(..);
-    let (sender, receiver) = futures::channel::oneshot::channel();
-    buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-        sender.send(result).ok();
-    });
-
-    ctx.device.poll(wgpu::Maintain::Wait);
 
     #[cfg(not(target_arch = "wasm32"))]
-    pollster::block_on(receiver)
-        .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
-        .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+    {
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).ok();
+        });
+        ctx.device.poll(wgpu::Maintain::Wait);
+        pollster::block_on(receiver)
+            .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
+            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        // In WASM, we can use a simpler synchronous pattern
+        buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
+        ctx.device.poll(wgpu::Maintain::Wait);
+    }
 
     // Copy data to output Mat
     let data = buffer_slice.get_mapped_range();
