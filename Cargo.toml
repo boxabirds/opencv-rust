@@ -1,0 +1,24 @@
+[package]
+name = "opencv-rust"
+version = "0.1.0"
+edition = "2021"
+authors = ["OpenCV Rust Contributors"]
+description = "A pure Rust implementation of OpenCV functionality"
+license = "Apache-2.0"
+repository = "https://github.com/boxabirds/opencv-rust"
+keywords = ["opencv", "computer-vision", "image-processing"]
+categories = ["multimedia::images", "computer-vision"]
+
+[dependencies]
+image = "0.24"
+ndarray = "0.15"
+num-traits = "0.2"
+thiserror = "1.0"
+rayon = "1.10"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "opencv_benchmarks"
+harness = false
