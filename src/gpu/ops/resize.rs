@@ -151,6 +151,7 @@ fn execute_resize(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> Result<()> {
         layout: Some(&pipeline_layout),
         module: &shader,
         entry_point: "resize_bilinear",
+        compilation_options: Default::default(),
     });
 
     // Create command encoder and execute

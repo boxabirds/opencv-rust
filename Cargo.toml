@@ -18,7 +18,7 @@ ndarray = "0.15"
 num-traits = "0.2"
 thiserror = "1.0"
 rayon = { version = "1.10", optional = true }
-wgpu = { version = "0.19", features = ["wgsl"], optional = true }
+wgpu = { version = "0.20", features = ["wgsl"], optional = true }
 pollster = { version = "0.3", optional = true }
 bytemuck = { version = "1.14", features = ["derive"], optional = true }
 futures = { version = "0.3", optional = true }

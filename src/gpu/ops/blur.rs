@@ -232,6 +232,7 @@ fn execute_blur_pass(
         layout: Some(&pipeline_layout),
         module: &shader,
         entry_point,
+        compilation_options: Default::default(),
     });
 
     // Create command encoder and execute compute pass

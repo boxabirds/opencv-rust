@@ -155,6 +155,7 @@ fn execute_threshold(
         layout: Some(&pipeline_layout),
         module: &shader,
         entry_point: "threshold_binary",
+        compilation_options: Default::default(),
     });
 
     // Create command encoder and execute

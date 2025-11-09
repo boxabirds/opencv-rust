@@ -160,6 +160,7 @@ fn execute_canny(
         layout: Some(&pipeline_layout),
         module: &shader,
         entry_point: "canny_edge",
+        compilation_options: Default::default(),
     });
 
     // Create command encoder and execute
