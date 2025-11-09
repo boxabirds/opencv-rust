@@ -98,10 +98,10 @@ function App() {
   // Helper function to convert WasmMat to image data URL for display
   const matToImageDataURL = (mat) => {
     try {
-      const width = mat.cols();
-      const height = mat.rows();
+      const width = mat.width();
+      const height = mat.height();
       const channels = mat.channels();
-      const data = mat.data();
+      const data = mat.get_data();
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
