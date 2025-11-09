@@ -18,21 +18,32 @@ Interactive web-based benchmark for testing opencv-rust performance with WebGPU 
 
 ### Browser Support
 
-- **Chrome/Edge 113+** with WebGPU flag enabled
-- **Firefox Nightly** with WebGPU behind flag (experimental)
-- **Safari Technology Preview** (limited support)
+**Production Ready:**
+- ✅ **Chrome/Edge 113+** (May 2023+) - WebGPU enabled by default, no flag needed
+- ✅ **Chrome 121+** (Jan 2024+) - Recommended for best stability
 
-### Enable WebGPU
+**Experimental:**
+- ⚠️ **Firefox Nightly** - Requires manual flag activation
+- ⚠️ **Safari Technology Preview** - Limited/partial support
 
-**Chrome/Edge**:
+### Enable WebGPU (if needed)
+
+**Modern Chrome/Edge (113+)**:
+- WebGPU works out-of-the-box, no configuration needed!
+- Just visit the demo and it should work
+
+**Older Chrome/Edge (100-112)**:
 1. Go to `chrome://flags/#enable-unsafe-webgpu`
 2. Set to "Enabled"
 3. Restart browser
 
-**Firefox**:
+**Firefox Nightly**:
 1. Go to `about:config`
 2. Set `dom.webgpu.enabled` to `true`
 3. Restart browser
+
+**Check WebGPU Support**:
+Open browser console and run: `console.log('WebGPU:', !!navigator.gpu)`
 
 ## Installation
 
