@@ -10,15 +10,22 @@ export default defineConfig({
   server: {
     port: 3000,
     headers: {
-      // Required for SharedArrayBuffer (needed for threading)
+      // Required for SharedArrayBuffer (needed for WASM threading)
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+    fs: {
+      // Allow serving files from project root (for WASM pkg)
+      allow: ['..', '../..'],
     },
   },
   build: {
     target: 'esnext',
   },
   optimizeDeps: {
-    exclude: ['opencv-rust-wasm'],
+    exclude: ['../../pkg'],
+  },
+  worker: {
+    format: 'es',
   },
 });

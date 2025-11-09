@@ -9,9 +9,7 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use crate::core::{Mat, MatDepth};
 #[cfg(target_arch = "wasm32")]
-use crate::core::types::Size;
-#[cfg(target_arch = "wasm32")]
-use crate::error::Result;
+use crate::core::types::{Size, InterpolationFlag, ColorConversionCode, ThresholdType};
 
 /// Initialize the WASM module with panic hooks for better error messages
 #[cfg(target_arch = "wasm32")]
@@ -19,6 +17,16 @@ use crate::error::Result;
 pub fn wasm_init() {
     console_error_panic_hook::set_once();
     web_sys::console::log_1(&"OpenCV-Rust WASM initialized".into());
+}
+
+/// Initialize rayon thread pool for multi-threading
+/// This must be called from JavaScript before using any parallel operations
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+#[wasm_bindgen]
+pub fn init_thread_pool(num_threads: usize) -> Result<(), JsValue> {
+    wasm_bindgen_rayon::init_thread_pool(num_threads);
+    web_sys::console::log_1(&format!("✓ Rayon thread pool initialized with {} threads", num_threads).into());
+    Ok(())
 }
 
 /// Initialize GPU asynchronously (must be called from JavaScript)
@@ -152,7 +160,7 @@ pub fn resize_wasm(
         &src.inner,
         &mut dst,
         Size::new(dst_width as i32, dst_height as i32),
-        crate::imgproc::InterpolationMethod::Linear,
+        InterpolationFlag::Linear,
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -174,7 +182,7 @@ pub fn threshold_wasm(
         crate::imgproc::cvt_color(
             &src.inner,
             &mut gray,
-            crate::imgproc::ColorConversion::BGR2GRAY,
+            ColorConversionCode::BgrToGray,
         )
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
         gray
@@ -190,7 +198,7 @@ pub fn threshold_wasm(
         &mut dst,
         thresh,
         max_val,
-        crate::imgproc::ThresholdType::Binary,
+        ThresholdType::Binary,
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -212,7 +220,7 @@ pub fn canny_wasm(
         crate::imgproc::cvt_color(
             &src.inner,
             &mut gray,
-            crate::imgproc::ColorConversion::BGR2GRAY,
+            ColorConversionCode::BgrToGray,
         )
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
         gray
