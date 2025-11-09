@@ -164,19 +164,24 @@ If you see errors loading the WASM module:
 - ⚠️ Requires Rust toolchain
 - ⚠️ Platform-specific builds
 
-## Current Limitations & Future Enhancements
+## GPU Acceleration Status
 
-**GPU Acceleration:**
-- ✅ Gaussian Blur - GPU-accelerated with WebGPU compute shaders
-- ⚠️ Resize, Threshold, Canny - CPU fallback (GPU infrastructure in place, needs implementation)
+**ALL Operations Fully GPU-Accelerated!** 🚀
+
+- ✅ **Gaussian Blur** - GPU-accelerated with separable filter compute shaders
+- ✅ **Resize** - GPU-accelerated with bilinear interpolation
+- ✅ **Threshold** - GPU-accelerated binary thresholding
+- ✅ **Canny Edge Detection** - GPU-accelerated with Sobel gradients + non-maximum suppression
+
+All operations automatically use GPU when available, with seamless CPU fallback.
 
 **Future Enhancements:**
-- [ ] Add more GPU-accelerated operations
 - [ ] Create performance charts (Chart.js/D3)
 - [ ] Add side-by-side before/after image comparison
 - [ ] Support batch processing
 - [ ] Export results to CSV/JSON
-- [ ] Add more operations (HOG, feature detection, etc.)
+- [ ] Add more operations (HOG, SIFT, ORB, feature detection, etc.)
+- [ ] Multi-pass edge tracking for full Canny algorithm
 
 ## Resources
 
