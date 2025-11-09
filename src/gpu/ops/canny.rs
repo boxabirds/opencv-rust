@@ -13,11 +13,13 @@ struct CannyParams {
     channels: u32,
     low_threshold: u32,
     high_threshold: u32,
-    _padding: [u32; 3],
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
 }
 
-/// GPU-accelerated Canny edge detection
-pub fn canny_gpu(
+/// GPU-accelerated Canny edge detection (async version)
+pub async fn canny_gpu_async(
     src: &Mat,
     dst: &mut Mat,
     low_threshold: f64,
@@ -31,25 +33,63 @@ pub fn canny_gpu(
 
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
-    GpuContext::with_gpu(|ctx| {
-        execute_canny(ctx, src, dst, low_threshold, high_threshold)
-    })
-    .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))??;
-
-    Ok(())
+    execute_canny(src, dst, low_threshold, high_threshold).await
 }
 
-fn execute_canny(
-    ctx: &GpuContext,
+#[cfg(not(target_arch = "wasm32"))]
+pub fn canny_gpu(
     src: &Mat,
     dst: &mut Mat,
     low_threshold: f64,
     high_threshold: f64,
 ) -> Result<()> {
+    pollster::block_on(canny_gpu_async(src, dst, low_threshold, high_threshold))
+}
+
+async fn execute_canny(
+    src: &Mat,
+    dst: &mut Mat,
+    low_threshold: f64,
+    high_threshold: f64,
+) -> Result<()> {
+    // Get GPU context with platform-specific approach
+    #[cfg(not(target_arch = "wasm32"))]
+    let ctx = GpuContext::get()
+        .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
     let width = src.cols() as u32;
     let height = src.rows() as u32;
     let channels = src.channels() as u32;
 
+    #[cfg(target_arch = "wasm32")]
+    {
+        // For WASM, clone device, queue, and adapter before async operations (they're Arc'd internally)
+        let (device, queue, adapter) = GpuContext::with_gpu(|ctx| (ctx.device.clone(), ctx.queue.clone(), ctx.adapter.clone()))
+            .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
+
+        let temp_ctx = GpuContext {
+            device,
+            queue,
+            adapter,
+        };
+
+        return execute_canny_impl(&temp_ctx, src, dst, low_threshold, high_threshold, width, height, channels).await;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    return execute_canny_impl(ctx, src, dst, low_threshold, high_threshold, width, height, channels).await;
+}
+
+async fn execute_canny_impl(
+    ctx: &GpuContext,
+    src: &Mat,
+    dst: &mut Mat,
+    low_threshold: f64,
+    high_threshold: f64,
+    width: u32,
+    height: u32,
+    channels: u32,
+) -> Result<()> {
     // Create shader module
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Canny Shader"),
@@ -82,7 +122,9 @@ fn execute_canny(
         channels,
         low_threshold: low_threshold as u32,
         high_threshold: high_threshold as u32,
-        _padding: [0; 3],
+        _pad0: 0,
+        _pad1: 0,
+        _pad2: 0,
     };
 
     let params_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -159,7 +201,9 @@ fn execute_canny(
         label: Some("Canny Pipeline"),
         layout: Some(&pipeline_layout),
         module: &shader,
-        entry_point: "canny_edge",
+        entry_point: Some("canny_edge"),
+        compilation_options: Default::default(),
+        cache: None,
     });
 
     // Create command encoder and execute
@@ -197,17 +241,29 @@ fn execute_canny(
 
     // Read back results
     let buffer_slice = staging_buffer.slice(..);
-    let (sender, _receiver) = futures::channel::oneshot::channel();
-    buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-        sender.send(result).ok();
-    });
-
-    ctx.device.poll(wgpu::Maintain::Wait);
 
     #[cfg(not(target_arch = "wasm32"))]
-    pollster::block_on(_receiver)
-        .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
-        .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+    {
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).ok();
+        });
+        pollster::block_on(receiver)
+            .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
+            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        // In WASM, properly await the buffer mapping
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).ok();
+        });
+        receiver.await
+            .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
+            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+    }
 
     // Copy data to output Mat
     let data = buffer_slice.get_mapped_range();

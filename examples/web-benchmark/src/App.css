@@ -303,7 +303,23 @@
   font-size: 0.8125rem;
 }
 
+.image-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.image-container h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 @media (max-width: 1024px) {
+  .image-comparison {
+    grid-template-columns: 1fr;
+  }
   .container {
     grid-template-columns: 1fr;
   }

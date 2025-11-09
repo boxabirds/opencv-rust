@@ -19,8 +19,8 @@ pub fn gaussian_blur(src: &Mat, dst: &mut Mat, ksize: Size, sigma_x: f64) -> Res
         ));
     }
 
-    // Try GPU acceleration if available
-    #[cfg(feature = "gpu")]
+    // Try GPU acceleration if available (native only - WASM uses direct GPU bindings)
+    #[cfg(all(feature = "gpu", not(target_arch = "wasm32")))]
     {
         if crate::gpu::gpu_available() && ksize.width == ksize.height {
             if let Ok(()) = crate::gpu::ops::gaussian_blur_gpu(src, dst, ksize, sigma_x) {
