@@ -50,14 +50,14 @@ async fn execute_resize(src: &Mat, dst: &mut Mat) -> Result<()> {
 
     #[cfg(target_arch = "wasm32")]
     {
-        // For WASM, clone device and queue before async operations (they're Arc'd internally)
-        let (device, queue) = GpuContext::with_gpu(|ctx| (ctx.device.clone(), ctx.queue.clone()))
+        // For WASM, clone device, queue, and adapter before async operations (they're Arc'd internally)
+        let (device, queue, adapter) = GpuContext::with_gpu(|ctx| (ctx.device.clone(), ctx.queue.clone(), ctx.adapter.clone()))
             .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
 
         let temp_ctx = GpuContext {
             device,
             queue,
-            adapter: unsafe { std::mem::zeroed() }, // Not needed for compute operations
+            adapter,
         };
 
         return execute_resize_impl(&temp_ctx, src, dst, src_width, src_height, dst_width, dst_height, channels).await;
