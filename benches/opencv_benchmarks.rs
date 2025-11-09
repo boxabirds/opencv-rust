@@ -65,7 +65,7 @@ fn bench_mat_access(c: &mut Criterion) {
 }
 
 fn bench_blur(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Gaussian Blur");
+    let mut group = c.benchmark_group("Gaussian Blur (CPU)");
     let img = Mat::new_with_default(512, 512, 3, MatDepth::U8, Scalar::all(128.0)).unwrap();
 
     for ksize in [3, 5, 7, 11].iter() {
@@ -77,6 +77,73 @@ fn bench_blur(c: &mut Criterion) {
             })
         });
     }
+
+    group.finish();
+}
+
+#[cfg(feature = "gpu")]
+fn bench_blur_gpu(c: &mut Criterion) {
+    use opencv_rust::gpu::init_gpu;
+
+    // Initialize GPU - if it fails, skip the benchmark
+    if !init_gpu() {
+        println!("GPU not available - skipping GPU benchmarks");
+        return;
+    }
+
+    let mut group = c.benchmark_group("Gaussian Blur (GPU)");
+
+    // Test different image sizes to see GPU scaling
+    let test_configs = [
+        ("512x512", 512, 512),
+        ("1024x1024", 1024, 1024),
+        ("2048x2048", 2048, 2048),
+    ];
+
+    for &(name, width, height) in test_configs.iter() {
+        let img = Mat::new_with_default(height, width, 3, MatDepth::U8, Scalar::all(128.0)).unwrap();
+
+        for ksize in [3, 5, 7, 11].iter() {
+            let bench_name = format!("{}_{}", name, ksize);
+            group.bench_with_input(
+                BenchmarkId::from_parameter(&bench_name),
+                &(img.clone(), *ksize),
+                |b, (img, ksize)| {
+                    b.iter(|| {
+                        let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+                        gaussian_blur(img, &mut dst, Size::new(*ksize, *ksize), 1.5).unwrap();
+                        black_box(dst)
+                    })
+                }
+            );
+        }
+    }
+
+    group.finish();
+}
+
+#[cfg(feature = "gpu")]
+fn bench_gpu_vs_cpu(c: &mut Criterion) {
+    use opencv_rust::gpu::init_gpu;
+
+    if !init_gpu() {
+        println!("GPU not available - skipping GPU vs CPU comparison");
+        return;
+    }
+
+    let mut group = c.benchmark_group("GPU vs CPU Comparison");
+    let img = Mat::new_with_default(1024, 1024, 3, MatDepth::U8, Scalar::all(128.0)).unwrap();
+    let ksize = 7;
+
+    // Note: With the current implementation, gaussian_blur automatically uses GPU if available
+    // To properly compare, we'd need separate CPU-only and GPU-only entry points
+    group.bench_function("gaussian_blur_7x7_1024x1024", |b| {
+        b.iter(|| {
+            let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+            gaussian_blur(&img, &mut dst, Size::new(ksize, ksize), 1.5).unwrap();
+            black_box(dst)
+        })
+    });
 
     group.finish();
 }
@@ -609,6 +676,39 @@ fn bench_non_local_means(c: &mut Criterion) {
     group.finish();
 }
 
+#[cfg(feature = "gpu")]
+criterion_group!(
+    benches,
+    bench_mat_creation,
+    bench_mat_access,
+    bench_blur,
+    bench_blur_gpu,
+    bench_gpu_vs_cpu,
+    bench_box_blur,
+    bench_median_blur,
+    bench_bilateral_filter,
+    bench_resize,
+    bench_threshold,
+    bench_adaptive_threshold,
+    bench_sobel,
+    bench_laplacian,
+    bench_scharr,
+    bench_canny,
+    bench_harris_corners,
+    bench_good_features,
+    bench_fast,
+    bench_flip,
+    bench_rotate,
+    bench_warp_affine,
+    bench_guided_filter,
+    bench_gabor_filter,
+    bench_non_local_means,
+    bench_kmeans,
+    bench_svm,
+    bench_decision_tree,
+);
+
+#[cfg(not(feature = "gpu"))]
 criterion_group!(
     benches,
     bench_mat_creation,
