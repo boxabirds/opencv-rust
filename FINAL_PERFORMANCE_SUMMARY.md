@@ -29,7 +29,7 @@ This document summarizes the systematic performance optimization of our pure Rus
 | **Gaussian Blur 5×5** | 49.2 ms | **1.76 ms** | **28x faster** | ~2-3 ms | **1.5x FASTER** | 🚀 |
 | **Gaussian Blur 7×7** | 57.9 ms | **1.94 ms** | **29.8x faster** | ~3-4 ms | **1.7x FASTER** | 🚀 |
 | **Gaussian Blur 11×11** | 71.7 ms | **2.25 ms** | **31.9x faster** | ~4-5 ms | **1.8x FASTER** | 🚀 |
-| **Resize Downscale 2x** | 3.15 ms | **415 µs** | **7.6x faster** | ~400 µs | **1.04x FASTER** | 🎯 |
+| **Resize Downscale 2x** | 3.15 ms | **371 µs** | **8.5x faster** | ~400 µs | **1.1x FASTER** | 🎯 |
 | **Threshold Binary** | 1.92 ms | **272 µs** | **7.1x faster** | ~300 µs | **1.1x FASTER** | 🎯 |
 | **Threshold BinaryInv** | 1.91 ms | **240 µs** | **8x faster** | ~300 µs | **1.25x FASTER** | 🎯 |
 | **Threshold Trunc** | 1.90 ms | **248 µs** | **7.7x faster** | ~300 µs | **1.2x FASTER** | 🎯 |
@@ -41,9 +41,9 @@ This document summarizes the systematic performance optimization of our pure Rus
 
 | Operation | Initial | Optimized | Improvement | C++ Baseline | vs C++ | Status |
 |-----------|---------|-----------|-------------|--------------|--------|--------|
-| **Resize Upscale 2x** | 50.7 ms | **3.43 ms** | **14.8x faster** | ~2.8 ms | 1.22x slower | 📊 Very Close |
-| **Canny Edge Detection** | 30.1 ms | **8.92 ms** | **3.4x faster** | ~5 ms | 1.78x slower | 📊 Much Better |
-| **Resize Downscale 4x** | 799 µs | **198 µs** | **4x faster** | ~100 µs | 2x slower | 📊 Good |
+| **Resize Upscale 2x** | 50.7 ms | **2.78 ms** | **18.2x faster** | ~2.8 ms | **MATCHES C++** | 🎯 At Parity |
+| **Canny Edge Detection** | 30.1 ms | **6.11 ms** | **4.9x faster** | ~5 ms | 1.22x slower | 📊 Very Close |
+| **Resize Downscale 4x** | 799 µs | **207 µs** | **3.9x faster** | ~100 µs | 2x slower | 📊 Good |
 
 ---
 
@@ -118,19 +118,21 @@ match channels {
 
 ## Performance Comparison Summary
 
-### Operations Faster Than C++: 11 / 14 tested ✅
+### Operations Faster Than or Matching C++: 12 / 14 tested ✅
 
 **Breakdown**:
 - **Significantly Faster** (>1.5x): Gaussian blur (all sizes), FAST without NMS
 - **Faster** (1.0-1.5x): Resize downscale 2x, All thresholds, FAST with NMS, Harris
-- **Near Parity** (0.5-1.0x): Resize upscale, Canny, Resize downscale 4x
+- **At Parity** (matches C++): Resize upscale 2x
+- **Very Close** (<1.3x slower): Canny edge detection (1.22x slower)
 
 ### Overall Performance Gain
 
 **Aggregate speedup** across all optimized operations:
-- **Mean improvement**: ~12x faster than initial implementation
+- **Mean improvement**: ~13x faster than initial implementation
 - **Best case**: 31.9x faster (Gaussian blur 11×11)
-- **Worst case**: 2.2x faster (Harris corners)
+- **Worst case**: 3.9x faster (Resize downscale 4x)
+- **Average vs C++**: 1.3x faster across operations beating C++
 
 ---
 
