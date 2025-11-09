@@ -117,6 +117,8 @@ impl GpuContext {
         {
             Some(a) => a,
             None => {
+                #[cfg(target_arch = "wasm32")]
+                web_sys::console::error_1(&"Failed to request WebGPU adapter - WebGPU may not be supported".into());
                 GPU_CONTEXT.with(|ctx| *ctx.borrow_mut() = None);
                 return false;
             }
@@ -134,7 +136,9 @@ impl GpuContext {
             .await
         {
             Ok(dq) => dq,
-            Err(_) => {
+            Err(e) => {
+                #[cfg(target_arch = "wasm32")]
+                web_sys::console::error_1(&format!("Failed to request WebGPU device: {:?}", e).into());
                 GPU_CONTEXT.with(|ctx| *ctx.borrow_mut() = None);
                 return false;
             }
