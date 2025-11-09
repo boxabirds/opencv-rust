@@ -64,7 +64,7 @@ pub fn threshold(
     Ok(thresh)
 }
 
-/// Apply adaptive threshold
+/// Apply adaptive threshold - optimized with rayon parallelization
 pub fn adaptive_threshold(
     src: &Mat,
     dst: &mut Mat,
@@ -86,62 +86,76 @@ pub fn adaptive_threshold(
         ));
     }
 
+    // Validate threshold type
+    match thresh_type {
+        ThresholdType::Binary | ThresholdType::BinaryInv => {}
+        _ => {
+            return Err(Error::UnsupportedOperation(
+                "adaptive_threshold only supports Binary and BinaryInv types".to_string(),
+            ));
+        }
+    }
+
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
+    let rows = src.rows();
+    let cols = src.cols();
     let half = block_size / 2;
     let maxval = maxval as u8;
 
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            let mut sum = 0f64;
-            let mut count = 0;
+    // Use rayon::scope to safely share references
+    rayon::scope(|_s| {
+        let dst_data = dst.data_mut();
+        let src_data = src.data();
 
-            for ky in -half..=half {
-                for kx in -half..=half {
-                    let r = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
-                    let c = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
+        dst_data.par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
+            for col in 0..cols {
+                let mut sum = 0u32;
+                let mut count = 0u32;
 
-                    let pixel = src.at(r, c)?;
-                    sum += pixel[0] as f64;
-                    count += 1;
+                // Calculate local threshold from neighborhood
+                for ky in -half..=half {
+                    let r = (row as i32 + ky).max(0).min(rows as i32 - 1) as usize;
+                    for kx in -half..=half {
+                        let c_offset = (col as i32 + kx).max(0).min(cols as i32 - 1) as usize;
+
+                        let src_idx = r * cols + c_offset;
+                        sum += src_data[src_idx] as u32;
+                        count += 1;
+                    }
                 }
+
+                let local_thresh = match method {
+                    AdaptiveThresholdMethod::Mean => (sum as f64 / count as f64) - c,
+                    AdaptiveThresholdMethod::Gaussian => {
+                        // Simplified - use mean for now (would normally use weighted Gaussian)
+                        (sum as f64 / count as f64) - c
+                    }
+                };
+
+                let src_idx = row * cols + col;
+                let value = src_data[src_idx];
+
+                dst_row[col] = match thresh_type {
+                    ThresholdType::Binary => {
+                        if value as f64 > local_thresh {
+                            maxval
+                        } else {
+                            0
+                        }
+                    }
+                    ThresholdType::BinaryInv => {
+                        if value as f64 > local_thresh {
+                            0
+                        } else {
+                            maxval
+                        }
+                    }
+                    _ => 0, // Already validated above
+                };
             }
-
-            let local_thresh = match method {
-                AdaptiveThresholdMethod::Mean => (sum / count as f64) - c,
-                AdaptiveThresholdMethod::Gaussian => {
-                    // Simplified - would normally use weighted Gaussian
-                    (sum / count as f64) - c
-                }
-            };
-
-            let src_pixel = src.at(row, col)?;
-            let value = src_pixel[0];
-
-            let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = match thresh_type {
-                ThresholdType::Binary => {
-                    if value as f64 > local_thresh {
-                        maxval
-                    } else {
-                        0
-                    }
-                }
-                ThresholdType::BinaryInv => {
-                    if value as f64 > local_thresh {
-                        0
-                    } else {
-                        maxval
-                    }
-                }
-                _ => {
-                    return Err(Error::UnsupportedOperation(
-                        "adaptive_threshold only supports Binary and BinaryInv types".to_string(),
-                    ));
-                }
-            };
-        }
-    }
+        });
+    });
 
     Ok(())
 }

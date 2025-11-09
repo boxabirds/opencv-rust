@@ -1,7 +1,8 @@
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
+use rayon::prelude::*;
 
-/// Bilateral filter for edge-preserving smoothing
+/// Bilateral filter for edge-preserving smoothing - optimized with rayon parallelization
 pub fn bilateral_filter(
     src: &Mat,
     dst: &mut Mat,
@@ -17,6 +18,9 @@ pub fn bilateral_filter(
 
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
+    let rows = src.rows();
+    let cols = src.cols();
+    let channels = src.channels();
     let radius = if d <= 0 { 5 } else { d / 2 };
 
     // Precompute spatial Gaussian kernel
@@ -33,45 +37,61 @@ pub fn bilateral_filter(
 
     let color_coeff = -0.5 / (sigma_color * sigma_color);
 
-    // Apply bilateral filter
-    for row in 0..src.rows() {
-        for col in 0..src.cols() {
-            let center_pixel = src.at(row, col)?;
+    // Use rayon::scope to safely share references
+    rayon::scope(|_s| {
+        let dst_data = dst.data_mut();
+        let src_data = src.data();
+        let row_size = cols * channels;
 
-            let mut sum = vec![0.0f64; src.channels()];
-            let mut weight_sum = 0.0f64;
+        dst_data.par_chunks_mut(row_size).enumerate().for_each(|(row, dst_row)| {
+            // Stack arrays for temporary storage (max 4 channels)
+            let mut sum = [0.0f64; 4];
+            let mut center = [0u8; 4];
 
-            for i in -radius..=radius {
-                for j in -radius..=radius {
-                    let y = (row as i32 + i).max(0).min(src.rows() as i32 - 1) as usize;
-                    let x = (col as i32 + j).max(0).min(src.cols() as i32 - 1) as usize;
+            for col in 0..cols {
+                // Get center pixel
+                let center_idx = (row * cols + col) * channels;
+                for ch in 0..channels {
+                    center[ch] = src_data[center_idx + ch];
+                }
 
-                    let neighbor_pixel = src.at(y, x)?;
+                sum.fill(0.0);
+                let mut weight_sum = 0.0f64;
 
-                    // Calculate color distance
-                    let mut color_dist = 0.0f64;
-                    for ch in 0..src.channels() {
-                        let diff = center_pixel[ch] as f64 - neighbor_pixel[ch] as f64;
-                        color_dist += diff * diff;
+                // Process neighborhood
+                for i in -radius..=radius {
+                    let y = (row as i32 + i).max(0).min(rows as i32 - 1) as usize;
+                    for j in -radius..=radius {
+                        let x = (col as i32 + j).max(0).min(cols as i32 - 1) as usize;
+
+                        let neighbor_idx = (y * cols + x) * channels;
+
+                        // Calculate color distance
+                        let mut color_dist = 0.0f64;
+                        for ch in 0..channels {
+                            let diff = center[ch] as f64 - src_data[neighbor_idx + ch] as f64;
+                            color_dist += diff * diff;
+                        }
+
+                        // Combined weight
+                        let weight = spatial_kernel[(i + radius) as usize][(j + radius) as usize]
+                            * (color_dist * color_coeff).exp();
+
+                        for ch in 0..channels {
+                            sum[ch] += src_data[neighbor_idx + ch] as f64 * weight;
+                        }
+                        weight_sum += weight;
                     }
+                }
 
-                    // Combined weight
-                    let weight = spatial_kernel[(i + radius) as usize][(j + radius) as usize]
-                        * (color_dist * color_coeff).exp();
-
-                    for ch in 0..src.channels() {
-                        sum[ch] += neighbor_pixel[ch] as f64 * weight;
-                    }
-                    weight_sum += weight;
+                // Write result
+                let dst_idx = col * channels;
+                for ch in 0..channels {
+                    dst_row[dst_idx + ch] = (sum[ch] / weight_sum) as u8;
                 }
             }
-
-            let dst_pixel = dst.at_mut(row, col)?;
-            for ch in 0..src.channels() {
-                dst_pixel[ch] = (sum[ch] / weight_sum) as u8;
-            }
-        }
-    }
+        });
+    });
 
     Ok(())
 }
