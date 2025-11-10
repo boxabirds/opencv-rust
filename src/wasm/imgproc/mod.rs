@@ -14,3 +14,8 @@ pub use morphology::{
     morphology_gradient_wasm, morphology_top_hat_wasm, morphology_black_hat_wasm,
     morphology_tophat_wasm, morphology_blackhat_wasm
 };
+#[cfg(target_arch = "wasm32")]
+pub use drawing::{
+    draw_line_wasm, draw_rectangle_wasm, draw_circle_wasm,
+    draw_ellipse_wasm, draw_polylines_wasm, put_text_wasm
+};
