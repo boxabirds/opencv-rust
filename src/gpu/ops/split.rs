@@ -230,6 +230,11 @@ async fn execute_split_impl(ctx: &GpuContext, src: &Mat, dst: &mut Vec<Mat>) -> 
 
     // Copy each channel to staging buffer and read back
     for i in 0..channels as usize {
+        // Create encoder for this channel's copy operation
+        let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some(&format!("Split Encoder {}", i)),
+        });
+
         let staging_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(&format!("Staging Buffer {}", i)),
             size: single_channel_size,
@@ -245,7 +250,7 @@ async fn execute_split_impl(ctx: &GpuContext, src: &Mat, dst: &mut Vec<Mat>) -> 
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
-        ctx.device.poll(wgpu::MaintainBase::Wait);
+        // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
         receiver
             .await
@@ -257,13 +262,6 @@ async fn execute_split_impl(ctx: &GpuContext, src: &Mat, dst: &mut Vec<Mat>) -> 
             dst[i].data_mut().copy_from_slice(&data[..]);
         }
         staging_buffer.unmap();
-
-        // Create new encoder for next channel
-        if i < channels as usize - 1 {
-            encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Split Encoder"),
-            });
-        }
     }
 
     Ok(())

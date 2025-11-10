@@ -51,15 +51,8 @@ pub fn cvt_color(src: &Mat, dst: &mut Mat, code: ColorConversionCode) -> Result<
         ));
     }
 
-    // Try GPU acceleration if available
-    #[cfg(all(feature = "gpu", not(target_arch = "wasm32")))]
-    {
-        if crate::gpu::gpu_available() {
-            if let Ok(()) = crate::gpu::ops::cvt_color_gpu(src, dst, code) {
-                return Ok(());
-            }
-        }
-    }
+    // GPU acceleration handled by individual conversion functions
+    // (rgb_to_gray_gpu, rgb_to_hsv_gpu, etc.) - no generic cvt_color_gpu
 
     // CPU fallback
     match code {

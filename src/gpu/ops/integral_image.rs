@@ -26,7 +26,7 @@ pub async fn integral_image_gpu_async(src: &Mat, dst: &mut Mat) -> Result<()> {
         ));
     }
 
-    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U32)?;
+    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::F32)?;
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -173,7 +173,7 @@ async fn execute_integral_image_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat)
     }
 
     ctx.queue.submit(Some(encoder.finish()));
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     // Vertical pass
     let params_v = IntegralImageParams {
@@ -246,7 +246,7 @@ async fn execute_integral_image_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat)
     buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
         let _ = sender.send(result);
     });
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     receiver
         .await

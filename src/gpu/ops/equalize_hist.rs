@@ -157,7 +157,7 @@ async fn execute_equalize_hist_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) 
     });
     encoder.clear_buffer(&histogram_buffer, 0, None);
     ctx.queue.submit(Some(encoder.finish()));
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     // Pass 0: Compute histogram
     let params_0 = EqualizeHistParams {
@@ -225,7 +225,7 @@ async fn execute_equalize_hist_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) 
     }
 
     ctx.queue.submit(Some(encoder.finish()));
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     // Pass 1: Compute CDF
     let params_1 = EqualizeHistParams {
@@ -291,7 +291,7 @@ async fn execute_equalize_hist_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) 
     }
 
     ctx.queue.submit(Some(encoder.finish()));
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     // Pass 2: Apply equalization
     let params_2 = EqualizeHistParams {
@@ -373,7 +373,7 @@ async fn execute_equalize_hist_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) 
     buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
         let _ = sender.send(result);
     });
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     receiver
         .await

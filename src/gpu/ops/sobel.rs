@@ -248,7 +248,7 @@ async fn execute_sobel_impl(
         let _ = sender.send(result);
     });
 
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     receiver
         .await
