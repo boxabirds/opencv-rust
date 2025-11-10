@@ -48,13 +48,35 @@ All 102 features have:
 
 **Status**: **SUBSTANTIAL** - Core functionality implemented with tests
 
-### ❓ Level 4: GPU Acceleration (Unverified)
-- GPU compute infrastructure exists
-- Some features have GPU kernels
-- WebGPU integration in WASM layer
-- **Verification Status**: Unknown which features have working GPU paths
+### 🚀 Level 4: GPU Acceleration (15 operations implemented)
+- GPU compute infrastructure exists with wgpu/WebGPU
+- 10 shaders implemented in src/gpu/shaders/
+- 15 GPU operations in src/gpu/ops/ with async/sync support
+- All GPU operations have WASM bindings with GPU enabled
 
-**Status**: **UNKNOWN** - Needs systematic verification
+**Implemented GPU Operations** (2025-11-10):
+1. ✅ Gaussian Blur (verified)
+2. ✅ Resize (verified)
+3. ✅ Canny Edge Detection (verified)
+4. ✅ Threshold (verified)
+5. ✅ Sobel (verified)
+6. 🆕 Box Blur
+7. 🆕 Laplacian
+8. 🆕 Scharr
+9. 🆕 Flip
+10. 🆕 Rotate (90/180/270 degrees)
+11. 🆕 Erode
+12. 🆕 Dilate
+13. 🆕 Morphological Opening (composite: erode + dilate)
+14. 🆕 Morphological Closing (composite: dilate + erode)
+15. 🆕 Morphological Gradient (composite: dilate - erode)
+16. 🆕 Morphological Top Hat (composite: src - opening)
+17. 🆕 Morphological Black Hat (composite: closing - src)
+18. 🆕 RGB to Grayscale
+19. 🆕 RGB to HSV
+20. 🆕 Adaptive Threshold
+
+**Status**: **ACTIVE DEVELOPMENT** - 20 features with GPU support, systematic expansion underway
 
 ### ⚠️ Level 5: Full Stack Verification (3.9% Confirmed)
 Only 4 features have **confirmed** full stack (CPU + GPU + WASM + Tests + Visual):
@@ -68,31 +90,42 @@ Only 4 features have **confirmed** full stack (CPU + GPU + WASM + Tests + Visual
 ## Feature Breakdown by Category
 
 ### 🎨 Image Filtering & Enhancement (18 features)
-**Demo Status**: 18/18 ✅ | **Verified**: 1/18 (Gaussian Blur)
+**Demo Status**: 18/18 ✅ | **Verified**: 1/18 | **GPU**: 4/18
 
-- Gaussian Blur ✅
-- Box Blur, Median Blur, Bilateral Filter 🔶
+- Gaussian Blur ✅ (verified + GPU)
+- Box Blur 🆕 (GPU implemented)
+- Laplacian 🆕 (GPU implemented)
+- Scharr 🆕 (GPU implemented)
+- Sobel 🆕 (GPU implemented)
+- Median Blur, Bilateral Filter 🔶
 - Guided Filter, Gabor Filter, LoG Filter 🔶
 - Anisotropic Diffusion, Distance Transform 🔶
-- Watershed, Laplacian, Scharr, Sobel 🔶
+- Watershed 🔶
 
 ### 📐 Edge Detection (4 features)
-**Demo Status**: 4/4 ✅ | **Verified**: 1/4 (Canny)
+**Demo Status**: 4/4 ✅ | **Verified**: 1/4 | **GPU**: 4/4
 
-- Canny ✅
-- Sobel, Scharr, Laplacian 🔶
+- Canny ✅ (verified + GPU)
+- Sobel 🆕 (GPU implemented)
+- Scharr 🆕 (GPU implemented)
+- Laplacian 🆕 (GPU implemented)
 
 ### 🔄 Geometric Transformations (6 features)
-**Demo Status**: 6/6 ✅ | **Verified**: 1/6 (Resize)
+**Demo Status**: 6/6 ✅ | **Verified**: 1/6 | **GPU**: 3/6
 
-- Resize ✅
-- Flip, Rotate, Warp Affine, Warp Perspective, Get Rotation Matrix 🔶
+- Resize ✅ (verified + GPU)
+- Flip 🆕 (GPU implemented)
+- Rotate 🆕 (GPU implemented)
+- Warp Affine, Warp Perspective, Get Rotation Matrix 🔶
 
 ### 🌈 Color & Thresholding (7 features)
-**Demo Status**: 7/7 ✅ | **Verified**: 1/7 (Threshold)
+**Demo Status**: 7/7 ✅ | **Verified**: 1/7 | **GPU**: 4/7
 
-- Threshold ✅
-- RGB↔Gray, RGB↔HSV, RGB↔Lab, RGB↔YCrCb, Adaptive Threshold 🔶
+- Threshold ✅ (verified + GPU)
+- RGB to Gray 🆕 (GPU implemented)
+- RGB to HSV 🆕 (GPU implemented)
+- Adaptive Threshold 🆕 (GPU implemented)
+- RGB↔Lab, RGB↔YCrCb 🔶
 
 ### 📊 Histogram Operations (5 features)
 **Demo Status**: 5/5 ✅ | **Verified**: 0/5
@@ -100,9 +133,15 @@ Only 4 features have **confirmed** full stack (CPU + GPU + WASM + Tests + Visual
 - Calculate, Equalize, Normalize, Compare, Back Projection 🔶
 
 ### 🔲 Morphological Operations (6 features)
-**Demo Status**: 6/6 ✅ | **Verified**: 0/6
+**Demo Status**: 6/6 ✅ | **Verified**: 0/6 | **GPU**: 6/6
 
-- Erode, Dilate, Opening, Closing, Gradient, Top/Black Hat 🔶
+- Erode 🆕 (GPU implemented)
+- Dilate 🆕 (GPU implemented)
+- Opening 🆕 (GPU composite: erode + dilate)
+- Closing 🆕 (GPU composite: dilate + erode)
+- Gradient 🆕 (GPU composite: dilate - erode)
+- Top Hat 🆕 (GPU composite: src - opening)
+- Black Hat 🆕 (GPU composite: closing - src)
 
 ### 🎯 Contour Detection (4 features)
 **Demo Status**: 4/4 ✅ | **Verified**: 0/4
