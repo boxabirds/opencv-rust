@@ -1,307 +1,377 @@
-# GPU Operations Implementation Status
+# OpenCV Rust/WebGPU Implementation Plan
 
 **Last Updated**: 2025-11-10
-**Total GPU Operations**: 58 (53 standalone + 5 composites)
-**Batch 1**: 25 operations ✅
-**Batch 2**: 22 operations ✅
-**Batch 3**: 11 operations ✅
-**WASM Bindings**: 55 operations (95% complete - all with GPU acceleration)
-
-## Status Legend
-- ✅ = Complete and verified
-- 🆕 = Implemented in current batch
-- 🔧 = WASM binding added (needs testing)
-- ⏳ = In progress
-- ⬜ = Not started
-
-## Comprehensive Status Table
-
-### Batch 1: Core Operations (25 operations)
-
-| # | Operation | CPU | GPU Shader | GPU Rust | WASM Binding | Gallery Entry | OpenCV Test Parity | Notes |
-|---|-----------|-----|------------|----------|--------------|---------------|-------------------|-------|
-| 1 | Gaussian Blur | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
-| 2 | Resize | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
-| 3 | Canny Edge Detection | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
-| 4 | Threshold | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
-| 5 | Sobel | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
-| 6 | Box Blur | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU-accelerated WASM binding |
-| 7 | Laplacian | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 8 | Scharr | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 9 | Flip | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 10 | Rotate (90/180/270) | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 11 | Erode | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 12 | Dilate | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 13 | Morph Opening | 🆕 | ➡️ | ➡️ | ✅ | ✅ | ⏳ | GPU via morphology_ex_async |
-| 14 | Morph Closing | 🆕 | ➡️ | ➡️ | ✅ | ✅ | ⏳ | GPU via morphology_ex_async |
-| 15 | Morph Gradient | 🆕 | ➡️ | ➡️ | ✅ | ✅ | ⏳ | GPU via morphology_ex_async |
-| 16 | Morph Top Hat | 🆕 | ➡️ | ➡️ | ✅ | ✅ | ⏳ | Composite: src-opening |
-| 17 | Morph Black Hat | 🆕 | ➡️ | ➡️ | ✅ | ✅ | ⏳ | Composite: closing-src |
-| 18 | RGB to Grayscale | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU-accelerated WASM binding |
-| 19 | RGB to HSV | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU-accelerated WASM binding |
-| 20 | HSV to RGB | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 21 | RGB to Lab | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 22 | RGB to YCrCb | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 23 | Adaptive Threshold | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 24 | Bilateral Filter | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 25 | Median Blur | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-
-### Batch 2: Advanced Operations (22 operations)
-
-| # | Operation | CPU | GPU Shader | GPU Rust | WASM Binding | Gallery Entry | OpenCV Test Parity | Notes |
-|---|-----------|-----|------------|----------|--------------|---------------|-------------------|-------|
-| 26 | Lab to RGB | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 27 | YCrCb to RGB | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 28 | Pyramid Down | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 29 | Pyramid Up | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 30 | Warp Affine | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 31 | Convert Scale | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 32 | Add Weighted | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 33 | Gradient Magnitude | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 34 | Distance Transform | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 35 | Integral Image | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 36 | Equalize Histogram | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 37 | Bitwise NOT | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 38 | Bitwise AND | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 39 | Bitwise OR | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 40 | Bitwise XOR | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 41 | Absolute Difference | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 42 | Min | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 43 | Max | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 44 | Add | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 45 | Subtract | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 46 | Multiply | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 47 | Normalize | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-
-### Batch 3: Advanced Processing (11 operations)
-
-| # | Operation | CPU | GPU Shader | GPU Rust | WASM Binding | Gallery Entry | OpenCV Test Parity | Notes |
-|---|-----------|-----|------------|----------|--------------|---------------|-------------------|-------|
-| 48 | Filter2D | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 49 | Warp Perspective | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 50 | InRange | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 51 | Split | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 52 | Merge | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 53 | Remap | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 54 | Pow | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 55 | Exp | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 56 | Log | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 57 | Sqrt | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-| 58 | LUT | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU WASM binding complete |
-
-## Statistics Summary
-
-### Overall Progress
-- **Total Operations**: 58
-- **GPU Shaders**: 51/58 (88%) - 5 composites use existing shaders
-- **Rust Implementation**: 53/58 (91%) - 5 composites use Rust composition
-- **Verified Complete**: 5/58 (9%)
-- **WASM Bindings Added**: 55/58 (95%) - All with GPU acceleration
-- **Needs Testing**: 53/58 (91%)
-
-### By Component Status
-
-| Component | Complete | In Progress | Not Started |
-|-----------|----------|-------------|-------------|
-| CPU Implementation | 58 | 0 | 0 |
-| GPU Shaders | 51 | 0 | 2 |
-| GPU Rust Wrappers | 53 | 0 | 0 |
-| WASM Bindings | 55 | 0 | 3 |
-| Gallery Entries | 58 | 0 | 0 |
-| OpenCV Test Parity | 5 | 0 | 53 |
-
-### Compilation Status
-- ✅ **Native build: Compiles successfully** (all GPU errors fixed - wgpu 27 compatible)
-- ✅ All 58 GPU operations compile without errors
-- ✅ **WASM bindings: 55/58 (95%) complete** - All with GPU acceleration
-- ✅ **WASM GPU bindings: Signature fixes complete** (in_range, filter2d, remap)
-  - Fixed type conversions: arrays/Vec → Scalar/Mat
-  - GPU fallbacks work correctly
-  - CPU fallbacks implemented for all 48 operations
-- ✅ All operations export correctly from `src/gpu/ops/mod.rs`
-
-### Batch 3 Highlights
-
-**Generic Transformations**:
-- Filter2D: Arbitrary 2D convolution with custom kernels
-- Warp Perspective: 3x3 projective transformations with bilinear interpolation
-- Remap: Generic pixel remapping with arbitrary mapping functions
-
-**Channel Operations**:
-- Split/Merge: Efficient channel separation and recombination
-- InRange: Multi-channel range-based masking
-
-**Math Operations**:
-- Element-wise functions: pow, exp, log, sqrt
-- LUT: Fast lookup table transformations
-
-## Implementation Details
-
-### GPU Architecture
-All GPU operations follow consistent patterns:
-
-1. **Shader Files** (`src/gpu/shaders/*.wgsl`):
-   - 16x16 workgroup size for optimal GPU utilization
-   - Proper border handling (clamping or skip borders)
-   - Multi-channel support where applicable
-   - Efficient memory access patterns
-
-2. **Rust Wrappers** (`src/gpu/ops/*.rs`):
-   - Async function for WASM: `*_gpu_async()`
-   - Sync wrapper for native: `*_gpu()` using `pollster::block_on`
-   - Platform-specific context handling with `#[cfg(target_arch = "wasm32")]`
-   - Proper error handling and validation
-   - Staging buffers for GPU→CPU data transfer
-
-3. **Module Exports** (`src/gpu/ops/mod.rs`):
-   - Sync exports for native with `#[cfg(not(target_arch = "wasm32"))]`
-   - Async exports for WASM (all platforms)
-   - Clear organization by batch
-
-### Advanced Techniques Implemented
-
-**Color Space Conversions**:
-- RGB ↔ HSV: Hue sector handling
-- RGB ↔ Lab: sRGB gamma correction, D65 white point, XYZ intermediate
-- RGB ↔ YCrCb: ITU-R BT.601 standard
-
-**Multi-Pass Algorithms**:
-- Integral Image: 2-pass (horizontal then vertical scan)
-- Histogram Equalization: 3-pass (histogram → CDF → apply)
-- Uses atomic operations for thread-safe histogram computation
-
-**Advanced Filtering**:
-- Median Blur: Sorting networks for 3x3 (9 elements) and 5x5 (25 elements)
-- Bilateral Filter: Spatial + range Gaussian weights
-
-**Geometric Transforms**:
-- Warp Affine: 2x3 matrix with bilinear interpolation
-- Pyramid operations: 5x5 Gaussian kernel
-
-## Recent Updates
-
-**2025-11-10 (Latest Session - Continued)**:
-1. **Upgraded 2 WASM bindings to GPU-first pattern**:
-   - median_blur_wasm: Added GPU acceleration with CPU fallback
-   - bilateral_filter_wasm: Added GPU acceleration with CPU fallback
-
-2. **Added 4 new GPU WASM bindings**:
-   - split_channels_wasm: GPU-accelerated multi-channel split
-   - merge_channels_wasm: GPU-accelerated channel merge
-   - warp_affine_wasm: Upgraded to call GPU first
-   - distance_transform_wasm: Upgraded to call GPU first
-
-3. **Updated web demo gallery**:
-   - Marked 14 operations as GPU-accelerated (gpuAccelerated: true)
-   - Total GPU operations in gallery: 24/102 (24%)
-   - Operations: median_blur, bilateral_filter, distance_transform, scharr, laplacian, flip, rotate, warp_affine, warp_perspective, adaptive_threshold, erode, dilate, morphology_opening, morphology_closing, morphology_gradient
-
-4. **Updated documentation**:
-   - plan.md now reflects 48/58 (83%) WASM bindings complete
-   - All 48 operations use GPU-first pattern with CPU fallback
-   - Updated all batch tables with ✅ WASM binding status
-
-**Progress: 55/58 GPU operations (95%) now have complete WASM bindings with GPU acceleration**
-
-5. **Upgraded 7 more operations to GPU acceleration**:
-   - hsv_to_rgb_wasm: Already had GPU-first pattern
-   - lab_to_rgb_wasm: Already had GPU-first pattern
-   - ycrcb_to_rgb_wasm: Already had GPU-first pattern
-   - pyr_down_wasm: Already had GPU-first pattern
-   - pyr_up_wasm: Already had GPU-first pattern
-   - morphology_opening_wasm: Upgraded to use morphology_ex_async with GPU
-   - morphology_closing_wasm: Upgraded to use morphology_ex_async with GPU
-   - morphology_gradient_wasm: Upgraded to use morphology_ex_async with GPU
-
-**Progress: 55/58 GPU operations (95%) complete - only 3 remaining**
+**Status**: Post-Audit Strategic Planning
 
 ---
 
-**2025-11-10 (Earlier)**:
-1. **Fixed all GPU compilation errors** (50 files modified):
-   - Updated wgpu API calls for wgpu 27 compatibility
-   - Fixed Scalar field access (`.0[index]` → `.val[index]`)
-   - Removed invalid MatDepth::U32, cvt_color_gpu references
-   - Fixed encoder borrow-after-move in split operation
-   - ✅ **Native build now compiles successfully**
+## Executive Summary
 
-2. **Added 21 WASM bindings** for GPU-accelerated operations:
-   - **Color conversions**: HSV→RGB, Lab→RGB, YCrCb→RGB
-   - **Pyramid operations**: pyrDown, pyrUp
-   - **Arithmetic operations**: convert_scale, add_weighted, gradient_magnitude, integral_image
-   - **Bitwise operations**: NOT, AND, OR, XOR, absdiff
-   - **Element-wise operations**: min, max, add
-   - **Advanced operations**: filter2D, inRange, remap, pow
+### Current Reality (Honest Assessment)
 
-   All new WASM bindings follow the GPU-first pattern with CPU fallback.
-   Location: `src/wasm/mod.rs` lines 3625-4208
+| Component | Status | Reality |
+|-----------|--------|---------|
+| **GPU Operations** | 58 implemented with WASM | ✅ 58 exist, ⚠️ 40 orphaned (no demos) |
+| **Gallery Demos** | 102 total | ⚠️ Only 18 (18%) have GPU, 84 CPU-only |
+| **Verified Complete** | 4-5 operations | ❌ Only 4% of 102 demos fully verified |
+| **Pipeline Caching** | Stub only | ❌ Critical performance gap (10-100ms/call) |
+| **Test Parity** | 396 tests exist | ❌ No systematic OpenCV comparison |
+| **WASM Quality** | 153 functions | ✅ **Project strength** |
 
-3. **Fixed WASM GPU binding signature mismatches**:
-   - Corrected type conversions (arrays/Vec → Scalar/Mat) for in_range, filter2d, remap
-   - Updated tracker API usage (MeanShift/CamShift)
-   - Fixed function names (abs_diff, ConvolutionLayer)
-   - Removed CPU fallbacks for unimplemented functions (error gracefully if GPU unavailable)
+### Key Insight
 
-4. **Added 5 more WASM bindings** (31/58 total, 53%):
-   - **Box Blur**: GPU-accelerated box filter
-   - **RGB to Grayscale**: GPU-accelerated color conversion
-   - **RGB to HSV**: GPU-accelerated color space conversion
-   - **Morph Top Hat**: Composite morphological operation
-   - **Morph Black Hat**: Composite morphological operation
+**Two parallel tracks exist with minimal overlap:**
+1. **GPU Operations Track**: 58 operations (shaders + Rust + WASM)
+2. **Gallery Demos Track**: 102 demonstrations (mostly CPU-only)
+3. **Gap**: Only 18 operations bridge both tracks (18%)
 
-## Next Steps
+---
 
-### Phase 1: WASM Integration (95% Complete) ✅
-Progress: 55/58 WASM bindings (95%), GPU code compiles ✅
-1. ✅ Fix GPU compilation errors (wgpu 27 compatibility)
-2. ✅ Add 55 WASM bindings with GPU acceleration
-3. ✅ Fix signature mismatches in GPU bindings (in_range, filter2d, remap)
-   - Fixed type conversions for Scalar and Mat parameters
-   - Updated MeanShift/CamShift tracker API usage
-   - Corrected function names (abs_diff, ConvolutionLayer)
-   - Implemented CPU fallbacks for most operations
-4. ✅ Upgraded morphology composites to use GPU (morphology_ex_async)
-5. ✅ Verified color conversions and pyramid operations have GPU bindings
-6. Add remaining 3 WASM bindings (if needed)
-7. Test all WASM bindings in web gallery
-8. Verify GPU acceleration works correctly
+## What's Actually Complete
 
-### Phase 2: Testing & Verification
-For each operation:
-1. Create unit tests comparing GPU vs CPU output
-2. Verify bit-level accuracy or acceptable tolerance
-3. Benchmark performance (target >2x speedup)
-4. Visual verification in gallery
+### ✅ Solid Accomplishments
 
-### Phase 3: Documentation
-1. Update API documentation
-2. Create usage examples
-3. Performance benchmarks
-4. Add to demo gallery with GPU toggle
+1. **Infrastructure** (40,196 lines of Rust)
+   - Professional error handling, type-safe implementations
+   - 14 OpenCV modules represented
 
-## File Locations
+2. **WASM Integration** (153 functions)
+   - Async GPU support, clean JavaScript interop
+   - Memory-safe browser execution
+   - **This is a project strength**
 
+3. **GPU Foundation** (58 operations)
+   - Modern WebGPU shaders (2,923 lines WGSL)
+   - wgpu 27 API compliance
+   - All compile successfully
+
+4. **Gallery** (102 interactive demos)
+   - Intuitive React UI, parameter controls
+   - Before/after comparison, performance metrics
+
+5. **Test Suite** (396 tests across 33 files)
+   - Accuracy-focused validation
+
+### ❌ Critical Gaps
+
+1. **Pipeline Caching**: Stub only - pipelines recreated every call (severe performance impact)
+2. **84 Demos Without GPU**: 82% of gallery runs CPU-only
+3. **40 Orphaned GPU Ops**: No corresponding demos
+4. **Test Parity**: No systematic OpenCV comparison
+5. **Verification**: Only 4-5/102 operations fully verified (4%)
+
+---
+
+## Recommended Path: Production-Ready Core (6 weeks)
+
+**Goal**: Make 15-20 critical operations production-ready with GPU acceleration
+
+### Why This Path?
+
+1. **Fixes Critical Gap**: Pipeline caching is essential for GPU performance
+2. **Establishes Quality Bar**: Creates template for completing remaining work
+3. **Builds Credibility**: Honest assessment vs overstated claims
+4. **Provides Value**: 15-20 verified operations cover 80% of common use cases
+5. **Enables Growth**: Solid foundation for future expansion
+
+### Core Operations to Verify (15-20 total)
+
+**Already Verified (4-5)**:
+- ✅ gaussian_blur, resize, threshold, canny, sobel
+
+**Priority for Verification (10-15)**:
+1. erode/dilate
+2. morphology operations (opening, closing, gradient)
+3. color conversions (RGB↔Gray, RGB↔HSV)
+4. bilateral_filter, median_blur, adaptive_threshold
+5. warp_affine, warp_perspective
+6. laplacian, scharr
+
+**Stretch Goals**: histogram equalization, box_blur, flip, rotate
+
+---
+
+## Implementation Plan
+
+### Phase 1: Infrastructure (Week 1-2)
+
+#### Priority 1: Implement Pipeline Caching 🔴 CRITICAL
+**Current**: `src/gpu/pipeline_cache.rs` is a 61-line stub
+**Impact**: 10-100ms saved per operation
+
+**Implementation**:
+```rust
+pub struct PipelineCache {
+    // Pre-compiled pipelines for common operations
+    gaussian_blur: ComputePipeline,
+    resize: ComputePipeline,
+    threshold: ComputePipeline,
+    // ... (15-20 core operations)
+
+    // Dynamic cache for parameterized operations
+    dynamic_cache: LruCache<PipelineKey, ComputePipeline>,
+}
+
+impl PipelineCache {
+    pub fn new(device: &Device) -> Self {
+        // Pre-compile all common pipelines at startup
+        // Target: <1 second initialization
+    }
+}
 ```
-src/gpu/
-├── shaders/          # 51 WGSL compute shaders
-│   ├── blur.wgsl
-│   ├── resize.wgsl
-│   ├── threshold.wgsl
-│   ├── ...
-│   ├── lut.wgsl
-│   └── normalize.wgsl
-├── ops/              # 53 Rust GPU operation wrappers
-│   ├── blur.rs
-│   ├── resize.rs
-│   ├── threshold.rs
-│   ├── ...
-│   ├── lut.rs
-│   ├── normalize.rs
-│   └── mod.rs        # Exports all operations
-└── device.rs         # GPU context management
+
+**Success Metrics**:
+- Pipeline creation moves from per-call to once at startup
+- Cache hit rate >80% in typical usage
+- Performance improvement: 10-100ms per operation
+- Memory overhead: <50MB for all cached pipelines
+
+**Files to Modify**:
+- `src/gpu/pipeline_cache.rs` (61 lines → ~300 lines)
+- `src/gpu/device.rs` (integrate cache)
+- `src/gpu/ops/*.rs` (use cached pipelines - 15-20 files)
+
+---
+
+#### Priority 2: Create OpenCV Test Harness ⚠️ HIGH
+**Goal**: Automated comparison against OpenCV reference implementation
+
+**New Files**:
+1. `tests/opencv_reference/generate_tests.py` - Generate reference outputs
+2. `tests/test_opencv_parity.rs` - Rust parity tests
+3. `tests/tolerances.toml` - Acceptable difference thresholds
+
+**Example**:
+```python
+# generate_tests.py
+# For each operation:
+# 1. Run OpenCV reference implementation
+# 2. Save input/output as test fixtures
+# 3. Generate Rust test comparing our output
+```
+
+```rust
+// test_opencv_parity.rs
+#[test]
+fn test_gaussian_blur_parity() {
+    let reference = load_opencv_reference("gaussian_blur");
+    let our_output = gaussian_blur(...);
+    assert_images_match(reference, our_output, tolerance);
+}
+```
+
+```toml
+# tolerances.toml
+[gaussian_blur]
+max_pixel_diff = 1  # ±1 due to rounding
+max_mean_diff = 0.1
+
+[bilateral_filter]
+max_pixel_diff = 3  # More tolerance for edge-preserving filters
+```
+
+**Success Metrics**:
+- Automated tests for all 15-20 core operations
+- Clear pass/fail criteria
+- Runs in CI on every commit
+- Documentation of acceptable tolerances
+
+---
+
+#### Priority 3: Fix Gallery GPU Marking ⚠️ MEDIUM
+**Issue**: Audit found 24 demos marked `gpuAccelerated: true` but only 18 have shaders
+
+**File**: `examples/web-benchmark/src/demoRegistry.js`
+
+**Action**:
+1. Identify which 6 of 24 marked demos lack shaders
+2. Either add shader OR remove GPU flag
+3. Update gallery metadata for accuracy
+
+---
+
+### Phase 2: Verification (Week 3-4)
+
+**Week 3**: Verify 5 operations
+- [ ] Verify: gaussian_blur, resize, threshold, canny, sobel
+- [ ] Tests: OpenCV parity tests passing
+- [ ] Docs: API documentation written
+
+**Week 4**: Verify 10-15 additional operations
+- [ ] Verify: erode, dilate, morphology ops, color conversions, filters
+- [ ] Gallery: All demos updated
+- [ ] Performance: >2x speedup achieved for 90%
+
+**Per-Operation Checklist**:
+- [ ] GPU shader ✓
+- [ ] Rust wrapper ✓
+- [ ] WASM binding ✓
+- [ ] OpenCV parity test ✓
+- [ ] Performance benchmark (>2x speedup) ✓
+- [ ] API documentation ✓
+- [ ] Gallery demo ✓
+
+---
+
+### Phase 3: Polish (Week 5-6)
+
+**Week 5**: Polish
+- [ ] Gallery: Add GPU toggle UI for side-by-side comparison
+- [ ] Optimization: Profile and optimize hotspots
+- [ ] CI/CD: Automated testing + deployment pipeline
+
+**Week 6**: Release
+- [ ] README: Update with honest claims (15-20 verified ops)
+- [ ] Documentation: Complete for all verified operations
+- [ ] Blog post: "Building Production-Ready GPU-Accelerated OpenCV in Rust"
+- [ ] Roadmap: Document path for remaining 80+ operations
+
+---
+
+## Success Metrics (6 weeks)
+
+### Quality Metrics
+- **Verified Operations**: 4-5 → **15-20** (375% increase)
+- **Pipeline Caching**: Stub → **Functional** (10-100ms improvement)
+- **Test Coverage**: 396 tests → **450+ tests** (including parity)
+- **GPU Speedup**: Unverified → **>2x for 90% of operations**
+
+### Technical Metrics
+- **Pipeline Cache Hit Rate**: Target >80%
+- **GPU Initialization Time**: Target <1 second
+- **Memory Usage**: Target <100MB GPU memory for typical operations
+
+### Project Health
+- **Documentation Coverage**: Target 100% for verified operations
+- **Known Issues**: Document all limitations honestly
+- **CI Pass Rate**: Target >95%
+- **Performance Regressions**: Zero tolerance
+
+---
+
+## What Gets Deferred
+
+- ⏸️ GPU support for 80+ remaining demos (long-term roadmap)
+- ⏸️ Advanced features (SIFT, ORB, DNN, etc.)
+- ⏸️ Performance optimization beyond pipeline caching
+- ⏸️ Mobile-specific optimizations
+
+---
+
+## Alternative Options Considered
+
+### Option A: Complete All 58 GPU Operations (4-6 weeks)
+**Pros**: Full depth on GPU track, solid foundation
+**Cons**: 44 gallery demos remain CPU-only, doesn't address breadth
+
+### Option B: Expand GPU to More Demos (6-8 weeks)
+**Pros**: Broader coverage (18% → 45% GPU)
+**Cons**: Spreads effort thin, pipeline caching still missing
+
+### Option C: Production-Ready Core ⭐ RECOMMENDED
+**Pros**: Quality over quantity, fixes critical issues, builds credibility
+**Cons**: Requires admitting current limitations
+
+---
+
+## Common Pitfalls to Avoid
+
+1. ❌ **Scope Creep**: Don't try to do all 102 demos at once
+   - ✅ Focus on 15-20 production-ready operations first
+
+2. ❌ **Ignoring Pipeline Caching**: Critical for performance
+   - ✅ Make it Priority 1, even if it delays other work
+
+3. ❌ **Skipping OpenCV Parity**: Can't claim "verified" without it
+   - ✅ Automate comparison testing in CI
+
+4. ❌ **Maintaining Overstated Claims**: Undermines credibility
+   - ✅ Update README honestly, build trust through quality
+
+5. ❌ **Batch Updates**: Trying to verify 10 operations at once
+   - ✅ Verify 1-2 operations at a time, learn and iterate
+
+---
+
+## Long-Term Roadmap (Post-6 Weeks)
+
+### Phase 4: Expand Coverage (Weeks 7-16)
+- Add GPU support for high-impact operations
+- Target 40-50 verified operations (50% of gallery)
+- Focus on: histograms, contours, feature detection
+
+### Phase 5: Advanced Features (Weeks 17-26)
+- Deep learning module (DNN)
+- Video processing optimizations
+- Advanced calibration algorithms
+
+### Phase 6: Optimization (Weeks 27-32)
+- Multi-GPU support
+- Mobile device optimizations
+- Batched operation APIs
+
+### Phase 7: Community & Ecosystem (Ongoing)
+- Python bindings (PyO3)
+- NPM package for easy WASM usage
+- Video tutorials and examples
+
+---
+
+## Getting Started
+
+**First commit should include**:
+1. Pipeline cache skeleton (even if not complete)
+2. Test infrastructure setup (`tests/opencv_reference/`)
+3. Gallery GPU marking fixes
+4. README update with honest claims
+
+**Commands**:
+```bash
+# 1. Create pipeline cache implementation
+cd src/gpu
+# Edit pipeline_cache.rs - remove placeholder, implement real caching
+
+# 2. Create test infrastructure
+mkdir -p tests/opencv_reference
+# Create generate_tests.py script
+
+# 3. Fix gallery GPU marking
+cd examples/web-benchmark/src
+# Audit demoRegistry.js, fix 6 incorrect GPU marks
+
+# 4. Update project status
+# Edit README.md to reflect honest current state
 ```
 
 ---
 
-**Last Updated**: 2025-11-10 20:15
-**Status**: Batch 3 Complete - 58 GPU operations implemented and compile successfully
+## Conclusion
+
+### Current State (Honest)
+- 58 GPU operations with shaders and WASM bindings ✅
+- 102 gallery demos (18% GPU-accelerated) ⚠️
+- 4-5 verified complete operations (4%) ❌
+- Pipeline caching: stub only ❌
+- Test parity: not systematic ❌
+
+### Recommended Next Steps
+1. **Focus on quality over quantity**: 15-20 production-ready operations
+2. **Fix critical infrastructure**: Implement pipeline caching
+3. **Establish methodology**: OpenCV parity testing
+4. **Be honest**: Update claims to match reality
+5. **Build foundation**: Template for completing remaining work
+
+### Why This Matters
+This project has **impressive infrastructure** and **substantial progress**, but overstated claims undermine credibility. By focusing on production-ready quality for core operations, we:
+1. Deliver real value to users
+2. Establish credibility
+3. Create template for future expansion
+4. Build sustainable momentum
+
+**Let's build something genuinely complete rather than superficially comprehensive.**
+
+---
+
+**Status**: Ready for implementation
+**Timeline**: 6 weeks to 15-20 production-ready operations
+**Next Step**: Implement pipeline caching (Priority 1)
