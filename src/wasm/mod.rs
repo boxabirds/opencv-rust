@@ -373,6 +373,33 @@ pub async fn blur_wasm(
     Ok(WasmMat { inner: dst })
 }
 
+/// Box blur - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = boxBlur)]
+pub async fn box_blur_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::box_blur_gpu_async(&src.inner, &mut dst, ksize).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU box blur failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    crate::imgproc::blur(&src.inner, &mut dst, Size::new(ksize, ksize))
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
 /// Median blur (WASM-compatible)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = medianBlur)]
@@ -1039,6 +1066,50 @@ pub async fn morphology_gradient_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     morphology_ex(&src.inner, &mut dst, MorphType::Gradient, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological top hat
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = morphologyTopHat)]
+pub async fn morphology_top_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    morphology_ex(&src.inner, &mut dst, MorphType::TopHat, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological black hat
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = morphologyBlackHat)]
+pub async fn morphology_black_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    morphology_ex(&src.inner, &mut dst, MorphType::BlackHat, &kernel)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -3625,6 +3696,60 @@ pub async fn blob_from_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 // ============================================================================
 // GPU-ACCELERATED OPERATIONS - BATCHES 1-3
 // ============================================================================
+
+/// Convert RGB to Grayscale (GPU-accelerated)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = rgbToGray)]
+pub async fn rgb_to_gray_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::rgb_to_gray_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU RGB to Gray failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToGray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Convert RGB to HSV color space (GPU-accelerated)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = rgbToHsv)]
+pub async fn rgb_to_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::rgb_to_hsv_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU RGB to HSV failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToHsv)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
 
 /// Convert HSV to RGB color space (GPU-accelerated)
 #[cfg(target_arch = "wasm32")]

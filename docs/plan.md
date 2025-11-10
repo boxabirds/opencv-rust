@@ -5,7 +5,7 @@
 **Batch 1**: 25 operations ✅
 **Batch 2**: 22 operations ✅
 **Batch 3**: 11 operations ✅
-**WASM Bindings**: 26 operations (5 verified + 21 new GPU-accelerated)
+**WASM Bindings**: 31 operations (5 verified + 26 new GPU-accelerated)
 
 ## Status Legend
 - ✅ = Complete and verified
@@ -25,7 +25,7 @@
 | 3 | Canny Edge Detection | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
 | 4 | Threshold | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
 | 5 | Sobel | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Verified complete** |
-| 6 | Box Blur | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
+| 6 | Box Blur | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU-accelerated WASM binding |
 | 7 | Laplacian | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
 | 8 | Scharr | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
 | 9 | Flip | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
@@ -35,10 +35,10 @@
 | 13 | Morph Opening | 🆕 | ➡️ | ➡️ | 🔧 | ✅ | ⏳ | Composite: erode+dilate |
 | 14 | Morph Closing | 🆕 | ➡️ | ➡️ | 🔧 | ✅ | ⏳ | Composite: dilate+erode |
 | 15 | Morph Gradient | 🆕 | ➡️ | ➡️ | 🔧 | ✅ | ⏳ | Composite: dilate-erode |
-| 16 | Morph Top Hat | 🆕 | ➡️ | ➡️ | 🔧 | ✅ | ⏳ | Composite: src-opening |
-| 17 | Morph Black Hat | 🆕 | ➡️ | ➡️ | 🔧 | ✅ | ⏳ | Composite: closing-src |
-| 18 | RGB to Grayscale | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
-| 19 | RGB to HSV | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
+| 16 | Morph Top Hat | 🆕 | ➡️ | ➡️ | ✅ | ✅ | ⏳ | Composite: src-opening |
+| 17 | Morph Black Hat | 🆕 | ➡️ | ➡️ | ✅ | ✅ | ⏳ | Composite: closing-src |
+| 18 | RGB to Grayscale | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU-accelerated WASM binding |
+| 19 | RGB to HSV | 🆕 | ✅ | ✅ | ✅ | ✅ | ⏳ | GPU-accelerated WASM binding |
 | 20 | HSV to RGB | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
 | 21 | RGB to Lab | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
 | 22 | RGB to YCrCb | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Needs WASM integration |
@@ -96,7 +96,7 @@
 - **GPU Shaders**: 51/58 (88%) - 5 composites use existing shaders
 - **Rust Implementation**: 53/58 (91%) - 5 composites use Rust composition
 - **Verified Complete**: 5/58 (9%)
-- **WASM Bindings Added**: 26/58 (45%) - 21 new GPU-accelerated + 5 verified
+- **WASM Bindings Added**: 31/58 (53%) - 26 new GPU-accelerated + 5 verified
 - **Needs Testing**: 53/58 (91%)
 
 ### By Component Status
@@ -106,7 +106,7 @@
 | CPU Implementation | 58 | 0 | 0 |
 | GPU Shaders | 51 | 0 | 2 |
 | GPU Rust Wrappers | 53 | 0 | 0 |
-| WASM Bindings | 5 | 21 | 32 |
+| WASM Bindings | 5 | 26 | 27 |
 | Gallery Entries | 58 | 0 | 0 |
 | OpenCV Test Parity | 5 | 0 | 53 |
 
@@ -199,10 +199,23 @@ All GPU operations follow consistent patterns:
    All new WASM bindings follow the GPU-first pattern with CPU fallback.
    Location: `src/wasm/mod.rs` lines 3625-4208
 
+3. **Fixed WASM GPU binding signature mismatches**:
+   - Corrected type conversions (arrays/Vec → Scalar/Mat) for in_range, filter2d, remap
+   - Updated tracker API usage (MeanShift/CamShift)
+   - Fixed function names (abs_diff, ConvolutionLayer)
+   - Removed CPU fallbacks for unimplemented functions (error gracefully if GPU unavailable)
+
+4. **Added 5 more WASM bindings** (31/58 total, 53%):
+   - **Box Blur**: GPU-accelerated box filter
+   - **RGB to Grayscale**: GPU-accelerated color conversion
+   - **RGB to HSV**: GPU-accelerated color space conversion
+   - **Morph Top Hat**: Composite morphological operation
+   - **Morph Black Hat**: Composite morphological operation
+
 ## Next Steps
 
 ### Phase 1: WASM Integration (In Progress)
-Progress: 26/58 WASM bindings (45%), GPU code compiles ✅
+Progress: 31/58 WASM bindings (53%), GPU code compiles ✅
 1. ✅ Fix GPU compilation errors (wgpu 27 compatibility)
 2. Add remaining 32 WASM bindings
 3. ✅ Fix signature mismatches in GPU bindings (in_range, filter2d, remap)
