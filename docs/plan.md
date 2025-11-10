@@ -5,11 +5,12 @@
 **Batch 1**: 25 operations ✅
 **Batch 2**: 22 operations ✅
 **Batch 3**: 11 operations ✅
+**WASM Bindings**: 26 operations (5 verified + 21 new GPU-accelerated)
 
 ## Status Legend
 - ✅ = Complete and verified
 - 🆕 = Implemented in current batch
-- 🔧 = Needs integration
+- 🔧 = WASM binding added (needs testing)
 - ⏳ = In progress
 - ⬜ = Not started
 
@@ -95,7 +96,7 @@
 - **GPU Shaders**: 51/58 (88%) - 5 composites use existing shaders
 - **Rust Implementation**: 53/58 (91%) - 5 composites use Rust composition
 - **Verified Complete**: 5/58 (9%)
-- **Needs WASM Integration**: 53/58 (91%)
+- **WASM Bindings Added**: 26/58 (45%) - 21 new GPU-accelerated + 5 verified
 - **Needs Testing**: 53/58 (91%)
 
 ### By Component Status
@@ -105,13 +106,14 @@
 | CPU Implementation | 58 | 0 | 0 |
 | GPU Shaders | 51 | 0 | 2 |
 | GPU Rust Wrappers | 53 | 0 | 0 |
-| WASM Bindings | 5 | 53 | 0 |
+| WASM Bindings | 5 | 21 | 32 |
 | Gallery Entries | 58 | 0 | 0 |
 | OpenCV Test Parity | 5 | 0 | 53 |
 
 ### Compilation Status
-- ✅ Native build: Compiles successfully
-- ✅ WASM build: Compiles successfully
+- ✅ WASM bindings: Syntax verified (no errors in src/wasm/mod.rs)
+- ⚠️ Native build: Has pre-existing GPU errors (wgpu MaintainBase API)
+- ⏳ WASM build: Pending GPU error fixes
 - ✅ All operations export correctly from `src/gpu/ops/mod.rs`
 
 ### Batch 3 Highlights
@@ -172,13 +174,28 @@ All GPU operations follow consistent patterns:
 - Warp Affine: 2x3 matrix with bilinear interpolation
 - Pyramid operations: 5x5 Gaussian kernel
 
+## Recent Updates
+
+**2025-11-10 (Latest)**: Added 21 WASM bindings for GPU-accelerated operations:
+- **Color conversions**: HSV→RGB, Lab→RGB, YCrCb→RGB
+- **Pyramid operations**: pyrDown, pyrUp
+- **Arithmetic operations**: convert_scale, add_weighted, gradient_magnitude, integral_image
+- **Bitwise operations**: NOT, AND, OR, XOR, absdiff
+- **Element-wise operations**: min, max, add
+- **Advanced operations**: filter2D, inRange, remap, pow
+
+All new WASM bindings follow the GPU-first pattern with CPU fallback.
+Location: `src/wasm/mod.rs` lines 3625-4208
+
 ## Next Steps
 
-### Phase 1: WASM Integration (Priority)
-For each of the 53 operations marked with 🔧:
-1. Add async wrapper to appropriate imgproc module (filter.rs, color.rs, etc.)
-2. Update WASM binding in `src/wasm/mod.rs` to use GPU version with `use_gpu: true`
-3. Test in web gallery
+### Phase 1: WASM Integration (In Progress)
+21 new WASM bindings added. Remaining tasks:
+1. Fix pre-existing GPU compilation errors:
+   - wgpu MaintainBase API updates (~30 files)
+   - Scalar type field access issues
+2. Test all WASM bindings in web gallery
+3. Verify GPU acceleration works correctly
 
 ### Phase 2: Testing & Verification
 For each operation:
