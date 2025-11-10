@@ -201,6 +201,14 @@ pub enum ColorConversionCode {
     RgbToHsv,
     HsvToBgr,
     HsvToRgb,
+    BgrToLab,
+    RgbToLab,
+    LabToBgr,
+    LabToRgb,
+    BgrToYCrCb,
+    RgbToYCrCb,
+    YCrCbToBgr,
+    YCrCbToRgb,
 }
 
 /// Interpolation methods
