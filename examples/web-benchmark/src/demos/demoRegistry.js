@@ -369,7 +369,7 @@ export const demos = [
     name: 'Anisotropic Diffusion',
     description: 'Edge-aware smoothing with diffusion',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -432,7 +432,7 @@ export const demos = [
     name: 'Watershed Segmentation',
     description: 'Marker-based image segmentation',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -677,7 +677,7 @@ export const demos = [
     name: 'Warp Perspective',
     description: 'Apply perspective transformation for document scanning',
     category: 'transform',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -694,7 +694,7 @@ export const demos = [
     name: 'Get Rotation Matrix 2D',
     description: 'Generate rotation matrix for affine transform',
     category: 'transform',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -886,7 +886,7 @@ export const demos = [
     name: 'Normalize Histogram',
     description: 'Normalize histogram values',
     category: 'histogram',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -914,7 +914,7 @@ export const demos = [
     name: 'Compare Histograms',
     description: 'Measure similarity between histograms',
     category: 'histogram',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -931,7 +931,7 @@ export const demos = [
     name: 'Back Projection',
     description: 'Find pixels matching histogram',
     category: 'histogram',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1094,7 +1094,7 @@ export const demos = [
     name: 'Top Hat',
     description: 'Original minus opening',
     category: 'morphology',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1113,7 +1113,7 @@ export const demos = [
     name: 'Black Hat',
     description: 'Closing minus original',
     category: 'morphology',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1220,7 +1220,7 @@ export const demos = [
     name: 'Image Moments',
     description: 'Calculate spatial moments for centroid and orientation',
     category: 'contours',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -1345,7 +1345,7 @@ export const demos = [
     name: 'SIFT',
     description: 'Scale-Invariant Feature Transform',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1382,7 +1382,7 @@ export const demos = [
     name: 'ORB',
     description: 'Oriented FAST and Rotated BRIEF',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1419,7 +1419,7 @@ export const demos = [
     name: 'BRISK',
     description: 'Binary Robust Invariant Scalable Keypoints',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1447,7 +1447,7 @@ export const demos = [
     name: 'AKAZE',
     description: 'Accelerated-KAZE features',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1475,7 +1475,7 @@ export const demos = [
     name: 'KAZE',
     description: 'Nonlinear scale space features',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {

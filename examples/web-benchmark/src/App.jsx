@@ -26,6 +26,41 @@ import init, {
   harrisCorners as wasmHarrisCorners,
   goodFeaturesToTrack as wasmGoodFeaturesToTrack,
   fast as wasmFast,
+  erode as wasmErode,
+  dilate as wasmDilate,
+  morphologyOpening as wasmMorphologyOpening,
+  morphologyClosing as wasmMorphologyClosing,
+  morphologyGradient as wasmMorphologyGradient,
+  equalizeHistogram as wasmEqualizeHistogram,
+  cvtColorHsv as wasmCvtColorHsv,
+  distanceTransform as wasmDistanceTransform,
+  nlmDenoising as wasmNlmDenoising,
+  houghLines as wasmHoughLines,
+  houghLinesP as wasmHoughLinesP,
+  houghCircles as wasmHoughCircles,
+  findContours as wasmFindContours,
+  boundingRect as wasmBoundingRect,
+  calcHistogram as wasmCalcHistogram,
+  detectAruco as wasmDetectAruco,
+  detectQR as wasmDetectQR,
+  contourArea as wasmContourArea,
+  arcLength as wasmArcLength,
+  approxPolyDP as wasmApproxPolyDP,
+  anisotropicDiffusion as wasmAnisotropicDiffusion,
+  morphologyTophat as wasmMorphologyTophat,
+  morphologyBlackhat as wasmMorphologyBlackhat,
+  warpPerspective as wasmWarpPerspective,
+  getRotationMatrix2d as wasmGetRotationMatrix2d,
+  normalizeHistogram as wasmNormalizeHistogram,
+  compareHistograms as wasmCompareHistograms,
+  backProjection as wasmBackProjection,
+  moments as wasmMoments,
+  watershed as wasmWatershed,
+  sift as wasmSift,
+  orb as wasmOrb,
+  brisk as wasmBrisk,
+  akaze as wasmAkaze,
+  kaze as wasmKaze,
   getVersion
 } from '../../../pkg/opencv_rust.js';
 
@@ -362,6 +397,186 @@ function App() {
         const threshold = params.threshold || 20;
         const nonmaxSuppression = params.nonmaxSuppression !== false;
         return await wasmFast(srcMat, threshold, nonmaxSuppression);
+      }
+
+      case 'erode': {
+        const ksize = params.ksize || 5;
+        return await wasmErode(srcMat, ksize);
+      }
+
+      case 'dilate': {
+        const ksize = params.ksize || 5;
+        return await wasmDilate(srcMat, ksize);
+      }
+
+      case 'morphology_opening': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyOpening(srcMat, ksize);
+      }
+
+      case 'morphology_closing': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyClosing(srcMat, ksize);
+      }
+
+      case 'morphology_gradient': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyGradient(srcMat, ksize);
+      }
+
+      case 'equalize_histogram': {
+        return await wasmEqualizeHistogram(srcMat);
+      }
+
+      case 'cvt_color_hsv': {
+        return await wasmCvtColorHsv(srcMat);
+      }
+
+      case 'distance_transform': {
+        return await wasmDistanceTransform(srcMat);
+      }
+
+      case 'nlm_denoising': {
+        const h = params.h || 10.0;
+        const templateWindowSize = params.templateWindowSize || 7;
+        const searchWindowSize = params.searchWindowSize || 21;
+        return await wasmNlmDenoising(srcMat, h, templateWindowSize, searchWindowSize);
+      }
+
+      case 'hough_lines': {
+        const threshold = params.threshold || 100;
+        return await wasmHoughLines(srcMat, threshold);
+      }
+
+      case 'hough_lines_p': {
+        const threshold = params.threshold || 50;
+        const minLineLength = params.minLineLength || 50.0;
+        const maxLineGap = params.maxLineGap || 10.0;
+        return await wasmHoughLinesP(srcMat, threshold, minLineLength, maxLineGap);
+      }
+
+      case 'hough_circles': {
+        const minDist = params.minDist || 50.0;
+        const param1 = params.param1 || 100.0;
+        const param2 = params.param2 || 30.0;
+        const minRadius = params.minRadius || 10;
+        const maxRadius = params.maxRadius || 100;
+        return await wasmHoughCircles(srcMat, minDist, param1, param2, minRadius, maxRadius);
+      }
+
+      case 'find_contours': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmFindContours(srcMat, thresholdValue);
+      }
+
+      case 'bounding_rect': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmBoundingRect(srcMat, thresholdValue);
+      }
+
+      case 'calc_histogram': {
+        return await wasmCalcHistogram(srcMat);
+      }
+
+      case 'aruco_detector': {
+        const dictId = params.dictId || 0;
+        return await wasmDetectAruco(srcMat, dictId);
+      }
+
+      case 'qr_detector': {
+        return await wasmDetectQR(srcMat);
+      }
+
+      case 'contour_area': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmContourArea(srcMat, thresholdValue);
+      }
+
+      case 'arc_length': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmArcLength(srcMat, thresholdValue);
+      }
+
+      case 'approx_poly_dp': {
+        const thresholdValue = params.threshold || 127.0;
+        const epsilon = params.epsilon || 5.0;
+        return await wasmApproxPolyDP(srcMat, thresholdValue, epsilon);
+      }
+
+      // ==================== Batch 4: Advanced Filters, Transforms & Feature Detection ====================
+
+      case 'anisotropic_diffusion': {
+        const iterations = params.iterations || 10;
+        const kappa = params.kappa || 20.0;
+        const lambda = params.lambda || 0.25;
+        return await wasmAnisotropicDiffusion(srcMat, iterations, kappa, lambda);
+      }
+
+      case 'morphology_tophat': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyTophat(srcMat, ksize);
+      }
+
+      case 'morphology_blackhat': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyBlackhat(srcMat, ksize);
+      }
+
+      case 'warp_perspective': {
+        const angle = params.angle || 15.0;
+        return await wasmWarpPerspective(srcMat, angle);
+      }
+
+      case 'get_rotation_matrix_2d': {
+        const angle = params.angle || 45.0;
+        const scale = params.scale || 1.0;
+        return await wasmGetRotationMatrix2d(srcMat, angle, scale);
+      }
+
+      case 'normalize_histogram': {
+        const alpha = params.alpha || 0.0;
+        const beta = params.beta || 255.0;
+        return await wasmNormalizeHistogram(srcMat, alpha, beta);
+      }
+
+      case 'compare_histograms': {
+        return await wasmCompareHistograms(srcMat);
+      }
+
+      case 'back_projection': {
+        return await wasmBackProjection(srcMat);
+      }
+
+      case 'moments': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmMoments(srcMat, thresholdValue);
+      }
+
+      case 'watershed': {
+        return await wasmWatershed(srcMat);
+      }
+
+      case 'sift': {
+        const nFeatures = params.n_features || 100;
+        return await wasmSift(srcMat, nFeatures);
+      }
+
+      case 'orb': {
+        const nFeatures = params.n_features || 100;
+        return await wasmOrb(srcMat, nFeatures);
+      }
+
+      case 'brisk': {
+        const threshold = params.threshold || 30;
+        return await wasmBrisk(srcMat, threshold);
+      }
+
+      case 'akaze': {
+        return await wasmAkaze(srcMat);
+      }
+
+      case 'kaze': {
+        return await wasmKaze(srcMat);
       }
 
       default:
