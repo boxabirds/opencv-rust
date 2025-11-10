@@ -111,9 +111,10 @@
 | OpenCV Test Parity | 5 | 0 | 53 |
 
 ### Compilation Status
-- ✅ WASM bindings: Syntax verified (no errors in src/wasm/mod.rs)
-- ⚠️ Native build: Has pre-existing GPU errors (wgpu MaintainBase API)
-- ⏳ WASM build: Pending GPU error fixes
+- ✅ **Native build: Compiles successfully** (all GPU errors fixed - wgpu 27 compatible)
+- ✅ All 58 GPU operations compile without errors
+- ✅ WASM bindings: 21 new GPU-accelerated bindings added
+- ⏳ WASM build: Needs signature fixes for some bindings (in_range, etc.)
 - ✅ All operations export correctly from `src/gpu/ops/mod.rs`
 
 ### Batch 3 Highlights
@@ -176,26 +177,34 @@ All GPU operations follow consistent patterns:
 
 ## Recent Updates
 
-**2025-11-10 (Latest)**: Added 21 WASM bindings for GPU-accelerated operations:
-- **Color conversions**: HSV→RGB, Lab→RGB, YCrCb→RGB
-- **Pyramid operations**: pyrDown, pyrUp
-- **Arithmetic operations**: convert_scale, add_weighted, gradient_magnitude, integral_image
-- **Bitwise operations**: NOT, AND, OR, XOR, absdiff
-- **Element-wise operations**: min, max, add
-- **Advanced operations**: filter2D, inRange, remap, pow
+**2025-11-10 (Latest)**:
+1. **Fixed all GPU compilation errors** (50 files modified):
+   - Updated wgpu API calls for wgpu 27 compatibility
+   - Fixed Scalar field access (`.0[index]` → `.val[index]`)
+   - Removed invalid MatDepth::U32, cvt_color_gpu references
+   - Fixed encoder borrow-after-move in split operation
+   - ✅ **Native build now compiles successfully**
 
-All new WASM bindings follow the GPU-first pattern with CPU fallback.
-Location: `src/wasm/mod.rs` lines 3625-4208
+2. **Added 21 WASM bindings** for GPU-accelerated operations:
+   - **Color conversions**: HSV→RGB, Lab→RGB, YCrCb→RGB
+   - **Pyramid operations**: pyrDown, pyrUp
+   - **Arithmetic operations**: convert_scale, add_weighted, gradient_magnitude, integral_image
+   - **Bitwise operations**: NOT, AND, OR, XOR, absdiff
+   - **Element-wise operations**: min, max, add
+   - **Advanced operations**: filter2D, inRange, remap, pow
+
+   All new WASM bindings follow the GPU-first pattern with CPU fallback.
+   Location: `src/wasm/mod.rs` lines 3625-4208
 
 ## Next Steps
 
 ### Phase 1: WASM Integration (In Progress)
-21 new WASM bindings added. Remaining tasks:
-1. Fix pre-existing GPU compilation errors:
-   - wgpu MaintainBase API updates (~30 files)
-   - Scalar type field access issues
-2. Test all WASM bindings in web gallery
-3. Verify GPU acceleration works correctly
+Progress: 26/58 WASM bindings (45%), GPU code compiles ✅
+1. ✅ Fix GPU compilation errors (wgpu 27 compatibility)
+2. Add remaining 32 WASM bindings
+3. Fix signature mismatches in some bindings (in_range, filter2d, remap, etc.)
+4. Test all WASM bindings in web gallery
+5. Verify GPU acceleration works correctly
 
 ### Phase 2: Testing & Verification
 For each operation:
