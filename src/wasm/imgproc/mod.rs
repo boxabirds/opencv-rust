@@ -19,3 +19,8 @@ pub use drawing::{
     draw_line_wasm, draw_rectangle_wasm, draw_circle_wasm,
     draw_ellipse_wasm, draw_polylines_wasm, put_text_wasm
 };
+#[cfg(target_arch = "wasm32")]
+pub use geometric::{
+    resize_wasm, flip_wasm, rotate_wasm, warp_affine_wasm,
+    warp_perspective_wasm, get_rotation_matrix_2d_wasm, remap_wasm
+};
