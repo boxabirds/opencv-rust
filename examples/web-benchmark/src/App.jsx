@@ -34,6 +34,18 @@ import init, {
   equalizeHistogram as wasmEqualizeHistogram,
   cvtColorHsv as wasmCvtColorHsv,
   distanceTransform as wasmDistanceTransform,
+  nlmDenoising as wasmNlmDenoising,
+  houghLines as wasmHoughLines,
+  houghLinesP as wasmHoughLinesP,
+  houghCircles as wasmHoughCircles,
+  findContours as wasmFindContours,
+  boundingRect as wasmBoundingRect,
+  calcHistogram as wasmCalcHistogram,
+  detectAruco as wasmDetectAruco,
+  detectQR as wasmDetectQR,
+  contourArea as wasmContourArea,
+  arcLength as wasmArcLength,
+  approxPolyDP as wasmApproxPolyDP,
   getVersion
 } from '../../../pkg/opencv_rust.js';
 
@@ -407,6 +419,73 @@ function App() {
 
       case 'distance_transform': {
         return await wasmDistanceTransform(srcMat);
+      }
+
+      case 'nlm_denoising': {
+        const h = params.h || 10.0;
+        const templateWindowSize = params.templateWindowSize || 7;
+        const searchWindowSize = params.searchWindowSize || 21;
+        return await wasmNlmDenoising(srcMat, h, templateWindowSize, searchWindowSize);
+      }
+
+      case 'hough_lines': {
+        const threshold = params.threshold || 100;
+        return await wasmHoughLines(srcMat, threshold);
+      }
+
+      case 'hough_lines_p': {
+        const threshold = params.threshold || 50;
+        const minLineLength = params.minLineLength || 50.0;
+        const maxLineGap = params.maxLineGap || 10.0;
+        return await wasmHoughLinesP(srcMat, threshold, minLineLength, maxLineGap);
+      }
+
+      case 'hough_circles': {
+        const minDist = params.minDist || 50.0;
+        const param1 = params.param1 || 100.0;
+        const param2 = params.param2 || 30.0;
+        const minRadius = params.minRadius || 10;
+        const maxRadius = params.maxRadius || 100;
+        return await wasmHoughCircles(srcMat, minDist, param1, param2, minRadius, maxRadius);
+      }
+
+      case 'find_contours': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmFindContours(srcMat, thresholdValue);
+      }
+
+      case 'bounding_rect': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmBoundingRect(srcMat, thresholdValue);
+      }
+
+      case 'calc_histogram': {
+        return await wasmCalcHistogram(srcMat);
+      }
+
+      case 'aruco_detector': {
+        const dictId = params.dictId || 0;
+        return await wasmDetectAruco(srcMat, dictId);
+      }
+
+      case 'qr_detector': {
+        return await wasmDetectQR(srcMat);
+      }
+
+      case 'contour_area': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmContourArea(srcMat, thresholdValue);
+      }
+
+      case 'arc_length': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmArcLength(srcMat, thresholdValue);
+      }
+
+      case 'approx_poly_dp': {
+        const thresholdValue = params.threshold || 127.0;
+        const epsilon = params.epsilon || 5.0;
+        return await wasmApproxPolyDP(srcMat, thresholdValue, epsilon);
       }
 
       default:

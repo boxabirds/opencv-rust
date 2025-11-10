@@ -1107,3 +1107,557 @@ pub async fn distance_transform_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 
     Ok(WasmMat { inner: dst })
 }
+
+/// Non-Local Means denoising
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = nlmDenoising)]
+pub async fn nlm_denoising_wasm(
+    src: &WasmMat,
+    h: f64,
+    template_window_size: i32,
+    search_window_size: i32,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::non_local_means_denoising;
+
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    non_local_means_denoising(&src.inner, &mut dst, h as f32, template_window_size, search_window_size)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Hough Lines detection - visualize on image
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = houghLines)]
+pub async fn hough_lines_wasm(
+    src: &WasmMat,
+    threshold: i32,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::hough::hough_lines;
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let lines = hough_lines(&gray, 1.0, std::f64::consts::PI / 180.0, threshold)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw lines on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
+
+    for (rho, theta) in lines.iter().take(50) { // Limit to 50 lines
+        let a = theta.cos();
+        let b = theta.sin();
+        let x0 = a * rho;
+        let y0 = b * rho;
+        let x1 = (x0 + 1000.0 * (-b)) as i32;
+        let y1 = (y0 + 1000.0 * a) as i32;
+        let x2 = (x0 - 1000.0 * (-b)) as i32;
+        let y2 = (y0 - 1000.0 * a) as i32;
+
+        let _ = line(&mut result, Point::new(x1, y1), Point::new(x2, y2), color, 2);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Hough Lines P (probabilistic) - visualize on image
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = houghLinesP)]
+pub async fn hough_lines_p_wasm(
+    src: &WasmMat,
+    threshold: i32,
+    min_line_length: f64,
+    max_line_gap: f64,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::hough::hough_lines_p;
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let lines = hough_lines_p(&gray, 1.0, std::f64::consts::PI / 180.0, threshold, min_line_length, max_line_gap)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw line segments on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 0.0, 255.0, 255.0); // Red
+
+    for (p1, p2) in lines {
+        let _ = line(&mut result, p1, p2, color, 2);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Hough Circles - visualize on image
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = houghCircles)]
+pub async fn hough_circles_wasm(
+    src: &WasmMat,
+    min_dist: f64,
+    param1: f64,
+    param2: f64,
+    min_radius: i32,
+    max_radius: i32,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::hough::{hough_circles, HoughCirclesMethod};
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let circles = hough_circles(&gray, HoughCirclesMethod::Gradient, 1.0, min_dist, param1, param2, min_radius, max_radius)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw circles on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 255.0, 255.0); // Magenta
+
+    for c in circles {
+        let _ = circle(&mut result, c.center, c.radius, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Find and draw contours
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = findContours)]
+pub async fn find_contours_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::find_contours;
+    use crate::imgproc::threshold::threshold;
+    use crate::core::types::ThresholdType;
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw contours on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
+
+    for contour in contours.iter().take(100) { // Limit to 100 contours
+        for i in 0..contour.len() {
+            let p1 = contour[i];
+            let p2 = contour[(i + 1) % contour.len()];
+            let _ = line(&mut result, p1, p2, color, 2);
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Find contours and draw bounding rectangles
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = boundingRect)]
+pub async fn bounding_rect_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::{find_contours, bounding_rect};
+    use crate::imgproc::threshold::threshold;
+    use crate::core::types::ThresholdType;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{ColorConversionCode, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw bounding rectangles
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 0.0, 255.0); // Blue
+
+    for contour in contours.iter().take(100) {
+        let rect = bounding_rect(&contour);
+        let _ = rectangle(&mut result, rect, color, 2);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Calculate histogram (returns visual representation)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = calcHistogram)]
+pub async fn calc_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::histogram::calc_hist;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{ColorConversionCode, Rect, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    // Calculate histogram
+    let hist = calc_hist(&gray, 256, (0.0, 256.0))
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Create visualization image (256x256)
+    let hist_img_size = 256;
+    let mut hist_img = Mat::new(hist_img_size, hist_img_size, 3, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Fill white background
+    for row in 0..hist_img_size {
+        for col in 0..hist_img_size {
+            let pixel = hist_img.at_mut(row, col)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            pixel[0] = 255;
+            pixel[1] = 255;
+            pixel[2] = 255;
+        }
+    }
+
+    // Find max value for scaling
+    let max_val = hist.iter().cloned().fold(0.0f32, f32::max);
+
+    // Draw histogram bars
+    let bin_width = hist_img_size / 256;
+    for i in 0..256 {
+        let bin_height = if max_val > 0.0 {
+            ((hist[i] / max_val) * hist_img_size as f32) as i32
+        } else {
+            0
+        };
+
+        if bin_height > 0 {
+            let rect = Rect::new(
+                i as i32 * bin_width as i32,
+                hist_img_size as i32 - bin_height,
+                bin_width as i32,
+                bin_height,
+            );
+            let _ = rectangle(&mut hist_img, rect, Scalar::new(0.0, 0.0, 0.0, 255.0), -1);
+        }
+    }
+
+    Ok(WasmMat { inner: hist_img })
+}
+
+/// Detect ArUco markers and visualize
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = detectAruco)]
+pub async fn detect_aruco_wasm(src: &WasmMat, dict_id: i32) -> Result<WasmMat, JsValue> {
+    use crate::objdetect::aruco::{ArucoDetector, ArucoDictionary};
+    use crate::imgproc::drawing::{line, circle};
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    // Map dict_id to ArucoDictionary variant (default to Dict4X4_50)
+    let dict = match dict_id {
+        0 => ArucoDictionary::Dict4X4_50,
+        1 => ArucoDictionary::Dict5X5_50,
+        2 => ArucoDictionary::Dict6X6_50,
+        _ => ArucoDictionary::Dict4X4_50,
+    };
+    let detector = ArucoDetector::new(dict);
+    let markers = detector.detect_markers(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw markers on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
+
+    for marker in markers {
+        // Draw marker corners
+        for i in 0..4 {
+            let p1_f = marker.corners[i];
+            let p2_f = marker.corners[(i + 1) % 4];
+            let p1 = Point::new(p1_f.x as i32, p1_f.y as i32);
+            let p2 = Point::new(p2_f.x as i32, p2_f.y as i32);
+            let _ = line(&mut result, p1, p2, color, 2);
+            let _ = circle(&mut result, p1, 5, Scalar::new(255.0, 0.0, 0.0, 255.0));
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Detect QR codes and visualize
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = detectQR)]
+pub async fn detect_qr_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::objdetect::qr_detector::QRCodeDetector;
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let detector = QRCodeDetector::new();
+    let results = detector.detect_multi(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw QR code boundaries
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 255.0, 255.0); // Magenta
+
+    for qr_points in results {
+        if qr_points.len() >= 4 {
+            for i in 0..4 {
+                let p1_f = qr_points[i];
+                let p2_f = qr_points[(i + 1) % 4];
+                let p1 = Point::new(p1_f.x as i32, p1_f.y as i32);
+                let p2 = Point::new(p2_f.x as i32, p2_f.y as i32);
+                let _ = line(&mut result, p1, p2, color, 3);
+            }
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Contour area visualization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = contourArea)]
+pub async fn contour_area_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::{find_contours, contour_area};
+    use crate::imgproc::threshold::threshold;
+    use crate::core::types::ThresholdType;
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw contours colored by area
+    let mut result = src.inner.clone();
+
+    for contour in contours.iter().take(100) {
+        let area = contour_area(&contour);
+
+        // Color based on area (larger = more red, smaller = more blue)
+        let normalized_area = (area / 10000.0).min(1.0);
+        let color = Scalar::new(
+            (1.0 - normalized_area) * 255.0,
+            0.0,
+            normalized_area * 255.0,
+            255.0
+        );
+
+        for i in 0..contour.len() {
+            let p1 = contour[i];
+            let p2 = contour[(i + 1) % contour.len()];
+            let _ = line(&mut result, p1, p2, color, 2);
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Arc length visualization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = arcLength)]
+pub async fn arc_length_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::{find_contours, arc_length};
+    use crate::imgproc::threshold::threshold;
+    use crate::core::types::ThresholdType;
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw contours colored by perimeter
+    let mut result = src.inner.clone();
+
+    for contour in contours.iter().take(100) {
+        let perimeter = arc_length(&contour, true);
+
+        // Color based on perimeter
+        let normalized_perimeter = (perimeter / 1000.0).min(1.0);
+        let color = Scalar::new(
+            0.0,
+            normalized_perimeter * 255.0,
+            (1.0 - normalized_perimeter) * 255.0,
+            255.0
+        );
+
+        for i in 0..contour.len() {
+            let p1 = contour[i];
+            let p2 = contour[(i + 1) % contour.len()];
+            let _ = line(&mut result, p1, p2, color, 2);
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Approximate polygon
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = approxPolyDP)]
+pub async fn approx_poly_dp_wasm(src: &WasmMat, threshold_value: f64, epsilon: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::{find_contours, approx_poly_dp};
+    use crate::imgproc::threshold::threshold;
+    use crate::core::types::ThresholdType;
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw approximated polygons
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 255.0, 0.0, 255.0); // Yellow
+
+    for contour in contours.iter().take(100) {
+        let approx = approx_poly_dp(&contour, epsilon, true);
+
+        for i in 0..approx.len() {
+            let p1 = approx[i];
+            let p2 = approx[(i + 1) % approx.len()];
+            let _ = line(&mut result, p1, p2, color, 3);
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
