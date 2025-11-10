@@ -2,7 +2,48 @@ use crate::core::{Mat, MatDepth};
 use crate::core::types::ColorConversionCode;
 use crate::error::{Error, Result};
 
-/// Convert color space of an image
+/// Convert color space of an image with GPU acceleration (async for WASM)
+pub async fn cvt_color_async(
+    src: &Mat,
+    dst: &mut Mat,
+    code: ColorConversionCode,
+    use_gpu: bool,
+) -> Result<()> {
+    if src.depth() != MatDepth::U8 {
+        return Err(Error::UnsupportedOperation(
+            "cvt_color only supports U8 depth".to_string(),
+        ));
+    }
+
+    // Try GPU if requested and available
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            match code {
+                ColorConversionCode::RgbToGray => {
+                    use crate::gpu::ops::rgb_to_gray_gpu_async;
+                    match rgb_to_gray_gpu_async(src, dst).await {
+                        Ok(()) => return Ok(()),
+                        Err(_) => { /* Fall through to CPU */ }
+                    }
+                }
+                ColorConversionCode::RgbToHsv => {
+                    use crate::gpu::ops::rgb_to_hsv_gpu_async;
+                    match rgb_to_hsv_gpu_async(src, dst).await {
+                        Ok(()) => return Ok(()),
+                        Err(_) => { /* Fall through to CPU */ }
+                    }
+                }
+                _ => { /* Fall through to CPU for unsupported GPU conversions */ }
+            }
+        }
+    }
+
+    // CPU fallback
+    cvt_color(src, dst, code)
+}
+
+/// Convert color space of an image (CPU-only, sync)
 pub fn cvt_color(src: &Mat, dst: &mut Mat, code: ColorConversionCode) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(

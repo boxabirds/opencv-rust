@@ -173,6 +173,27 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
 }
 
 /// Flip an image
+/// Flip image with GPU acceleration (async for WASM)
+pub async fn flip_async(src: &Mat, dst: &mut Mat, flip_code: i32, use_gpu: bool) -> Result<()> {
+    // Try GPU if requested and available
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            use crate::gpu::ops::flip_gpu_async;
+            match flip_gpu_async(src, dst, flip_code).await {
+                Ok(()) => return Ok(()),
+                Err(_) => {
+                    // Fall through to CPU
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    flip(src, dst, flip_code)
+}
+
+/// Flip image (CPU-only, sync)
 pub fn flip(src: &Mat, dst: &mut Mat, flip_code: i32) -> Result<()> {
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
@@ -336,6 +357,37 @@ pub fn get_affine_transform(src: &[Point2f; 3], dst: &[Point2f; 3]) -> [[f64; 3]
 }
 
 /// Rotate image by 90, 180, or 270 degrees
+/// Rotate image with GPU acceleration (async for WASM)
+pub async fn rotate_async(
+    src: &Mat,
+    dst: &mut Mat,
+    rotate_code: RotateCode,
+    use_gpu: bool,
+) -> Result<()> {
+    // Try GPU if requested and available
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            use crate::gpu::ops::rotate_gpu_async;
+            let gpu_rotate_code = match rotate_code {
+                RotateCode::Rotate90Clockwise => 0,
+                RotateCode::Rotate180 => 1,
+                RotateCode::Rotate90CounterClockwise => 2,
+            };
+            match rotate_gpu_async(src, dst, gpu_rotate_code).await {
+                Ok(()) => return Ok(()),
+                Err(_) => {
+                    // Fall through to CPU
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    rotate(src, dst, rotate_code)
+}
+
+/// Rotate image (CPU-only, sync)
 pub fn rotate(src: &Mat, dst: &mut Mat, rotate_code: RotateCode) -> Result<()> {
     match rotate_code {
         RotateCode::Rotate90Clockwise => {

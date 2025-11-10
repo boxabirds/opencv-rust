@@ -117,7 +117,32 @@ pub fn sobel(
     Ok(())
 }
 
-/// Calculate Laplacian
+/// Calculate Laplacian with GPU acceleration (async for WASM)
+pub async fn laplacian_async(
+    src: &Mat,
+    dst: &mut Mat,
+    ksize: i32,
+    use_gpu: bool,
+) -> Result<()> {
+    // Try GPU if requested and available
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            use crate::gpu::ops::laplacian_gpu_async;
+            match laplacian_gpu_async(src, dst).await {
+                Ok(()) => return Ok(()),
+                Err(_) => {
+                    // Fall through to CPU
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    laplacian(src, dst, ksize)
+}
+
+/// Calculate Laplacian (CPU-only, sync)
 pub fn laplacian(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
     if src.channels() != 1 {
         return Err(Error::InvalidParameter(
@@ -311,7 +336,33 @@ pub fn canny(
     Ok(())
 }
 
-/// Scharr derivative filter (more accurate than Sobel 3x3)
+/// Scharr derivative filter with GPU acceleration (async for WASM)
+pub async fn scharr_async(
+    src: &Mat,
+    dst: &mut Mat,
+    dx: i32,
+    dy: i32,
+    use_gpu: bool,
+) -> Result<()> {
+    // Try GPU if requested and available
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            use crate::gpu::ops::scharr_gpu_async;
+            match scharr_gpu_async(src, dst, dx, dy).await {
+                Ok(()) => return Ok(()),
+                Err(_) => {
+                    // Fall through to CPU
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    scharr(src, dst, dx, dy)
+}
+
+/// Scharr derivative filter (more accurate than Sobel 3x3) (CPU-only, sync)
 pub fn scharr(src: &Mat, dst: &mut Mat, dx: i32, dy: i32) -> Result<()> {
     if src.channels() != 1 {
         return Err(Error::InvalidParameter(

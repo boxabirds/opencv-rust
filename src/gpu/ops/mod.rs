@@ -3,6 +3,16 @@ pub mod resize;
 pub mod threshold;
 pub mod canny;
 pub mod sobel;
+pub mod box_blur;
+pub mod laplacian;
+pub mod flip;
+pub mod erode;
+pub mod dilate;
+pub mod rotate;
+pub mod scharr;
+pub mod rgb_to_gray;
+pub mod rgb_to_hsv;
+pub mod adaptive_threshold;
 
 // Export sync versions for native
 #[cfg(not(target_arch = "wasm32"))]
@@ -15,6 +25,26 @@ pub use threshold::threshold_gpu;
 pub use canny::canny_gpu;
 #[cfg(not(target_arch = "wasm32"))]
 pub use sobel::sobel_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use box_blur::box_blur_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use laplacian::laplacian_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use flip::flip_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use erode::erode_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use dilate::dilate_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use rotate::rotate_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use scharr::scharr_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use rgb_to_gray::rgb_to_gray_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use rgb_to_hsv::rgb_to_hsv_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use adaptive_threshold::adaptive_threshold_gpu;
 
 // Export async versions for WASM
 pub use blur::gaussian_blur_gpu_async;
@@ -22,3 +52,13 @@ pub use resize::resize_gpu_async;
 pub use threshold::threshold_gpu_async;
 pub use canny::canny_gpu_async;
 pub use sobel::sobel_gpu_async;
+pub use box_blur::box_blur_gpu_async;
+pub use laplacian::laplacian_gpu_async;
+pub use flip::flip_gpu_async;
+pub use erode::erode_gpu_async;
+pub use dilate::dilate_gpu_async;
+pub use rotate::rotate_gpu_async;
+pub use scharr::scharr_gpu_async;
+pub use rgb_to_gray::rgb_to_gray_gpu_async;
+pub use rgb_to_hsv::rgb_to_hsv_gpu_async;
+pub use adaptive_threshold::adaptive_threshold_gpu_async;

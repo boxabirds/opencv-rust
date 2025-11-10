@@ -361,11 +361,13 @@ pub async fn blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::blur(
+    crate::imgproc::blur_async(
         &src.inner,
         &mut dst,
         Size::new(ksize as i32, ksize as i32),
+        true, // use_gpu=true for WASM
     )
+    .await
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -468,7 +470,8 @@ pub async fn scharr_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::scharr(&gray, &mut dst, dx, dy)
+    crate::imgproc::scharr_async(&gray, &mut dst, dx, dy, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -495,7 +498,8 @@ pub async fn laplacian_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::laplacian(&gray, &mut dst, ksize)
+    crate::imgproc::laplacian_async(&gray, &mut dst, ksize, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -516,7 +520,8 @@ pub async fn flip_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::flip(&src.inner, &mut dst, flip_code)
+    crate::imgproc::flip_async(&src.inner, &mut dst, flip_code, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -546,7 +551,8 @@ pub async fn rotate_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::rotate(&src.inner, &mut dst, rotate_enum)
+    crate::imgproc::rotate_async(&src.inner, &mut dst, rotate_enum, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -567,7 +573,8 @@ pub async fn cvt_color_gray_wasm(
         ColorConversionCode::RgbToGray
     };
 
-    crate::imgproc::cvt_color(&src.inner, &mut dst, code)
+    crate::imgproc::cvt_color_async(&src.inner, &mut dst, code, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -599,7 +606,7 @@ pub async fn adaptive_threshold_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::adaptive_threshold(
+    crate::imgproc::adaptive_threshold_async(
         &gray,
         &mut dst,
         maxval,
@@ -607,7 +614,9 @@ pub async fn adaptive_threshold_wasm(
         ThresholdType::Binary,
         block_size,
         c,
+        true, // use_gpu=true for WASM
     )
+    .await
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -927,7 +936,7 @@ pub async fn fast_wasm(
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = erode)]
 pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::morphology::{erode, get_structuring_element, MorphShape};
+    use crate::imgproc::morphology::{erode_async, get_structuring_element, MorphShape};
     use crate::core::types::Size;
 
     let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
@@ -939,7 +948,8 @@ pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    erode(&src.inner, &mut dst, &kernel)
+    erode_async(&src.inner, &mut dst, &kernel, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -949,7 +959,7 @@ pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = dilate)]
 pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::morphology::{dilate, get_structuring_element, MorphShape};
+    use crate::imgproc::morphology::{dilate_async, get_structuring_element, MorphShape};
     use crate::core::types::Size;
 
     let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
@@ -961,7 +971,8 @@ pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> 
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    dilate(&src.inner, &mut dst, &kernel)
+    dilate_async(&src.inner, &mut dst, &kernel, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -1065,7 +1076,7 @@ pub async fn equalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = cvtColorHsv)]
 pub async fn cvt_color_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::color::cvt_color_async;
     use crate::core::types::ColorConversionCode;
 
     let mut dst = Mat::new(
@@ -1076,7 +1087,8 @@ pub async fn cvt_color_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToHsv)
+    cvt_color_async(&src.inner, &mut dst, ColorConversionCode::RgbToHsv, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })

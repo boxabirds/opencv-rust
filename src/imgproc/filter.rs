@@ -40,7 +40,27 @@ fn gaussian_blur_cpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma_x: f64) -> Res
     apply_separable_filter(src, dst, &kernel, &kernel)
 }
 
-/// Apply box blur (simple averaging) - optimized with separable filter
+/// Apply box blur with GPU acceleration (async for WASM)
+pub async fn blur_async(src: &Mat, dst: &mut Mat, ksize: Size, use_gpu: bool) -> Result<()> {
+    // Try GPU if requested and available
+    if use_gpu && ksize.width == ksize.height {
+        #[cfg(feature = "gpu")]
+        {
+            use crate::gpu::ops::box_blur_gpu_async;
+            match box_blur_gpu_async(src, dst, ksize.width as i32).await {
+                Ok(()) => return Ok(()),
+                Err(_) => {
+                    // Fall through to CPU
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    blur(src, dst, ksize)
+}
+
+/// Apply box blur (simple averaging) - optimized with separable filter (CPU-only, sync)
 pub fn blur(src: &Mat, dst: &mut Mat, ksize: Size) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(
