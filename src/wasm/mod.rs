@@ -920,3 +920,190 @@ pub async fn fast_wasm(
 
     Ok(WasmMat { inner: result })
 }
+
+/// Morphological erosion
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = erode)]
+pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{erode, get_structuring_element, MorphShape};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    erode(&src.inner, &mut dst, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological dilation
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = dilate)]
+pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{dilate, get_structuring_element, MorphShape};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    dilate(&src.inner, &mut dst, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological opening
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = morphologyOpening)]
+pub async fn morphology_opening_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    morphology_ex(&src.inner, &mut dst, MorphType::Open, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological closing
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = morphologyClosing)]
+pub async fn morphology_closing_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    morphology_ex(&src.inner, &mut dst, MorphType::Close, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological gradient
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = morphologyGradient)]
+pub async fn morphology_gradient_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    morphology_ex(&src.inner, &mut dst, MorphType::Gradient, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Equalize histogram for contrast enhancement
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = equalizeHistogram)]
+pub async fn equalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::histogram::equalize_hist;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut dst = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    equalize_hist(&gray, &mut dst)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Convert to HSV color space
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = cvtColorHsv)]
+pub async fn cvt_color_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToHsv)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Distance transform
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = distanceTransform)]
+pub async fn distance_transform_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::advanced_filter::distance_transform;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::color::cvt_color;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    distance_transform(&gray, &mut dst, crate::imgproc::advanced_filter::DistanceType::L2, 3)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}

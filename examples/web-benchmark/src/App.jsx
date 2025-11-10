@@ -26,6 +26,14 @@ import init, {
   harrisCorners as wasmHarrisCorners,
   goodFeaturesToTrack as wasmGoodFeaturesToTrack,
   fast as wasmFast,
+  erode as wasmErode,
+  dilate as wasmDilate,
+  morphologyOpening as wasmMorphologyOpening,
+  morphologyClosing as wasmMorphologyClosing,
+  morphologyGradient as wasmMorphologyGradient,
+  equalizeHistogram as wasmEqualizeHistogram,
+  cvtColorHsv as wasmCvtColorHsv,
+  distanceTransform as wasmDistanceTransform,
   getVersion
 } from '../../../pkg/opencv_rust.js';
 
@@ -362,6 +370,43 @@ function App() {
         const threshold = params.threshold || 20;
         const nonmaxSuppression = params.nonmaxSuppression !== false;
         return await wasmFast(srcMat, threshold, nonmaxSuppression);
+      }
+
+      case 'erode': {
+        const ksize = params.ksize || 5;
+        return await wasmErode(srcMat, ksize);
+      }
+
+      case 'dilate': {
+        const ksize = params.ksize || 5;
+        return await wasmDilate(srcMat, ksize);
+      }
+
+      case 'morphology_opening': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyOpening(srcMat, ksize);
+      }
+
+      case 'morphology_closing': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyClosing(srcMat, ksize);
+      }
+
+      case 'morphology_gradient': {
+        const ksize = params.ksize || 5;
+        return await wasmMorphologyGradient(srcMat, ksize);
+      }
+
+      case 'equalize_histogram': {
+        return await wasmEqualizeHistogram(srcMat);
+      }
+
+      case 'cvt_color_hsv': {
+        return await wasmCvtColorHsv(srcMat);
+      }
+
+      case 'distance_transform': {
+        return await wasmDistanceTransform(srcMat);
       }
 
       default:
