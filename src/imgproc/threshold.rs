@@ -67,6 +67,36 @@ pub fn threshold(
 }
 
 /// Apply adaptive threshold - optimized with rayon parallelization
+/// Adaptive threshold with GPU acceleration (async for WASM)
+pub async fn adaptive_threshold_async(
+    src: &Mat,
+    dst: &mut Mat,
+    maxval: f64,
+    method: AdaptiveThresholdMethod,
+    thresh_type: ThresholdType,
+    block_size: i32,
+    c: f64,
+    use_gpu: bool,
+) -> Result<()> {
+    // Try GPU if requested, available, and method is Mean
+    if use_gpu && method == AdaptiveThresholdMethod::Mean {
+        #[cfg(feature = "gpu")]
+        {
+            use crate::gpu::ops::adaptive_threshold_gpu_async;
+            match adaptive_threshold_gpu_async(src, dst, maxval as u8, block_size, c as i32).await {
+                Ok(()) => return Ok(()),
+                Err(_) => {
+                    // Fall through to CPU
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    adaptive_threshold(src, dst, maxval, method, thresh_type, block_size, c)
+}
+
+/// Adaptive threshold (CPU-only, sync)
 pub fn adaptive_threshold(
     src: &Mat,
     dst: &mut Mat,

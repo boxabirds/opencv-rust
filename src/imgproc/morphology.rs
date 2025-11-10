@@ -2,6 +2,9 @@ use crate::core::{Mat, MatDepth};
 use crate::core::types::Size;
 use crate::error::{Error, Result};
 
+#[cfg(feature = "gpu")]
+use crate::gpu::ops::{erode_gpu_async, dilate_gpu_async};
+
 /// Morphological operation types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MorphType {
@@ -233,6 +236,154 @@ pub fn morphology_ex(
             // Black hat: closing - source
             let mut closed = Mat::new(1, 1, 1, MatDepth::U8)?;
             morphology_ex(src, &mut closed, MorphType::Close, kernel)?;
+
+            *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
+
+            for row in 0..src.rows() {
+                for col in 0..src.cols() {
+                    let c_pix = closed.at(row, col)?;
+                    let s_pix = src.at(row, col)?;
+                    let dst_pix = dst.at_mut(row, col)?;
+
+                    for ch in 0..src.channels() {
+                        dst_pix[ch] = c_pix[ch].saturating_sub(s_pix[ch]);
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+}
+
+/// Async version of erode with optional GPU acceleration
+/// For simple rectangular kernels, uses GPU if available and use_gpu is true
+pub async fn erode_async(
+    src: &Mat,
+    dst: &mut Mat,
+    kernel: &[Vec<bool>],
+    use_gpu: bool,
+) -> Result<()> {
+    // Try GPU if requested, available, and kernel is simple (rectangular)
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            // Check if kernel is rectangular (all true)
+            let is_rect = kernel.iter().all(|row| row.iter().all(|&v| v));
+            if is_rect && !kernel.is_empty() && !kernel[0].is_empty() {
+                let ksize = kernel.len() as i32; // Assume square kernel
+                match erode_gpu_async(src, dst, ksize).await {
+                    Ok(()) => return Ok(()),
+                    Err(_) => {
+                        // Fall through to CPU
+                    }
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    erode(src, dst, kernel)
+}
+
+/// Async version of dilate with optional GPU acceleration
+/// For simple rectangular kernels, uses GPU if available and use_gpu is true
+pub async fn dilate_async(
+    src: &Mat,
+    dst: &mut Mat,
+    kernel: &[Vec<bool>],
+    use_gpu: bool,
+) -> Result<()> {
+    // Try GPU if requested, available, and kernel is simple (rectangular)
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            // Check if kernel is rectangular (all true)
+            let is_rect = kernel.iter().all(|row| row.iter().all(|&v| v));
+            if is_rect && !kernel.is_empty() && !kernel[0].is_empty() {
+                let ksize = kernel.len() as i32; // Assume square kernel
+                match dilate_gpu_async(src, dst, ksize).await {
+                    Ok(()) => return Ok(()),
+                    Err(_) => {
+                        // Fall through to CPU
+                    }
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    dilate(src, dst, kernel)
+}
+
+/// Async version of morphology_ex with optional GPU acceleration
+pub async fn morphology_ex_async(
+    src: &Mat,
+    dst: &mut Mat,
+    op: MorphType,
+    kernel: &[Vec<bool>],
+    use_gpu: bool,
+) -> Result<()> {
+    match op {
+        MorphType::Erode => erode_async(src, dst, kernel, use_gpu).await,
+        MorphType::Dilate => dilate_async(src, dst, kernel, use_gpu).await,
+        MorphType::Open => {
+            // Opening: erosion followed by dilation
+            let mut temp = Mat::new(1, 1, 1, MatDepth::U8)?;
+            erode_async(src, &mut temp, kernel, use_gpu).await?;
+            dilate_async(&temp, dst, kernel, use_gpu).await
+        }
+        MorphType::Close => {
+            // Closing: dilation followed by erosion
+            let mut temp = Mat::new(1, 1, 1, MatDepth::U8)?;
+            dilate_async(src, &mut temp, kernel, use_gpu).await?;
+            erode_async(&temp, dst, kernel, use_gpu).await
+        }
+        MorphType::Gradient => {
+            // Morphological gradient: dilation - erosion
+            let mut dilated = Mat::new(1, 1, 1, MatDepth::U8)?;
+            let mut eroded = Mat::new(1, 1, 1, MatDepth::U8)?;
+            dilate_async(src, &mut dilated, kernel, use_gpu).await?;
+            erode_async(src, &mut eroded, kernel, use_gpu).await?;
+
+            *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
+
+            for row in 0..src.rows() {
+                for col in 0..src.cols() {
+                    let d_pix = dilated.at(row, col)?;
+                    let e_pix = eroded.at(row, col)?;
+                    let dst_pix = dst.at_mut(row, col)?;
+
+                    for ch in 0..src.channels() {
+                        dst_pix[ch] = d_pix[ch].saturating_sub(e_pix[ch]);
+                    }
+                }
+            }
+            Ok(())
+        }
+        MorphType::TopHat => {
+            // Top hat: source - opening
+            let mut opened = Mat::new(1, 1, 1, MatDepth::U8)?;
+            Box::pin(morphology_ex_async(src, &mut opened, MorphType::Open, kernel, use_gpu)).await?;
+
+            *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
+
+            for row in 0..src.rows() {
+                for col in 0..src.cols() {
+                    let s_pix = src.at(row, col)?;
+                    let o_pix = opened.at(row, col)?;
+                    let dst_pix = dst.at_mut(row, col)?;
+
+                    for ch in 0..src.channels() {
+                        dst_pix[ch] = s_pix[ch].saturating_sub(o_pix[ch]);
+                    }
+                }
+            }
+            Ok(())
+        }
+        MorphType::BlackHat => {
+            // Black hat: closing - source
+            let mut closed = Mat::new(1, 1, 1, MatDepth::U8)?;
+            Box::pin(morphology_ex_async(src, &mut closed, MorphType::Close, kernel, use_gpu)).await?;
 
             *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 

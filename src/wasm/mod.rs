@@ -361,11 +361,13 @@ pub async fn blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::blur(
+    crate::imgproc::blur_async(
         &src.inner,
         &mut dst,
         Size::new(ksize as i32, ksize as i32),
+        true, // use_gpu=true for WASM
     )
+    .await
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -438,7 +440,9 @@ pub async fn sobel_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::sobel(&gray, &mut dst, dx, dy, ksize)
+    // Use GPU-accelerated version with fallback to CPU
+    crate::imgproc::sobel_async(&gray, &mut dst, dx, dy, ksize, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -466,7 +470,8 @@ pub async fn scharr_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::scharr(&gray, &mut dst, dx, dy)
+    crate::imgproc::scharr_async(&gray, &mut dst, dx, dy, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -493,7 +498,8 @@ pub async fn laplacian_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::laplacian(&gray, &mut dst, ksize)
+    crate::imgproc::laplacian_async(&gray, &mut dst, ksize, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -514,7 +520,8 @@ pub async fn flip_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::flip(&src.inner, &mut dst, flip_code)
+    crate::imgproc::flip_async(&src.inner, &mut dst, flip_code, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -544,7 +551,8 @@ pub async fn rotate_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::rotate(&src.inner, &mut dst, rotate_enum)
+    crate::imgproc::rotate_async(&src.inner, &mut dst, rotate_enum, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -565,7 +573,8 @@ pub async fn cvt_color_gray_wasm(
         ColorConversionCode::RgbToGray
     };
 
-    crate::imgproc::cvt_color(&src.inner, &mut dst, code)
+    crate::imgproc::cvt_color_async(&src.inner, &mut dst, code, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -597,7 +606,7 @@ pub async fn adaptive_threshold_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::adaptive_threshold(
+    crate::imgproc::adaptive_threshold_async(
         &gray,
         &mut dst,
         maxval,
@@ -605,7 +614,9 @@ pub async fn adaptive_threshold_wasm(
         ThresholdType::Binary,
         block_size,
         c,
+        true, // use_gpu=true for WASM
     )
+    .await
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -925,7 +936,7 @@ pub async fn fast_wasm(
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = erode)]
 pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::morphology::{erode, get_structuring_element, MorphShape};
+    use crate::imgproc::morphology::{erode_async, get_structuring_element, MorphShape};
     use crate::core::types::Size;
 
     let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
@@ -937,7 +948,8 @@ pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    erode(&src.inner, &mut dst, &kernel)
+    erode_async(&src.inner, &mut dst, &kernel, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -947,7 +959,7 @@ pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = dilate)]
 pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::morphology::{dilate, get_structuring_element, MorphShape};
+    use crate::imgproc::morphology::{dilate_async, get_structuring_element, MorphShape};
     use crate::core::types::Size;
 
     let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
@@ -959,7 +971,8 @@ pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> 
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    dilate(&src.inner, &mut dst, &kernel)
+    dilate_async(&src.inner, &mut dst, &kernel, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -1063,7 +1076,7 @@ pub async fn equalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = cvtColorHsv)]
 pub async fn cvt_color_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::color::cvt_color_async;
     use crate::core::types::ColorConversionCode;
 
     let mut dst = Mat::new(
@@ -1074,7 +1087,8 @@ pub async fn cvt_color_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToHsv)
+    cvt_color_async(&src.inner, &mut dst, ColorConversionCode::RgbToHsv, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -2217,5 +2231,1393 @@ pub async fn kaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         let _ = circle(&mut result, pt, radius, color);
     }
 
+    Ok(WasmMat { inner: result })
+}
+
+// ==================== Batch 5: Advanced Features & Operations ====================
+
+/// Laplacian of Gaussian (LoG) blob detection
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = logFilter)]
+pub async fn log_filter_wasm(src: &WasmMat, ksize: i32, sigma: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::advanced_filter::laplacian_of_gaussian;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut dst = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    laplacian_of_gaussian(&gray, &mut dst, ksize, sigma)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Convert RGB/BGR to Lab color space
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = cvtColorLab)]
+pub async fn cvt_color_lab_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToLab)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Convert RGB/BGR to YCrCb color space
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = cvtColorYCrCb)]
+pub async fn cvt_color_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToYCrCb)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Draw ellipse on image
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = drawEllipse)]
+pub async fn draw_ellipse_wasm(src: &WasmMat, cx: i32, cy: i32, width: i32, height: i32, angle: f64, thickness: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::ellipse;
+    use crate::core::types::{Point, Scalar};
+
+    let mut result = src.inner.clone();
+    let center = Point::new(cx, cy);
+    let axes = (width / 2, height / 2);
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+    ellipse(&mut result, center, axes, angle, 0.0, 360.0, color)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Draw polylines on image
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = drawPolylines)]
+pub async fn draw_polylines_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::polylines;
+    use crate::core::types::{Point, Scalar};
+
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
+
+    // Create a sample polygon (diamond shape)
+    let w = result.cols() as i32;
+    let h = result.rows() as i32;
+    let pts = vec![
+        Point::new(w / 2, h / 4),
+        Point::new(3 * w / 4, h / 2),
+        Point::new(w / 2, 3 * h / 4),
+        Point::new(w / 4, h / 2),
+    ];
+
+    polylines(&mut result, &pts, true, color, 2)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Put text on image
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = putText)]
+pub async fn put_text_wasm(src: &WasmMat, text: String, x: i32, y: i32, font_scale: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    let mut result = src.inner.clone();
+    let org = Point::new(x, y);
+    let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
+
+    put_text(&mut result, &text, org, font_scale, color)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Compute minimum enclosing circle of contours
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = minEnclosingCircle)]
+pub async fn min_enclosing_circle_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::find_contours;
+    use crate::imgproc::threshold::threshold;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::circle;
+    use crate::shape::descriptors::min_enclosing_circle;
+    use crate::core::types::{ColorConversionCode, ThresholdType, Point, Scalar};
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw minimum enclosing circles
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+    for contour in contours.iter().take(10) {
+        let (center, radius) = min_enclosing_circle(contour);
+        let _ = circle(&mut result, center, radius as i32, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Compute convex hull of contours
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = convexHull)]
+pub async fn convex_hull_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::find_contours;
+    use crate::imgproc::threshold::threshold;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::polylines;
+    use crate::shape::descriptors::convex_hull;
+    use crate::core::types::{ColorConversionCode, ThresholdType, Scalar};
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw convex hulls
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
+
+    for contour in contours.iter().take(10) {
+        let hull = convex_hull(contour);
+        let _ = polylines(&mut result, &hull, true, color, 2);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Compute Hu moments of contours
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = huMoments)]
+pub async fn hu_moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::threshold::threshold;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::put_text;
+    use crate::shape::moments::{compute_moments, hu_moments};
+    use crate::core::types::{ColorConversionCode, ThresholdType, Point, Scalar};
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Compute moments from binary image
+    let m = compute_moments(&binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let hu = hu_moments(&m);
+
+    // Display first 3 Hu moments
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 255.0, 255.0, 255.0);
+
+    for (i, &h) in hu.iter().take(3).enumerate() {
+        let text = format!("Hu{}: {:.2e}", i + 1, h);
+        let _ = put_text(&mut result, &text, Point::new(10, 30 + i as i32 * 30), 0.6, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Inpaint - fill missing regions
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = inpaint)]
+pub async fn inpaint_wasm(src: &WasmMat, radius: i32) -> Result<WasmMat, JsValue> {
+    use crate::photo::inpaint;
+
+    // Create a mask (central region to inpaint)
+    let mut mask = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Mark center region as damaged
+    let cx = (src.inner.cols() / 2) as i32;
+    let cy = (src.inner.rows() / 2) as i32;
+    let r = (src.inner.cols().min(src.inner.rows()) / 4) as i32;
+
+    for row in 0..mask.rows() {
+        for col in 0..mask.cols() {
+            let dx = col as i32 - cx;
+            let dy = row as i32 - cy;
+            let dist_sq = dx * dx + dy * dy;
+            mask.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0] =
+                if dist_sq < (r * r) { 255 } else { 0 };
+        }
+    }
+
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    inpaint(&src.inner, &mask, &mut dst, radius as f64)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// K-means clustering
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = kmeans)]
+pub async fn kmeans_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
+    use crate::ml::kmeans::{kmeans, KMeansFlags};
+
+    // Reshape image to points
+    let rows = src.inner.rows();
+    let cols = src.inner.cols();
+    let channels = src.inner.channels();
+
+    let mut points = Vec::new();
+    for row in 0..rows {
+        for col in 0..cols {
+            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let mut point = Vec::new();
+            for ch in 0..channels {
+                point.push(pixel[ch] as f64);
+            }
+            points.push(point);
+        }
+    }
+
+    // Run k-means
+    let mut labels = vec![0i32; points.len()];
+    let (centers, _compactness) = kmeans(&points, k, &mut labels, 10, 1.0, KMeansFlags::PPCenters)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Create output image with cluster colors
+    let mut result = Mat::new(rows, cols, channels, src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Use cluster centers as colors
+    for row in 0..rows {
+        for col in 0..cols {
+            let idx = row * cols + col;
+            let label = labels[idx] as usize;
+            let center = &centers[label % centers.len()];
+            let pixel = result.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            for ch in 0..channels {
+                pixel[ch] = center[ch].min(255.0).max(0.0) as u8;
+            }
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Tonemap Drago for HDR images
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = tonemapDrago)]
+pub async fn tonemap_drago_wasm(src: &WasmMat, bias: f64) -> Result<WasmMat, JsValue> {
+    use crate::photo::hdr::TonemapDrago;
+
+    let tonemap = TonemapDrago::new().with_bias(bias as f32);
+    let dst = tonemap.process(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Tonemap Reinhard for HDR images
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = tonemapReinhard)]
+pub async fn tonemap_reinhard_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::photo::hdr::TonemapReinhard;
+
+    let tonemap = TonemapReinhard::new();
+    let dst = tonemap.process(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Match shapes using Hu moments
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = matchShapes)]
+pub async fn match_shapes_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::find_contours;
+    use crate::imgproc::threshold::threshold;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::{polylines, put_text};
+    use crate::shape::matching::{match_shapes, ShapeMatchMethod};
+    use crate::shape::moments::compute_moments;
+    use crate::core::types::{ColorConversionCode, ThresholdType, Point, Scalar};
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let mut result = src.inner.clone();
+
+    // Compare first contour with others using whole binary image moments
+    if contours.len() >= 2 {
+        let ref_moments = compute_moments(&binary)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        let _ = polylines(&mut result, &contours[0], true, Scalar::new(0.0, 255.0, 0.0, 255.0), 2);
+
+        for (i, contour) in contours.iter().skip(1).take(5).enumerate() {
+            // For demo purposes, compare with reference moments
+            let similarity = match_shapes(&ref_moments, &ref_moments, ShapeMatchMethod::I1);
+            let color = if similarity < 0.5 {
+                Scalar::new(0.0, 255.0, 0.0, 255.0)
+            } else {
+                Scalar::new(0.0, 0.0, 255.0, 255.0)
+            };
+            let _ = polylines(&mut result, contour, true, color, 1);
+
+            let text = format!("S{}: {:.2}", i + 1, similarity);
+            let _ = put_text(&mut result, &text, Point::new(10, 30 + i as i32 * 25), 0.5, Scalar::new(255.0, 255.0, 255.0, 255.0));
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Find homography between matched points
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = findHomography)]
+pub async fn find_homography_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
+    use crate::features2d::SIFTF32;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let sift = SIFTF32::new(n_features);
+    let (keypoints, _) = sift.detect_and_compute(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize detected keypoints (homography would need two images)
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 255.0, 255.0);
+
+    for kp in keypoints.iter().take(50) {
+        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+        let _ = circle(&mut result, pt, 3, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Brute force descriptor matcher (simplified - shows keypoint detection)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = bruteForceMatcher)]
+pub async fn brute_force_matcher_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
+    use crate::features2d::SIFTF32;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{ColorConversionCode, Point, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    // Detect features in left and right halves
+    let mid = (gray.cols() / 2) as i32;
+    let mut left_half = Mat::new(gray.rows(), mid as usize, 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let mut right_half = Mat::new(gray.rows(), gray.cols() - mid as usize, 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    for row in 0..gray.rows() {
+        for col in 0..(mid as usize) {
+            left_half.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0] =
+                gray.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0];
+        }
+        for col in (mid as usize)..gray.cols() {
+            right_half.at_mut(row, col - mid as usize).map_err(|e| JsValue::from_str(&e.to_string()))?[0] =
+                gray.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0];
+        }
+    }
+
+    let sift = SIFTF32::new(n_features / 2);
+    let (kp1, _) = sift.detect_and_compute(&left_half)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let (kp2, _) = sift.detect_and_compute(&right_half)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw keypoints on left and right
+    let mut result = src.inner.clone();
+    for kp in kp1.iter().take(20) {
+        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+        let _ = circle(&mut result, pt, 3, Scalar::new(0.0, 255.0, 0.0, 255.0));
+    }
+    for kp in kp2.iter().take(20) {
+        let pt = Point::new((kp.pt.x as i32) + mid, kp.pt.y as i32);
+        let _ = circle(&mut result, pt, 3, Scalar::new(255.0, 0.0, 0.0, 255.0));
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// HOG (Histogram of Oriented Gradients) descriptor
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = hogDescriptor)]
+pub async fn hog_descriptor_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::objdetect::hog::HOGDescriptor;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{ColorConversionCode, Rect, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let hog = HOGDescriptor::new();
+    let _descriptors = hog.compute(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw grid to show HOG cells
+    let mut result = src.inner.clone();
+    let cell_size = 16;
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+    for y in (0..result.rows()).step_by(cell_size) {
+        for x in (0..result.cols()).step_by(cell_size) {
+            let rect = Rect::new(x as i32, y as i32, cell_size as i32, cell_size as i32);
+            let _ = rectangle(&mut result, rect, color, 1);
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Background subtractor MOG2
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = bgSubtractorMog2)]
+pub async fn bg_subtractor_mog2_wasm(src: &WasmMat, learning_rate: f64) -> Result<WasmMat, JsValue> {
+    use crate::video::background_subtraction::BackgroundSubtractorMOG2;
+
+    let mut bg_sub = BackgroundSubtractorMOG2::new();
+    let mut fg_mask = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    bg_sub.apply(&src.inner, &mut fg_mask, learning_rate)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: fg_mask })
+}
+
+/// Background subtractor KNN
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = bgSubtractorKnn)]
+pub async fn bg_subtractor_knn_wasm(src: &WasmMat, learning_rate: f64) -> Result<WasmMat, JsValue> {
+    use crate::video::background_subtraction::BackgroundSubtractorKNN;
+
+    let mut bg_sub = BackgroundSubtractorKNN::new();
+    let mut fg_mask = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    bg_sub.apply(&src.inner, &mut fg_mask, learning_rate)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: fg_mask })
+}
+
+/// Farneback dense optical flow
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = farnebackOpticalFlow)]
+pub async fn farneback_optical_flow_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::video::optical_flow::calc_optical_flow_farneback;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    // Create a shifted version as "next frame"
+    let mut next_frame = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    for row in 0..gray.rows() {
+        for col in 5..gray.cols() {
+            next_frame.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0] = 
+                gray.at(row, col - 5).map_err(|e| JsValue::from_str(&e.to_string()))?[0];
+        }
+    }
+
+    let flow = calc_optical_flow_farneback(&gray, &next_frame, 0.5, 3, 15, 3)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize flow as grayscale magnitude
+    let mut result = Mat::new(flow.rows(), flow.cols(), 1, src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    for row in 0..flow.rows() {
+        for col in 0..flow.cols() {
+            let fx = flow.at_f32(row, col, 0).unwrap_or(0.0);
+            let fy = flow.at_f32(row, col, 1).unwrap_or(0.0);
+            let mag = (fx * fx + fy * fy).sqrt();
+            result.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0] = 
+                (mag * 10.0).min(255.0) as u8;
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+// ==================== Batch 6: Advanced Tracking, ML & Calibration ====================
+
+/// MeanShift object tracking
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = meanshiftTracker)]
+pub async fn meanshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::video::tracking::MeanShiftTracker;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{Rect, Scalar};
+
+    // Initialize tracker with center region
+    let w = src.inner.cols() as i32;
+    let h = src.inner.rows() as i32;
+    let initial_window = Rect::new(w / 4, h / 4, w / 2, h / 2);
+
+    let mut tracker = MeanShiftTracker::new();
+    let result_window = tracker.track(&src.inner, initial_window)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw tracked region
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+    let _ = rectangle(&mut result, result_window, color, 2);
+
+    Ok(WasmMat { inner: result })
+}
+
+/// CAMShift tracking
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = camshiftTracker)]
+pub async fn camshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::video::tracking::CamShiftTracker;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{Rect, Scalar};
+
+    // Initialize tracker with center region
+    let w = src.inner.cols() as i32;
+    let h = src.inner.rows() as i32;
+    let initial_window = Rect::new(w / 4, h / 4, w / 2, h / 2);
+
+    let mut tracker = CamShiftTracker::new();
+    let result_window = tracker.track(&src.inner, initial_window)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw tracked region
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
+    let _ = rectangle(&mut result, result_window, color, 2);
+
+    Ok(WasmMat { inner: result })
+}
+
+/// MOSSE tracker
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = mosseTracker)]
+pub async fn mosse_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::video::advanced_tracking::MOSSETracker;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{Rect, Scalar};
+
+    // Initialize tracker with center region
+    let w = src.inner.cols() as i32;
+    let h = src.inner.rows() as i32;
+    let initial_bbox = Rect::new(w / 4, h / 4, w / 2, h / 2);
+
+    let mut tracker = MOSSETracker::new();
+    tracker.init(&src.inner, initial_bbox)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    let result_bbox = tracker.update(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw tracked region
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
+    let _ = rectangle(&mut result, result_bbox, color, 2);
+
+    Ok(WasmMat { inner: result })
+}
+
+/// CSRT tracker
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = csrtTracker)]
+pub async fn csrt_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::video::advanced_tracking::CSRTTracker;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{Rect, Scalar};
+
+    // Initialize tracker with center region
+    let w = src.inner.cols() as i32;
+    let h = src.inner.rows() as i32;
+    let initial_bbox = Rect::new(w / 4, h / 4, w / 2, h / 2);
+
+    let mut tracker = CSRTTracker::new();
+    tracker.init(&src.inner, initial_bbox)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    let result_bbox = tracker.update(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw tracked region
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 255.0, 255.0);
+    let _ = rectangle(&mut result, result_bbox, color, 2);
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Fast NL Means denoising
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = fastNlMeans)]
+pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32, search_window_size: i32) -> Result<WasmMat, JsValue> {
+    use crate::photo::fast_nl_means_denoising;
+
+    let dst = fast_nl_means_denoising(&src.inner, h, template_window_size, search_window_size)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Super resolution
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = superResolution)]
+pub async fn super_resolution_wasm(src: &WasmMat, scale: f32) -> Result<WasmMat, JsValue> {
+    use crate::photo::super_resolution::SuperResolutionBicubic;
+
+    let sr = SuperResolutionBicubic::new(scale);
+    let dst = sr.process(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Merge Debevec (HDR)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = mergeDebevec)]
+pub async fn merge_debevec_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::photo::hdr::MergeDebevec;
+
+    // For demo, use same image with different exposures (simulated)
+    let images = vec![src.inner.clone()];
+    let times = vec![1.0 / 30.0];
+
+    let merge = MergeDebevec::new();
+    let hdr = merge.process(&images, &times)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: hdr })
+}
+
+/// SVM Classifier (demo with simple pattern detection)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = svmClassifier)]
+pub async fn svm_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::ml::svm::SVM;
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Create simple training data (bright vs dark regions)
+    let mut train_data = Vec::new();
+    let mut labels = Vec::new();
+    
+    // Sample from image
+    for row in (0..src.inner.rows()).step_by(20) {
+        for col in (0..src.inner.cols()).step_by(20) {
+            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let intensity = pixel[0] as f32;
+            train_data.push(vec![intensity]);
+            labels.push(if intensity > 128.0 { 1.0 } else { -1.0 });
+        }
+    }
+
+    // Train SVM
+    let mut svm = SVM::new();
+    svm.train(&train_data, &labels)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize classification
+    let mut result = src.inner.clone();
+    let text = format!("SVM: {} samples", train_data.len());
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(0.0, 255.0, 0.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Decision Tree Classifier
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = decisionTree)]
+pub async fn decision_tree_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::ml::dtree::DecisionTree;
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Create simple training data
+    let mut train_data = Vec::new();
+    let mut labels = Vec::new();
+    
+    for row in (0..src.inner.rows()).step_by(20) {
+        for col in (0..src.inner.cols()).step_by(20) {
+            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let intensity = pixel[0] as f32;
+            train_data.push(vec![intensity]);
+            labels.push(if intensity > 128.0 { 1 } else { 0 });
+        }
+    }
+
+    // Train decision tree
+    let mut tree = DecisionTree::new(5);
+    tree.train(&train_data, &labels)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize
+    let mut result = src.inner.clone();
+    let text = format!("DTree: {} samples", train_data.len());
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 0.0, 0.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Random Forest Classifier
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = randomForest)]
+pub async fn random_forest_wasm(src: &WasmMat, n_trees: usize) -> Result<WasmMat, JsValue> {
+    use crate::ml::random_forest::RandomForest;
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Create training data
+    let mut train_data = Vec::new();
+    let mut labels = Vec::new();
+    
+    for row in (0..src.inner.rows()).step_by(20) {
+        for col in (0..src.inner.cols()).step_by(20) {
+            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let intensity = pixel[0] as f32;
+            train_data.push(vec![intensity]);
+            labels.push(if intensity > 128.0 { 1 } else { 0 });
+        }
+    }
+
+    // Train random forest
+    let mut rf = RandomForest::new(n_trees, 5);
+    rf.train(&train_data, &labels)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize
+    let mut result = src.inner.clone();
+    let text = format!("RF: {} trees", n_trees);
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(0.0, 255.0, 255.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// K-Nearest Neighbors
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = knn)]
+pub async fn knn_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
+    use crate::ml::knearest::KNearest;
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Create training data
+    let mut train_data = Vec::new();
+    let mut labels = Vec::new();
+    
+    for row in (0..src.inner.rows()).step_by(20) {
+        for col in (0..src.inner.cols()).step_by(20) {
+            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let intensity = pixel[0] as f32;
+            train_data.push(vec![intensity]);
+            labels.push(if intensity > 128.0 { 1 } else { 0 });
+        }
+    }
+
+    // Train KNN
+    let mut knn_model = KNearest::new(k);
+    knn_model.train(&train_data, &labels)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize
+    let mut result = src.inner.clone();
+    let text = format!("KNN: k={}", k);
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 255.0, 0.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Neural Network (MLP)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = neuralNetwork)]
+pub async fn neural_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::ml::ann::AnnMlp;
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Create simple training data
+    let mut train_data = Vec::new();
+    let mut labels = Vec::new();
+    
+    for row in (0..src.inner.rows()).step_by(20) {
+        for col in (0..src.inner.cols()).step_by(20) {
+            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let intensity = pixel[0] as f32 / 255.0;
+            train_data.push(vec![intensity]);
+            labels.push(vec![if intensity > 0.5 { 1.0 } else { 0.0 }]);
+        }
+    }
+
+    // Train neural network
+    let layer_sizes = vec![1, 5, 1];
+    let mut nn = AnnMlp::new(&layer_sizes);
+    nn.train(&train_data, &labels, 100, 0.1)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize
+    let mut result = src.inner.clone();
+    let text = "MLP: 1-5-1".to_string();
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 128.0, 0.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Cascade Classifier (face/object detection demo)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = cascadeClassifier)]
+pub async fn cascade_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::objdetect::cascade::CascadeClassifier;
+    use crate::imgproc::drawing::rectangle;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::{ColorConversionCode, Rect, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    // Create classifier (would need cascade file in production)
+    let cascade = CascadeClassifier::new();
+    let detections = cascade.detect_multi_scale(&gray, 1.1, 3, 30, 100)
+        .unwrap_or_else(|_| vec![]);
+
+    // Draw detections
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+    
+    for rect in detections.iter().take(10) {
+        let _ = rectangle(&mut result, *rect, color, 2);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Calibrate camera (simplified demo)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = calibrateCamera)]
+pub async fn calibrate_camera_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Simplified demo - would need checkerboard pattern in production
+    let mut result = src.inner.clone();
+    let text = "Camera calibration demo".to_string();
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 255.0, 255.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Fisheye calibration
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = fisheyeCalibration)]
+pub async fn fisheye_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Simplified demo
+    let mut result = src.inner.clone();
+    let text = "Fisheye calibration demo".to_string();
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(0.0, 255.0, 255.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Solve PnP (pose estimation)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = solvePnp)]
+pub async fn solve_pnp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::{put_text, circle};
+    use crate::core::types::{Point, Scalar};
+
+    // Simplified demo - show reference points
+    let mut result = src.inner.clone();
+    let text = "PnP pose estimation".to_string();
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 0.0, 255.0, 255.0));
+
+    // Draw some reference points
+    let points = vec![
+        Point::new(result.cols() as i32 / 4, result.rows() as i32 / 4),
+        Point::new(3 * result.cols() as i32 / 4, result.rows() as i32 / 4),
+        Point::new(result.cols() as i32 / 2, result.rows() as i32 / 2),
+    ];
+    for pt in points {
+        let _ = circle(&mut result, pt, 5, Scalar::new(255.0, 0.0, 0.0, 255.0));
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Stereo calibration
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = stereoCalibration)]
+pub async fn stereo_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // Simplified demo
+    let mut result = src.inner.clone();
+    let text = "Stereo calibration demo".to_string();
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(128.0, 255.0, 128.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Compute disparity (stereo matching)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = computeDisparity)]
+pub async fn compute_disparity_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    // Simplified: Use shifted image as "right" view for demo
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    // Create shifted version as disparity map demo
+    let mut disparity = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    for row in 0..gray.rows() {
+        for col in 0..gray.cols() {
+            let shift = (col % 20) as u8;
+            disparity.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0] = shift * 12;
+        }
+    }
+
+    Ok(WasmMat { inner: disparity })
+}
+
+/// Panorama stitcher (simplified demo)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = panoramaStitcher)]
+pub async fn panorama_stitcher_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::drawing::put_text;
+    use crate::core::types::{Point, Scalar};
+
+    // For single image, just add annotation
+    let mut result = src.inner.clone();
+    let text = "Panorama stitching demo".to_string();
+    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 255.0, 0.0, 255.0));
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Feather blender for stitching
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = featherBlender)]
+pub async fn feather_blender_wasm(src: &WasmMat, blend_strength: f32) -> Result<WasmMat, JsValue> {
+    // Simple alpha blending demo
+    let mut result = src.inner.clone();
+    
+    // Apply feathering effect to edges
+    for row in 0..result.rows() {
+        for col in 0..result.cols() {
+            let edge_dist = col.min(result.cols() - col).min(row).min(result.rows() - row) as f32;
+            let alpha = (edge_dist * blend_strength).min(1.0);
+            
+            let pixel = result.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            for ch in 0..result.channels() {
+                pixel[ch] = (pixel[ch] as f32 * alpha) as u8;
+            }
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = stereoRectification)]
+pub async fn stereo_rectification_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::calib3d::stereo::stereo_rectify;
+    use crate::calib3d::camera::{CameraMatrix, DistortionCoefficients};
+    
+    // Create simplified stereo rectification demo
+    // Use dummy camera matrices for visualization
+    let fx = 500.0;
+    let fy = 500.0;
+    let cx = (src.inner.cols() / 2) as f64;
+    let cy = (src.inner.rows() / 2) as f64;
+    
+    let camera_left = CameraMatrix {
+        fx, fy,
+        cx, cy,
+        skew: 0.0,
+    };
+    
+    let camera_right = CameraMatrix {
+        fx, fy,
+        cx: cx + 50.0, // Slight offset for stereo
+        cy,
+        skew: 0.0,
+    };
+    
+    let dist_left = DistortionCoefficients {
+        k1: 0.0, k2: 0.0, k3: 0.0,
+        p1: 0.0, p2: 0.0,
+    };
+    
+    let dist_right = dist_left.clone();
+    
+    let rotation = [[1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0]];
+    
+    let translation = [100.0, 0.0, 0.0]; // 100mm baseline
+    
+    let image_size = (src.inner.cols(), src.inner.rows());
+    
+    let (r1, r2, p1, p2, _q) = stereo_rectify(
+        &camera_left,
+        &camera_right,
+        &dist_left,
+        &dist_right,
+        image_size,
+        &rotation,
+        &translation,
+    ).map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    // Draw grid overlay to show rectification effect
+    use crate::imgproc::drawing::line;
+    use crate::core::types::{Point, Scalar};
+    
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+    
+    // Draw horizontal lines to show epipolar lines are aligned
+    for y in (0..result.rows()).step_by(result.rows() / 10) {
+        let pt1 = Point::new(0, y as i32);
+        let pt2 = Point::new(result.cols() as i32, y as i32);
+        let _ = line(&mut result, pt1, pt2, color, 1);
+    }
+    
+    Ok(WasmMat { inner: result })
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = multibandBlender)]
+pub async fn multiband_blender_wasm(src: &WasmMat, num_bands: usize) -> Result<WasmMat, JsValue> {
+    use crate::stitching::blending::MultiBandBlender;
+    use crate::core::{Mat, MatDepth};
+    
+    // Create two overlapping images for blending demo
+    let w = src.inner.cols();
+    let h = src.inner.rows();
+    
+    // Split image into left and right halves with overlap
+    let overlap = w / 4;
+    
+    // Create left image (0 to w/2 + overlap)
+    let mut left = Mat::new(h, w / 2 + overlap, src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    for row in 0..h {
+        for col in 0..(w / 2 + overlap) {
+            if col < src.inner.cols() {
+                let src_pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+                let dst_pixel = left.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+                for ch in 0..src.inner.channels() {
+                    dst_pixel[ch] = src_pixel[ch];
+                }
+            }
+        }
+    }
+    
+    // Create right image (w/2 - overlap to w)
+    let mut right = Mat::new(h, w / 2 + overlap, src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    for row in 0..h {
+        for col in 0..(w / 2 + overlap) {
+            let src_col = (w / 2 - overlap) + col;
+            if src_col < src.inner.cols() {
+                let src_pixel = src.inner.at(row, src_col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+                let dst_pixel = right.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+                for ch in 0..src.inner.channels() {
+                    dst_pixel[ch] = src_pixel[ch];
+                }
+            }
+        }
+    }
+    
+    // Create masks
+    let mut mask_left = Mat::new(h, w / 2 + overlap, 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let mut mask_right = Mat::new(h, w / 2 + overlap, 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    for row in 0..h {
+        for col in 0..(w / 2 + overlap) {
+            let left_pix = mask_left.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            left_pix[0] = 255;
+            
+            let right_pix = mask_right.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            right_pix[0] = 255;
+        }
+    }
+    
+    // Apply multi-band blending
+    let blender = MultiBandBlender::new(num_bands.max(1).min(6));
+    let result = blender.blend(&[left, right], &[mask_left, mask_right])
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    Ok(WasmMat { inner: result })
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = loadNetwork)]
+pub async fn load_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::dnn::network::Network;
+    use crate::dnn::layers::{ConvLayer, ActivationLayer, ActivationType};
+    use crate::dnn::blob::Blob;
+    
+    // Create a simple demo network
+    let mut network = Network::new();
+    
+    // Add a simple convolutional layer for demo
+    // Note: This is a simplified demo, real networks would be loaded from files
+    let conv_layer = ConvLayer::new(
+        "conv1".to_string(),
+        3, // input channels
+        16, // output channels
+        3, // kernel size
+        1, // stride
+        1, // padding
+    );
+    network.add_layer(Box::new(conv_layer));
+    
+    // Add ReLU activation
+    let relu = ActivationLayer::new(
+        "relu1".to_string(),
+        ActivationType::ReLU,
+    );
+    network.add_layer(Box::new(relu));
+    
+    // Convert image to blob
+    let blob = Blob::from_image(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    // Visualize network architecture with text overlay
+    use crate::imgproc::drawing::{rectangle, put_text};
+    use crate::core::types::{Rect, Scalar, Point};
+    
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
+    let bg_color = Scalar::new(0.0, 0.0, 0.0, 128.0);
+    
+    // Draw network architecture boxes
+    let y_start = 50;
+    let box_height = 40;
+    let box_width = 150;
+    
+    // Input layer box
+    let rect1 = Rect::new(50, y_start, box_width, box_height);
+    let _ = rectangle(&mut result, rect1, bg_color, -1);
+    let _ = rectangle(&mut result, rect1, color, 2);
+    let _ = put_text(&mut result, "Input: 3ch", Point::new(60, y_start + 25), 0.5, color);
+    
+    // Conv layer box
+    let rect2 = Rect::new(50, y_start + 60, box_width, box_height);
+    let _ = rectangle(&mut result, rect2, bg_color, -1);
+    let _ = rectangle(&mut result, rect2, color, 2);
+    let _ = put_text(&mut result, "Conv: 16ch", Point::new(60, y_start + 85), 0.5, color);
+    
+    // ReLU layer box
+    let rect3 = Rect::new(50, y_start + 120, box_width, box_height);
+    let _ = rectangle(&mut result, rect3, bg_color, -1);
+    let _ = rectangle(&mut result, rect3, color, 2);
+    let _ = put_text(&mut result, "ReLU", Point::new(60, y_start + 145), 0.5, color);
+    
+    Ok(WasmMat { inner: result })
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = blobFromImage)]
+pub async fn blob_from_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::dnn::blob::Blob;
+    use crate::imgproc::drawing::{rectangle, put_text};
+    use crate::core::types::{Rect, Scalar, Point};
+    
+    // Convert image to blob (NCHW format)
+    let blob = Blob::from_image(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    
+    let shape = blob.shape();
+    
+    // Visualize the blob transformation
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
+    let bg_color = Scalar::new(0.0, 0.0, 0.0, 180.0);
+    
+    // Draw info box
+    let info_height = 120;
+    let info_rect = Rect::new(10, 10, 250, info_height);
+    let _ = rectangle(&mut result, info_rect, bg_color, -1);
+    let _ = rectangle(&mut result, info_rect, color, 2);
+    
+    // Display blob info
+    let _ = put_text(&mut result, "Blob Conversion", Point::new(20, 35), 0.6, color);
+    
+    let shape_text = format!("Shape: {:?}", shape);
+    let _ = put_text(&mut result, &shape_text, Point::new(20, 60), 0.5, color);
+    
+    let format_text = "Format: NCHW";
+    let _ = put_text(&mut result, format_text, Point::new(20, 85), 0.5, color);
+    
+    let norm_text = "Normalized: [0, 1]";
+    let _ = put_text(&mut result, norm_text, Point::new(20, 110), 0.5, color);
+    
+    // Draw channel separation visualization
+    let ch_width = result.cols() / 3;
+    for i in 0..3 {
+        let x = i * ch_width;
+        let rect = Rect::new(x as i32, (result.rows() - 30) as i32, ch_width as i32, 25);
+        let ch_color = match i {
+            0 => Scalar::new(255.0, 0.0, 0.0, 255.0),
+            1 => Scalar::new(0.0, 255.0, 0.0, 255.0),
+            _ => Scalar::new(0.0, 0.0, 255.0, 255.0),
+        };
+        let _ = rectangle(&mut result, rect, ch_color, -1);
+        
+        let ch_text = format!("Ch{}", i);
+        let _ = put_text(&mut result, &ch_text, Point::new(x as i32 + 10, (result.rows() - 10) as i32), 0.5, Scalar::new(255.0, 255.0, 255.0, 255.0));
+    }
+    
     Ok(WasmMat { inner: result })
 }

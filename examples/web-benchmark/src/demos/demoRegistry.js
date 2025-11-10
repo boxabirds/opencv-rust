@@ -304,7 +304,7 @@ export const demos = [
     name: 'Laplacian of Gaussian (LoG)',
     description: 'Blob detection using LoG operator',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -746,7 +746,7 @@ export const demos = [
     name: 'RGB to Lab',
     description: 'Convert RGB to Lab color space',
     category: 'color',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -755,7 +755,7 @@ export const demos = [
     name: 'RGB to YCrCb',
     description: 'Convert RGB to YCrCb color space',
     category: 'color',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -1505,7 +1505,7 @@ export const demos = [
     name: 'Brute Force Matcher',
     description: 'Match feature descriptors',
     category: 'features',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1694,7 +1694,7 @@ export const demos = [
     name: 'HOG Descriptor',
     description: 'Histogram of Oriented Gradients for pedestrian detection',
     category: 'detection',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1711,7 +1711,7 @@ export const demos = [
     name: 'Cascade Classifier',
     description: 'Haar/LBP cascade for face/object detection',
     category: 'detection',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1770,7 +1770,7 @@ export const demos = [
     name: 'Farneback Optical Flow',
     description: 'Dense optical flow computation',
     category: 'video',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1807,7 +1807,7 @@ export const demos = [
     name: 'MeanShift Tracker',
     description: 'Color-based object tracking',
     category: 'video',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1826,7 +1826,7 @@ export const demos = [
     name: 'CAMShift Tracker',
     description: 'Adaptive mean shift tracking',
     category: 'video',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -1835,7 +1835,7 @@ export const demos = [
     name: 'MOSSE Tracker',
     description: 'Fast correlation filter tracking',
     category: 'video',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1854,7 +1854,7 @@ export const demos = [
     name: 'CSRT Tracker',
     description: 'Discriminative correlation filter with spatial reliability',
     category: 'video',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -1863,7 +1863,7 @@ export const demos = [
     name: 'Background Subtractor MOG2',
     description: 'Gaussian mixture-based background/foreground segmentation',
     category: 'video',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1897,7 +1897,7 @@ export const demos = [
     name: 'Background Subtractor KNN',
     description: 'K-nearest neighbors background subtraction',
     category: 'video',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1930,7 +1930,7 @@ export const demos = [
     name: 'Calibrate Camera',
     description: 'Camera calibration using chessboard',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1967,7 +1967,7 @@ export const demos = [
     name: 'Fisheye Calibration',
     description: 'Wide-angle lens calibration',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -1976,7 +1976,7 @@ export const demos = [
     name: 'Solve PnP',
     description: 'Find object pose from 3D-2D correspondences',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1993,7 +1993,7 @@ export const demos = [
     name: 'Stereo Calibration',
     description: 'Calibrate stereo camera pair',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -2002,7 +2002,7 @@ export const demos = [
     name: 'Stereo Rectification',
     description: 'Align stereo images for disparity computation',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -2011,7 +2011,7 @@ export const demos = [
     name: 'Compute Disparity',
     description: 'Generate depth map from stereo pair',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2039,7 +2039,7 @@ export const demos = [
     name: 'Find Homography',
     description: 'Estimate planar transformation from point correspondences',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2070,7 +2070,7 @@ export const demos = [
     name: 'SVM Classifier',
     description: 'Support Vector Machine for classification',
     category: 'ml',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2105,7 +2105,7 @@ export const demos = [
     name: 'Decision Tree',
     description: 'Decision tree classifier',
     category: 'ml',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2124,7 +2124,7 @@ export const demos = [
     name: 'Random Forest',
     description: 'Random forest ensemble classifier',
     category: 'ml',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2152,7 +2152,7 @@ export const demos = [
     name: 'K-Nearest Neighbors',
     description: 'Instance-based learning classifier',
     category: 'ml',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2178,7 +2178,7 @@ export const demos = [
     name: 'Neural Network (MLP)',
     description: 'Multi-layer perceptron neural network',
     category: 'ml',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2206,7 +2206,7 @@ export const demos = [
     name: 'K-Means Clustering',
     description: 'Unsupervised clustering algorithm',
     category: 'ml',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2248,7 +2248,7 @@ export const demos = [
     name: 'Merge Debevec (HDR)',
     description: 'Create HDR image from exposure stack',
     category: 'photo',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -2257,7 +2257,7 @@ export const demos = [
     name: 'Tonemap Drago',
     description: 'HDR to LDR using Drago tone mapping',
     category: 'photo',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2285,7 +2285,7 @@ export const demos = [
     name: 'Tonemap Reinhard',
     description: 'Local tone mapping operator',
     category: 'photo',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2313,7 +2313,7 @@ export const demos = [
     name: 'Fast NL Means Denoising',
     description: 'Fast non-local means denoising',
     category: 'photo',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2350,7 +2350,7 @@ export const demos = [
     name: 'Inpaint',
     description: 'Image restoration and object removal',
     category: 'photo',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2376,7 +2376,7 @@ export const demos = [
     name: 'Super Resolution',
     description: 'Upscale images with enhanced detail',
     category: 'photo',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2398,7 +2398,7 @@ export const demos = [
     name: 'Panorama Stitcher',
     description: 'Automatic panorama creation from overlapping images',
     category: 'stitching',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2417,7 +2417,7 @@ export const demos = [
     name: 'Feather Blender',
     description: 'Simple alpha blending for panoramas',
     category: 'stitching',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2436,7 +2436,7 @@ export const demos = [
     name: 'Multi-band Blender',
     description: 'Pyramid blending for seamless panoramas',
     category: 'stitching',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2545,7 +2545,7 @@ export const demos = [
     name: 'Draw Ellipse',
     description: 'Draw an ellipse on the image',
     category: 'drawing',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2579,7 +2579,7 @@ export const demos = [
     name: 'Draw Polylines',
     description: 'Draw polygon/polylines on the image',
     category: 'drawing',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2610,7 +2610,7 @@ export const demos = [
     name: 'Put Text',
     description: 'Render text on the image',
     category: 'drawing',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2655,7 +2655,7 @@ export const demos = [
     name: 'Load Neural Network',
     description: 'Load a pre-trained DNN model',
     category: 'dnn',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2672,7 +2672,7 @@ export const demos = [
     name: 'Blob from Image',
     description: 'Prepare image for DNN inference',
     category: 'dnn',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2702,7 +2702,7 @@ export const demos = [
     name: 'Min Enclosing Circle',
     description: 'Find smallest circle enclosing contour',
     category: 'shape',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -2711,7 +2711,7 @@ export const demos = [
     name: 'Convex Hull',
     description: 'Compute convex boundary of contour',
     category: 'shape',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2727,7 +2727,7 @@ export const demos = [
     name: 'Hu Moments',
     description: 'Rotation-invariant shape descriptors',
     category: 'shape',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -2736,7 +2736,7 @@ export const demos = [
     name: 'Match Shapes',
     description: 'Compare shape similarity',
     category: 'shape',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {

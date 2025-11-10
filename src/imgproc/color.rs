@@ -2,7 +2,48 @@ use crate::core::{Mat, MatDepth};
 use crate::core::types::ColorConversionCode;
 use crate::error::{Error, Result};
 
-/// Convert color space of an image
+/// Convert color space of an image with GPU acceleration (async for WASM)
+pub async fn cvt_color_async(
+    src: &Mat,
+    dst: &mut Mat,
+    code: ColorConversionCode,
+    use_gpu: bool,
+) -> Result<()> {
+    if src.depth() != MatDepth::U8 {
+        return Err(Error::UnsupportedOperation(
+            "cvt_color only supports U8 depth".to_string(),
+        ));
+    }
+
+    // Try GPU if requested and available
+    if use_gpu {
+        #[cfg(feature = "gpu")]
+        {
+            match code {
+                ColorConversionCode::RgbToGray => {
+                    use crate::gpu::ops::rgb_to_gray_gpu_async;
+                    match rgb_to_gray_gpu_async(src, dst).await {
+                        Ok(()) => return Ok(()),
+                        Err(_) => { /* Fall through to CPU */ }
+                    }
+                }
+                ColorConversionCode::RgbToHsv => {
+                    use crate::gpu::ops::rgb_to_hsv_gpu_async;
+                    match rgb_to_hsv_gpu_async(src, dst).await {
+                        Ok(()) => return Ok(()),
+                        Err(_) => { /* Fall through to CPU */ }
+                    }
+                }
+                _ => { /* Fall through to CPU for unsupported GPU conversions */ }
+            }
+        }
+    }
+
+    // CPU fallback
+    cvt_color(src, dst, code)
+}
+
+/// Convert color space of an image (CPU-only, sync)
 pub fn cvt_color(src: &Mat, dst: &mut Mat, code: ColorConversionCode) -> Result<()> {
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation(
@@ -39,6 +80,18 @@ pub fn cvt_color(src: &Mat, dst: &mut Mat, code: ColorConversionCode) -> Result<
         }
         ColorConversionCode::HsvToBgr | ColorConversionCode::HsvToRgb => {
             hsv_to_rgb(src, dst, code == ColorConversionCode::HsvToBgr)
+        }
+        ColorConversionCode::BgrToLab | ColorConversionCode::RgbToLab => {
+            rgb_to_lab(src, dst, code == ColorConversionCode::BgrToLab)
+        }
+        ColorConversionCode::LabToBgr | ColorConversionCode::LabToRgb => {
+            lab_to_rgb(src, dst, code == ColorConversionCode::LabToBgr)
+        }
+        ColorConversionCode::BgrToYCrCb | ColorConversionCode::RgbToYCrCb => {
+            rgb_to_ycrcb(src, dst, code == ColorConversionCode::BgrToYCrCb)
+        }
+        ColorConversionCode::YCrCbToBgr | ColorConversionCode::YCrCbToRgb => {
+            ycrcb_to_rgb(src, dst, code == ColorConversionCode::YCrCbToBgr)
         }
     }
 }
@@ -302,6 +355,184 @@ fn hsv_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
                 dst_pixel[0] = r;
                 dst_pixel[1] = g;
                 dst_pixel[2] = b;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Convert RGB/BGR to Lab color space
+fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
+    if src.channels() != 3 {
+        return Err(Error::InvalidParameter(
+            "Source must have 3 channels".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 3, MatDepth::U8)?;
+
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let pixel = src.at(row, col)?;
+            let (r, g, b) = if is_bgr {
+                (pixel[2] as f32 / 255.0, pixel[1] as f32 / 255.0, pixel[0] as f32 / 255.0)
+            } else {
+                (pixel[0] as f32 / 255.0, pixel[1] as f32 / 255.0, pixel[2] as f32 / 255.0)
+            };
+
+            // Convert to XYZ (D65 illuminant)
+            let r_linear = if r > 0.04045 { ((r + 0.055) / 1.055).powf(2.4) } else { r / 12.92 };
+            let g_linear = if g > 0.04045 { ((g + 0.055) / 1.055).powf(2.4) } else { g / 12.92 };
+            let b_linear = if b > 0.04045 { ((b + 0.055) / 1.055).powf(2.4) } else { b / 12.92 };
+
+            let x = r_linear * 0.4124 + g_linear * 0.3576 + b_linear * 0.1805;
+            let y = r_linear * 0.2126 + g_linear * 0.7152 + b_linear * 0.0722;
+            let z = r_linear * 0.0193 + g_linear * 0.1192 + b_linear * 0.9505;
+
+            // Normalize for D65
+            let xn = x / 0.950489;
+            let yn = y / 1.0;
+            let zn = z / 1.08884;
+
+            // Convert to Lab
+            let f = |t: f32| if t > 0.008856 { t.powf(1.0 / 3.0) } else { 7.787 * t + 16.0 / 116.0 };
+            let fx = f(xn);
+            let fy = f(yn);
+            let fz = f(zn);
+
+            let l = 116.0 * fy - 16.0;
+            let a = 500.0 * (fx - fy);
+            let b_lab = 200.0 * (fy - fz);
+
+            let dst_pixel = dst.at_mut(row, col)?;
+            dst_pixel[0] = (l * 2.55).min(255.0).max(0.0) as u8;  // L in [0, 255]
+            dst_pixel[1] = ((a + 128.0)).min(255.0).max(0.0) as u8;  // a in [0, 255]
+            dst_pixel[2] = ((b_lab + 128.0)).min(255.0).max(0.0) as u8;  // b in [0, 255]
+        }
+    }
+
+    Ok(())
+}
+
+/// Convert Lab to RGB/BGR
+fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
+    if src.channels() != 3 {
+        return Err(Error::InvalidParameter(
+            "Source must have 3 channels".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 3, MatDepth::U8)?;
+
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let pixel = src.at(row, col)?;
+            let l = pixel[0] as f32 / 2.55;
+            let a = pixel[1] as f32 - 128.0;
+            let b = pixel[2] as f32 - 128.0;
+
+            // Convert to XYZ
+            let fy = (l + 16.0) / 116.0;
+            let fx = a / 500.0 + fy;
+            let fz = fy - b / 200.0;
+
+            let f_inv = |t: f32| if t > 0.206897 { t.powi(3) } else { (t - 16.0 / 116.0) / 7.787 };
+            let xn = f_inv(fx) * 0.950489;
+            let yn = f_inv(fy) * 1.0;
+            let zn = f_inv(fz) * 1.08884;
+
+            // Convert to RGB
+            let r_linear = xn * 3.2406 + yn * -1.5372 + zn * -0.4986;
+            let g_linear = xn * -0.9689 + yn * 1.8758 + zn * 0.0415;
+            let b_linear = xn * 0.0557 + yn * -0.2040 + zn * 1.0570;
+
+            let gamma = |t: f32| if t > 0.0031308 { 1.055 * t.powf(1.0 / 2.4) - 0.055 } else { 12.92 * t };
+            let r = (gamma(r_linear) * 255.0).min(255.0).max(0.0) as u8;
+            let g = (gamma(g_linear) * 255.0).min(255.0).max(0.0) as u8;
+            let b_rgb = (gamma(b_linear) * 255.0).min(255.0).max(0.0) as u8;
+
+            let dst_pixel = dst.at_mut(row, col)?;
+            if is_bgr {
+                dst_pixel[0] = b_rgb;
+                dst_pixel[1] = g;
+                dst_pixel[2] = r;
+            } else {
+                dst_pixel[0] = r;
+                dst_pixel[1] = g;
+                dst_pixel[2] = b_rgb;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Convert RGB/BGR to YCrCb
+fn rgb_to_ycrcb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
+    if src.channels() != 3 {
+        return Err(Error::InvalidParameter(
+            "Source must have 3 channels".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 3, MatDepth::U8)?;
+
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let pixel = src.at(row, col)?;
+            let (r, g, b) = if is_bgr {
+                (pixel[2] as f32, pixel[1] as f32, pixel[0] as f32)
+            } else {
+                (pixel[0] as f32, pixel[1] as f32, pixel[2] as f32)
+            };
+
+            // ITU-R BT.601 conversion
+            let y = 0.299 * r + 0.587 * g + 0.114 * b;
+            let cr = (r - y) * 0.713 + 128.0;
+            let cb = (b - y) * 0.564 + 128.0;
+
+            let dst_pixel = dst.at_mut(row, col)?;
+            dst_pixel[0] = y.min(255.0).max(0.0) as u8;
+            dst_pixel[1] = cr.min(255.0).max(0.0) as u8;
+            dst_pixel[2] = cb.min(255.0).max(0.0) as u8;
+        }
+    }
+
+    Ok(())
+}
+
+/// Convert YCrCb to RGB/BGR
+fn ycrcb_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
+    if src.channels() != 3 {
+        return Err(Error::InvalidParameter(
+            "Source must have 3 channels".to_string(),
+        ));
+    }
+
+    *dst = Mat::new(src.rows(), src.cols(), 3, MatDepth::U8)?;
+
+    for row in 0..src.rows() {
+        for col in 0..src.cols() {
+            let pixel = src.at(row, col)?;
+            let y = pixel[0] as f32;
+            let cr = pixel[1] as f32 - 128.0;
+            let cb = pixel[2] as f32 - 128.0;
+
+            // ITU-R BT.601 conversion
+            let r = y + 1.403 * cr;
+            let g = y - 0.714 * cr - 0.344 * cb;
+            let b = y + 1.773 * cb;
+
+            let dst_pixel = dst.at_mut(row, col)?;
+            if is_bgr {
+                dst_pixel[0] = b.min(255.0).max(0.0) as u8;
+                dst_pixel[1] = g.min(255.0).max(0.0) as u8;
+                dst_pixel[2] = r.min(255.0).max(0.0) as u8;
+            } else {
+                dst_pixel[0] = r.min(255.0).max(0.0) as u8;
+                dst_pixel[1] = g.min(255.0).max(0.0) as u8;
+                dst_pixel[2] = b.min(255.0).max(0.0) as u8;
             }
         }
     }

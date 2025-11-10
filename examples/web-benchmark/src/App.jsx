@@ -61,6 +61,50 @@ import init, {
   brisk as wasmBrisk,
   akaze as wasmAkaze,
   kaze as wasmKaze,
+  logFilter as wasmLogFilter,
+  cvtColorLab as wasmCvtColorLab,
+  cvtColorYCrCb as wasmCvtColorYCrCb,
+  drawEllipse as wasmDrawEllipse,
+  drawPolylines as wasmDrawPolylines,
+  putText as wasmPutText,
+  minEnclosingCircle as wasmMinEnclosingCircle,
+  convexHull as wasmConvexHull,
+  huMoments as wasmHuMoments,
+  matchShapes as wasmMatchShapes,
+  inpaint as wasmInpaint,
+  kmeans as wasmKmeans,
+  findHomography as wasmFindHomography,
+  bruteForceMatcher as wasmBruteForceMatcher,
+  hogDescriptor as wasmHogDescriptor,
+  bgSubtractorMog2 as wasmBgSubtractorMog2,
+  bgSubtractorKnn as wasmBgSubtractorKnn,
+  farnebackOpticalFlow as wasmFarnebackOpticalFlow,
+  tonemapDrago as wasmTonemapDrago,
+  tonemapReinhard as wasmTonemapReinhard,
+  meanshiftTracker as wasmMeanshiftTracker,
+  camshiftTracker as wasmCamshiftTracker,
+  mosseTracker as wasmMosseTracker,
+  csrtTracker as wasmCsrtTracker,
+  svmClassifier as wasmSvmClassifier,
+  decisionTree as wasmDecisionTree,
+  randomForest as wasmRandomForest,
+  knn as wasmKnn,
+  neuralNetwork as wasmNeuralNetwork,
+  fastNlMeans as wasmFastNlMeans,
+  superResolution as wasmSuperResolution,
+  mergeDebevec as wasmMergeDebevec,
+  calibrateCamera as wasmCalibrateCamera,
+  fisheyeCalibration as wasmFisheyeCalibration,
+  solvePnp as wasmSolvePnp,
+  stereoCalibration as wasmStereoCalibration,
+  computeDisparity as wasmComputeDisparity,
+  cascadeClassifier as wasmCascadeClassifier,
+  panoramaStitcher as wasmPanoramaStitcher,
+  featherBlender as wasmFeatherBlender,
+  stereoRectification as wasmStereoRectification,
+  multibandBlender as wasmMultibandBlender,
+  loadNetwork as wasmLoadNetwork,
+  blobFromImage as wasmBlobFromImage,
   getVersion
 } from '../../../pkg/opencv_rust.js';
 
@@ -578,6 +622,216 @@ function App() {
       case 'kaze': {
         return await wasmKaze(srcMat);
       }
+
+      // ==================== Batch 5: Advanced Features & Operations ====================
+
+      case 'log_filter': {
+        const ksize = params.ksize || 5;
+        const sigma = params.sigma || 1.5;
+        return await wasmLogFilter(srcMat, ksize, sigma);
+      }
+
+      case 'cvt_color_lab': {
+        return await wasmCvtColorLab(srcMat);
+      }
+
+      case 'cvt_color_ycrcb': {
+        return await wasmCvtColorYCrCb(srcMat);
+      }
+
+      case 'draw_ellipse': {
+        const cx = params.cx || srcMat.width / 2;
+        const cy = params.cy || srcMat.height / 2;
+        const width = params.width || 100;
+        const height = params.height || 60;
+        const angle = params.angle || 0;
+        const thickness = params.thickness || 2;
+        return await wasmDrawEllipse(srcMat, cx, cy, width, height, angle, thickness);
+      }
+
+      case 'draw_polylines': {
+        return await wasmDrawPolylines(srcMat);
+      }
+
+      case 'put_text': {
+        const text = params.text || "OpenCV Rust";
+        const x = params.x || 50;
+        const y = params.y || 100;
+        const font_scale = params.font_scale || 1.0;
+        return await wasmPutText(srcMat, text, x, y, font_scale);
+      }
+
+      case 'min_enclosing_circle': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmMinEnclosingCircle(srcMat, thresholdValue);
+      }
+
+      case 'convex_hull': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmConvexHull(srcMat, thresholdValue);
+      }
+
+      case 'hu_moments': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmHuMoments(srcMat, thresholdValue);
+      }
+
+      case 'match_shapes': {
+        const thresholdValue = params.threshold || 127.0;
+        return await wasmMatchShapes(srcMat, thresholdValue);
+      }
+
+      case 'inpaint': {
+        const radius = params.radius || 3;
+        return await wasmInpaint(srcMat, radius);
+      }
+
+      case 'kmeans': {
+        const k = params.k || 4;
+        return await wasmKmeans(srcMat, k);
+      }
+
+      case 'find_homography': {
+        const nFeatures = params.n_features || 100;
+        return await wasmFindHomography(srcMat, nFeatures);
+      }
+
+      case 'brute_force_matcher': {
+        const nFeatures = params.n_features || 100;
+        return await wasmBruteForceMatcher(srcMat, nFeatures);
+      }
+
+      case 'hog_descriptor': {
+        return await wasmHogDescriptor(srcMat);
+      }
+
+      case 'bg_subtractor_mog2': {
+        const learningRate = params.learning_rate || 0.01;
+        return await wasmBgSubtractorMog2(srcMat, learningRate);
+      }
+
+      case 'bg_subtractor_knn': {
+        const learningRate = params.learning_rate || 0.01;
+        return await wasmBgSubtractorKnn(srcMat, learningRate);
+      }
+
+      case 'farneback_optical_flow': {
+        return await wasmFarnebackOpticalFlow(srcMat);
+      }
+
+      case 'tonemap_drago': {
+        const bias = params.bias || 0.85;
+        return await wasmTonemapDrago(srcMat, bias);
+      }
+
+      case 'tonemap_reinhard': {
+        return await wasmTonemapReinhard(srcMat);
+      }
+
+      case 'meanshift_tracker': {
+        return await wasmMeanshiftTracker(srcMat);
+      }
+
+      case 'camshift_tracker': {
+        return await wasmCamshiftTracker(srcMat);
+      }
+
+      case 'mosse_tracker': {
+        return await wasmMosseTracker(srcMat);
+      }
+
+      case 'csrt_tracker': {
+        return await wasmCsrtTracker(srcMat);
+      }
+
+      case 'svm_classifier': {
+        return await wasmSvmClassifier(srcMat);
+      }
+
+      case 'decision_tree': {
+        return await wasmDecisionTree(srcMat);
+      }
+
+      case 'random_forest': {
+        const nTrees = params.n_trees || 10;
+        return await wasmRandomForest(srcMat, nTrees);
+      }
+
+      case 'knn': {
+        const k = params.k || 5;
+        return await wasmKnn(srcMat, k);
+      }
+
+      case 'neural_network': {
+        return await wasmNeuralNetwork(srcMat);
+      }
+
+      case 'fast_nl_means': {
+        const h = params.h || 10.0;
+        const templateWindowSize = params.template_window_size || 7;
+        const searchWindowSize = params.search_window_size || 21;
+        return await wasmFastNlMeans(srcMat, h, templateWindowSize, searchWindowSize);
+      }
+
+      case 'super_resolution': {
+        const scale = params.scale || 2.0;
+        return await wasmSuperResolution(srcMat, scale);
+      }
+
+      case 'merge_debevec': {
+        return await wasmMergeDebevec(srcMat);
+      }
+
+      case 'calibrate_camera': {
+        return await wasmCalibrateCamera(srcMat);
+      }
+
+      case 'fisheye_calibration': {
+        return await wasmFisheyeCalibration(srcMat);
+      }
+
+      case 'solve_pnp': {
+        return await wasmSolvePnp(srcMat);
+      }
+
+      case 'stereo_calibration': {
+        return await wasmStereoCalibration(srcMat);
+      }
+
+      case 'compute_disparity': {
+        return await wasmComputeDisparity(srcMat);
+      }
+
+      case 'cascade_classifier': {
+        return await wasmCascadeClassifier(srcMat);
+      }
+
+      case 'panorama_stitcher': {
+        return await wasmPanoramaStitcher(srcMat);
+      }
+
+      case 'feather_blender': {
+        const blendStrength = params.blend_strength || 0.5;
+        return await wasmFeatherBlender(srcMat, blendStrength);
+      }
+
+      case 'stereo_rectification': {
+        return await wasmStereoRectification(srcMat);
+      }
+
+      case 'multiband_blender': {
+        const numBands = params.num_bands || 4;
+        return await wasmMultibandBlender(srcMat, numBands);
+      }
+
+      case 'load_network': {
+        return await wasmLoadNetwork(srcMat);
+      }
+
+      case 'blob_from_image': {
+        return await wasmBlobFromImage(srcMat);
+      }
+
 
       default:
         throw new Error(`Unknown demo: ${demoId}`);
