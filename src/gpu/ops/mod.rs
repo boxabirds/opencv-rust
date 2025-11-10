@@ -44,6 +44,19 @@ pub mod subtract;
 pub mod multiply;
 pub mod normalize;
 
+// Batch 3 operations
+pub mod filter2d;
+pub mod warp_perspective;
+pub mod in_range;
+pub mod split;
+pub mod merge;
+pub mod remap;
+pub mod pow;
+pub mod exp;
+pub mod log;
+pub mod sqrt;
+pub mod lut;
+
 // Export sync versions for native
 #[cfg(not(target_arch = "wasm32"))]
 pub use blur::gaussian_blur_gpu;
@@ -129,6 +142,28 @@ pub use subtract::subtract_gpu;
 pub use multiply::multiply_gpu;
 #[cfg(not(target_arch = "wasm32"))]
 pub use normalize::normalize_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use filter2d::filter2d_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use warp_perspective::warp_perspective_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use in_range::in_range_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use split::split_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use merge::merge_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use remap::remap_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use pow::pow_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use exp::exp_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use log::log_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use sqrt::sqrt_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use lut::lut_gpu;
 
 // Export async versions for WASM
 pub use blur::gaussian_blur_gpu_async;
@@ -173,3 +208,14 @@ pub use add::add_gpu_async;
 pub use subtract::subtract_gpu_async;
 pub use multiply::multiply_gpu_async;
 pub use normalize::normalize_gpu_async;
+pub use filter2d::filter2d_gpu_async;
+pub use warp_perspective::warp_perspective_gpu_async;
+pub use in_range::in_range_gpu_async;
+pub use split::split_gpu_async;
+pub use merge::merge_gpu_async;
+pub use remap::remap_gpu_async;
+pub use pow::pow_gpu_async;
+pub use exp::exp_gpu_async;
+pub use log::log_gpu_async;
+pub use sqrt::sqrt_gpu_async;
+pub use lut::lut_gpu_async;
