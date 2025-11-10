@@ -7,6 +7,25 @@ import init, {
   resize as wasmResize,
   threshold as wasmThreshold,
   canny as wasmCanny,
+  blur as wasmBlur,
+  medianBlur as wasmMedianBlur,
+  bilateralFilter as wasmBilateralFilter,
+  sobel as wasmSobel,
+  scharr as wasmScharr,
+  laplacian as wasmLaplacian,
+  flip as wasmFlip,
+  rotate as wasmRotate,
+  cvtColorGray as wasmCvtColorGray,
+  adaptiveThreshold as wasmAdaptiveThreshold,
+  drawLine as wasmDrawLine,
+  drawRectangle as wasmDrawRectangle,
+  drawCircle as wasmDrawCircle,
+  guidedFilter as wasmGuidedFilter,
+  gaborFilter as wasmGaborFilter,
+  warpAffine as wasmWarpAffine,
+  harrisCorners as wasmHarrisCorners,
+  goodFeaturesToTrack as wasmGoodFeaturesToTrack,
+  fast as wasmFast,
   getVersion
 } from '../../../pkg/opencv_rust.js';
 
@@ -179,6 +198,170 @@ function App() {
         const threshold1 = params.threshold1 || 50;
         const threshold2 = params.threshold2 || 150;
         return await wasmCanny(srcMat, threshold1, threshold2);
+      }
+
+      case 'box_blur': {
+        const ksize = params.ksize || 5;
+        return await wasmBlur(srcMat, ksize);
+      }
+
+      case 'median_blur': {
+        const ksize = params.ksize || 5;
+        return await wasmMedianBlur(srcMat, ksize);
+      }
+
+      case 'bilateral_filter': {
+        const d = params.diameter || 9;
+        const sigmaColor = params.sigmaColor || 75;
+        const sigmaSpace = params.sigmaSpace || 75;
+        return await wasmBilateralFilter(srcMat, d, sigmaColor, sigmaSpace);
+      }
+
+      case 'sobel': {
+        const dx = params.dx || 1;
+        const dy = params.dy || 0;
+        const ksize = params.ksize || 3;
+        return await wasmSobel(srcMat, dx, dy, ksize);
+      }
+
+      case 'scharr': {
+        const dx = params.dx || 1;
+        const dy = params.dy || 0;
+        return await wasmScharr(srcMat, dx, dy);
+      }
+
+      case 'laplacian': {
+        const ksize = params.ksize || 3;
+        return await wasmLaplacian(srcMat, ksize);
+      }
+
+      case 'flip': {
+        // Convert 'Horizontal', 'Vertical', 'Both' to flip codes
+        let flipCode = 1; // Default: horizontal
+        if (params.flipCode === 'Vertical') flipCode = 0;
+        else if (params.flipCode === 'Both') flipCode = -1;
+        else if (typeof params.flipCode === 'number') flipCode = params.flipCode;
+        return await wasmFlip(srcMat, flipCode);
+      }
+
+      case 'rotate': {
+        // Convert '90°', '180°', '270°' to rotation codes
+        let rotateCode = 0; // 90° clockwise
+        if (params.angle === '180°' || params.angle === 180) rotateCode = 1;
+        else if (params.angle === '270°' || params.angle === 270) rotateCode = 2;
+        else if (typeof params.rotateCode === 'number') rotateCode = params.rotateCode;
+        return await wasmRotate(srcMat, rotateCode);
+      }
+
+      case 'cvt_color_gray': {
+        return await wasmCvtColorGray(srcMat);
+      }
+
+      case 'adaptive_threshold': {
+        const maxval = params.maxval || 255;
+        const blockSize = params.blockSize || 11;
+        const c = params.c || 2;
+        return await wasmAdaptiveThreshold(srcMat, maxval, blockSize, c);
+      }
+
+      case 'draw_line': {
+        // Use center of image for line endpoints as demo
+        const width = srcMat.width;
+        const height = srcMat.height;
+        const x1 = Math.floor(width * 0.2);
+        const y1 = Math.floor(height * 0.2);
+        const x2 = Math.floor(width * 0.8);
+        const y2 = Math.floor(height * 0.8);
+        const thickness = params.thickness || 2;
+        // Parse color - default to red
+        const color = params.color || '#FF0000';
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        return await wasmDrawLine(srcMat, x1, y1, x2, y2, r, g, b, thickness);
+      }
+
+      case 'draw_rectangle': {
+        // Draw rectangle in center third of image as demo
+        const width = srcMat.width;
+        const height = srcMat.height;
+        const x = Math.floor(width * 0.25);
+        const y = Math.floor(height * 0.25);
+        const w = Math.floor(width * 0.5);
+        const h = Math.floor(height * 0.5);
+        const thickness = params.thickness || 2;
+        const color = params.color || '#00FF00';
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        return await wasmDrawRectangle(srcMat, x, y, w, h, r, g, b, thickness);
+      }
+
+      case 'draw_circle': {
+        // Draw circle in center of image as demo
+        const centerX = Math.floor(srcMat.width / 2);
+        const centerY = Math.floor(srcMat.height / 2);
+        const radius = params.radius || Math.floor(Math.min(srcMat.width, srcMat.height) * 0.2);
+        const color = params.color || '#0000FF';
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        return await wasmDrawCircle(srcMat, centerX, centerY, radius, r, g, b);
+      }
+
+      case 'guided_filter': {
+        const radius = params.radius || 5;
+        const eps = params.epsilon || 0.1;
+        return await wasmGuidedFilter(srcMat, radius, eps);
+      }
+
+      case 'gabor_filter': {
+        const ksize = 21;
+        const sigma = params.sigma || 3.0;
+        const theta = (params.orientation || 0) * Math.PI / 180; // Convert degrees to radians
+        const lambda = 1.0 / (params.frequency || 0.1);
+        const gamma = 0.5;
+        const psi = 0;
+        return await wasmGaborFilter(srcMat, ksize, sigma, theta, lambda, gamma, psi);
+      }
+
+      case 'warp_affine': {
+        // Create a simple rotation + translation matrix as demo
+        const angle = (params.angle || 15) * Math.PI / 180;
+        const scale = params.scale || 1.0;
+        const centerX = srcMat.width / 2;
+        const centerY = srcMat.height / 2;
+
+        // Rotation matrix around center
+        const cos = Math.cos(angle) * scale;
+        const sin = Math.sin(angle) * scale;
+        const tx = centerX - centerX * cos + centerY * sin;
+        const ty = centerY - centerX * sin - centerY * cos;
+
+        const matrix = [cos, -sin, tx, sin, cos, ty];
+        return await wasmWarpAffine(srcMat, matrix, srcMat.width, srcMat.height);
+      }
+
+      case 'harris_corners': {
+        const blockSize = params.blockSize || 3;
+        const ksize = params.ksize || 3;
+        const k = params.k || 0.04;
+        const threshold = params.threshold || 100.0;
+        return await wasmHarrisCorners(srcMat, blockSize, ksize, k, threshold);
+      }
+
+      case 'good_features_to_track': {
+        const maxCorners = params.maxCorners || 100;
+        const qualityLevel = params.qualityLevel || 0.01;
+        const minDistance = params.minDistance || 10.0;
+        const blockSize = params.blockSize || 3;
+        return await wasmGoodFeaturesToTrack(srcMat, maxCorners, qualityLevel, minDistance, blockSize);
+      }
+
+      case 'fast': {
+        const threshold = params.threshold || 20;
+        const nonmaxSuppression = params.nonmaxSuppression !== false;
+        return await wasmFast(srcMat, threshold, nonmaxSuppression);
       }
 
       default:

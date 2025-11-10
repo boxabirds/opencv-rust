@@ -118,7 +118,7 @@ impl GpuBatch {
                 }
                 GpuOp::Threshold { thresh, maxval } => {
                     let mut dst = Mat::new(1, 1, 1, MatDepth::U8)?;
-                    crate::gpu::ops::threshold::threshold_gpu_async(&current, &mut dst, thresh, maxval).await?;
+                    crate::gpu::ops::threshold::threshold_gpu_async(&current, &mut dst, thresh.clamp(0.0, 255.0) as u8, maxval.clamp(0.0, 255.0) as u8).await?;
                     dst
                 }
                 GpuOp::Canny { threshold1, threshold2 } => {
