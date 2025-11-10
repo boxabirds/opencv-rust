@@ -58,6 +58,10 @@ pub mod gpu;
 #[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 pub mod wasm;
 
+// Backend tests runnable on native (mirrors wasm/backend.rs logic)
+#[cfg(test)]
+mod backend_native_test;
+
 pub mod prelude {
     //! Convenience module that re-exports commonly used items
     pub use crate::core::{Mat, MatDepth, Point, Point2f, Size, Rect, Scalar};
