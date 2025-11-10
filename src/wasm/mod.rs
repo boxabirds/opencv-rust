@@ -3,7 +3,7 @@
 //! This module provides JavaScript-compatible bindings for running opencv-rust
 //! in the browser via WebAssembly.
 
-mod backend;
+pub mod backend;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
