@@ -101,6 +101,10 @@ import init, {
   cascadeClassifier as wasmCascadeClassifier,
   panoramaStitcher as wasmPanoramaStitcher,
   featherBlender as wasmFeatherBlender,
+  stereoRectification as wasmStereoRectification,
+  multibandBlender as wasmMultibandBlender,
+  loadNetwork as wasmLoadNetwork,
+  blobFromImage as wasmBlobFromImage,
   getVersion
 } from '../../../pkg/opencv_rust.js';
 
@@ -809,6 +813,23 @@ function App() {
       case 'feather_blender': {
         const blendStrength = params.blend_strength || 0.5;
         return await wasmFeatherBlender(srcMat, blendStrength);
+      }
+
+      case 'stereo_rectification': {
+        return await wasmStereoRectification(srcMat);
+      }
+
+      case 'multiband_blender': {
+        const numBands = params.num_bands || 4;
+        return await wasmMultibandBlender(srcMat, numBands);
+      }
+
+      case 'load_network': {
+        return await wasmLoadNetwork(srcMat);
+      }
+
+      case 'blob_from_image': {
+        return await wasmBlobFromImage(srcMat);
       }
 
 

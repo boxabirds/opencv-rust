@@ -2002,7 +2002,7 @@ export const demos = [
     name: 'Stereo Rectification',
     description: 'Align stereo images for disparity computation',
     category: 'calibration',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -2436,7 +2436,7 @@ export const demos = [
     name: 'Multi-band Blender',
     description: 'Pyramid blending for seamless panoramas',
     category: 'stitching',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2655,7 +2655,7 @@ export const demos = [
     name: 'Load Neural Network',
     description: 'Load a pre-trained DNN model',
     category: 'dnn',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -2672,7 +2672,7 @@ export const demos = [
     name: 'Blob from Image',
     description: 'Prepare image for DNN inference',
     category: 'dnn',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
