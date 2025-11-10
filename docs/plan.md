@@ -48,13 +48,14 @@ All 102 features have:
 
 **Status**: **SUBSTANTIAL** - Core functionality implemented with tests
 
-### 🚀 Level 4: GPU Acceleration (15 operations implemented)
+### 🚀 Level 4: GPU Acceleration (47 operations implemented)
 - GPU compute infrastructure exists with wgpu/WebGPU
-- 10 shaders implemented in src/gpu/shaders/
-- 15 GPU operations in src/gpu/ops/ with async/sync support
+- 40 shaders implemented in src/gpu/shaders/
+- 42 standalone GPU operations in src/gpu/ops/ with async/sync support
+- 5 composite operations built from basic operations
 - All GPU operations have WASM bindings with GPU enabled
 
-**Implemented GPU Operations** (2025-11-10):
+**Batch 1: Core Operations** (verified 2025-11-10):
 1. ✅ Gaussian Blur (verified)
 2. ✅ Resize (verified)
 3. ✅ Canny Edge Detection (verified)
@@ -75,8 +76,37 @@ All 102 features have:
 18. 🆕 RGB to Grayscale
 19. 🆕 RGB to HSV
 20. 🆕 Adaptive Threshold
+21. 🆕 HSV to RGB
+22. 🆕 RGB to Lab
+23. 🆕 RGB to YCrCb
+24. 🆕 Bilateral Filter
+25. 🆕 Median Blur (3x3, 5x5)
 
-**Status**: **ACTIVE DEVELOPMENT** - 20 features with GPU support, systematic expansion underway
+**Batch 2: Advanced Operations** (2025-11-10):
+26. 🆕 Lab to RGB - Perceptually uniform color space inverse conversion
+27. 🆕 YCrCb to RGB - ITU-R BT.601 inverse color conversion
+28. 🆕 Pyramid Down - Gaussian pyramid downsample for multi-scale processing
+29. 🆕 Pyramid Up - Gaussian pyramid upsample
+30. 🆕 Warp Affine - 2x3 affine transformations with bilinear interpolation
+31. 🆕 Convert Scale - Linear scaling (dst = src * alpha + beta)
+32. 🆕 Add Weighted - Weighted image blending (dst = src1*alpha + src2*beta + gamma)
+33. 🆕 Gradient Magnitude - Combined Sobel gradient magnitude computation
+34. 🆕 Distance Transform - Euclidean distance to nearest zero pixel
+35. 🆕 Integral Image - Summed area table for fast box filtering
+36. 🆕 Equalize Histogram - 3-pass histogram equalization (histogram → CDF → apply)
+37. 🆕 Bitwise NOT - Bitwise inversion
+38. 🆕 Bitwise AND - Element-wise bitwise AND
+39. 🆕 Bitwise OR - Element-wise bitwise OR
+40. 🆕 Bitwise XOR - Element-wise bitwise XOR
+41. 🆕 Absolute Difference - |src1 - src2|
+42. 🆕 Min - Element-wise minimum
+43. 🆕 Max - Element-wise maximum
+44. 🆕 Add - Saturated element-wise addition
+45. 🆕 Subtract - Saturated element-wise subtraction
+46. 🆕 Multiply - Element-wise multiplication with scaling
+47. 🆕 Normalize - Normalize pixel values to specified range
+
+**Status**: **BATCH 2 COMPLETE** - 47 GPU operations (42 standalone + 5 composites) fully implemented with async/WASM support. Both native and WASM builds compile successfully.
 
 ### ⚠️ Level 5: Full Stack Verification (3.9% Confirmed)
 Only 4 features have **confirmed** full stack (CPU + GPU + WASM + Tests + Visual):
