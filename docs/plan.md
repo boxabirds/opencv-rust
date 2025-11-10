@@ -16,6 +16,8 @@
 | **Verified Complete** | 4-5 operations | ❌ Only 4% of 102 demos fully verified |
 | **Pipeline Caching** | Stub only | ❌ Critical performance gap (10-100ms/call) |
 | **Test Parity** | 396 tests exist | ❌ No systematic OpenCV comparison |
+| **OpenCV.js API Parity** | Unknown | ❌ Not verified against opencv.js |
+| **OpenCV.js Benchmark** | Not available | ❌ Gallery lacks opencv.js comparison |
 | **WASM Quality** | 153 functions | ✅ **Project strength** |
 
 ### Key Insight
@@ -55,10 +57,12 @@
 ### ❌ Critical Gaps
 
 1. **Pipeline Caching**: Stub only - pipelines recreated every call (severe performance impact)
-2. **84 Demos Without GPU**: 82% of gallery runs CPU-only
-3. **40 Orphaned GPU Ops**: No corresponding demos
-4. **Test Parity**: No systematic OpenCV comparison
-5. **Verification**: Only 4-5/102 operations fully verified (4%)
+2. **OpenCV.js API Parity**: No verification that our WASM API matches opencv.js
+3. **OpenCV.js Benchmark**: Gallery lacks side-by-side comparison with opencv.js
+4. **84 Demos Without GPU**: 82% of gallery runs CPU-only
+5. **40 Orphaned GPU Ops**: No corresponding demos
+6. **Test Parity**: No systematic OpenCV comparison
+7. **Verification**: Only 4-5/102 operations fully verified (4%)
 
 ---
 
@@ -69,10 +73,12 @@
 ### Why This Path?
 
 1. **Fixes Critical Gap**: Pipeline caching is essential for GPU performance
-2. **Establishes Quality Bar**: Creates template for completing remaining work
-3. **Builds Credibility**: Honest assessment vs overstated claims
-4. **Provides Value**: 15-20 verified operations cover 80% of common use cases
-5. **Enables Growth**: Solid foundation for future expansion
+2. **Competitive Advantage**: Direct benchmarking against opencv.js shows our value proposition
+3. **API Compatibility**: 100% parity with opencv.js ensures easy migration for developers
+4. **Establishes Quality Bar**: Creates template for completing remaining work
+5. **Builds Credibility**: Honest assessment vs overstated claims
+6. **Provides Value**: 15-20 verified operations cover 80% of common use cases
+7. **Enables Growth**: Solid foundation for future expansion
 
 ### Core Operations to Verify (15-20 total)
 
@@ -133,28 +139,59 @@ impl PipelineCache {
 
 ---
 
-#### Priority 2: Create OpenCV Test Harness ⚠️ HIGH
-**Goal**: Automated comparison against OpenCV reference implementation
+#### Priority 2: Ensure OpenCV.js API Parity & Test Harness ⚠️ HIGH
+**Goal**: 100% API compatibility with opencv.js + automated comparison
+
+**Critical Requirement**: Our WASM bindings MUST match opencv.js signatures exactly for seamless developer migration.
 
 **New Files**:
-1. `tests/opencv_reference/generate_tests.py` - Generate reference outputs
-2. `tests/test_opencv_parity.rs` - Rust parity tests
+1. `tests/opencv_js_reference/` - OpenCV.js comparison tests
+   - `compare_apis.js` - Script to verify API signature parity
+   - `generate_tests.js` - Generate reference outputs from opencv.js
+   - `benchmark_suite.js` - Performance comparison harness
+2. `tests/test_opencv_js_parity.rs` - Rust parity tests
 3. `tests/tolerances.toml` - Acceptable difference thresholds
 
-**Example**:
-```python
-# generate_tests.py
-# For each operation:
-# 1. Run OpenCV reference implementation
-# 2. Save input/output as test fixtures
-# 3. Generate Rust test comparing our output
+**API Parity Verification**:
+```javascript
+// compare_apis.js
+// For each operation, verify:
+// 1. Function signature matches opencv.js
+// 2. Parameter names and types match
+// 3. Return types match
+// 4. Error handling matches
+
+const operations = ['GaussianBlur', 'resize', 'threshold', ...];
+operations.forEach(op => {
+  verifySignature(ourWasm[op], cv[op]);
+  verifyParameterTypes(ourWasm[op], cv[op]);
+});
+```
+
+**Correctness Testing**:
+```javascript
+// generate_tests.js
+// For each operation:
+// 1. Run opencv.js reference implementation
+// 2. Run our WASM implementation
+// 3. Compare outputs (pixel-level or tolerance)
+// 4. Generate pass/fail report
+
+const src = cv.imread('test_image.jpg');
+const opencvResult = new cv.Mat();
+const ourResult = new cv.Mat();
+
+cv.GaussianBlur(src, opencvResult, new cv.Size(5,5), 1.5);
+ourWasm.gaussian_blur(src, ourResult, 5, 1.5);
+
+compareResults(opencvResult, ourResult, tolerance);
 ```
 
 ```rust
-// test_opencv_parity.rs
+// test_opencv_js_parity.rs
 #[test]
 fn test_gaussian_blur_parity() {
-    let reference = load_opencv_reference("gaussian_blur");
+    let reference = load_opencv_js_reference("gaussian_blur");
     let our_output = gaussian_blur(...);
     assert_images_match(reference, our_output, tolerance);
 }
@@ -171,14 +208,144 @@ max_pixel_diff = 3  # More tolerance for edge-preserving filters
 ```
 
 **Success Metrics**:
-- Automated tests for all 15-20 core operations
+- 100% API signature parity with opencv.js for all 15-20 core operations
+- Automated tests comparing our output vs opencv.js
 - Clear pass/fail criteria
 - Runs in CI on every commit
 - Documentation of acceptable tolerances
+- Migration guide for opencv.js users
 
 ---
 
-#### Priority 3: Fix Gallery GPU Marking ⚠️ MEDIUM
+#### Priority 3: Gallery OpenCV.js Benchmark Integration 🔴 CRITICAL
+**Goal**: Add side-by-side performance comparison with opencv.js in gallery
+
+**Why Critical**:
+- Demonstrates our GPU advantage over opencv.js
+- Provides real-world performance metrics
+- Shows value proposition to developers
+- Industry-standard comparison (opencv.js is the web baseline)
+
+**Implementation**:
+
+**New Files**:
+1. `examples/web-benchmark/src/OpenCVJsLoader.jsx` - Load opencv.js dynamically
+2. `examples/web-benchmark/src/BenchmarkComparison.jsx` - Side-by-side UI
+3. `examples/web-benchmark/public/opencv.js` - OpenCV.js library (4.5.5+)
+
+**Gallery UI Updates**:
+```jsx
+// BenchmarkComparison.jsx
+const BenchmarkComparison = ({ operation, image, params }) => {
+  const [results, setResults] = useState({
+    ourWasm: { time: 0, image: null },
+    opencvJs: { time: 0, image: null },
+    speedup: 0
+  });
+
+  const runBenchmark = async () => {
+    // Run our implementation
+    const t1 = performance.now();
+    const ourResult = await ourWasm[operation](image, params);
+    const ourTime = performance.now() - t1;
+
+    // Run opencv.js
+    const t2 = performance.now();
+    const cvResult = runOpenCVJs(operation, image, params);
+    const cvTime = performance.now() - t2;
+
+    setResults({
+      ourWasm: { time: ourTime, image: ourResult },
+      opencvJs: { time: cvTime, image: cvResult },
+      speedup: cvTime / ourTime
+    });
+  };
+
+  return (
+    <div className="benchmark-comparison">
+      <div className="result-column">
+        <h3>Our Implementation (GPU)</h3>
+        <img src={results.ourWasm.image} />
+        <p>Time: {results.ourWasm.time}ms</p>
+      </div>
+      <div className="result-column">
+        <h3>OpenCV.js (CPU)</h3>
+        <img src={results.opencvJs.image} />
+        <p>Time: {results.opencvJs.time}ms</p>
+      </div>
+      <div className="speedup-indicator">
+        <h2>{results.speedup.toFixed(2)}x faster</h2>
+      </div>
+    </div>
+  );
+};
+```
+
+**Benchmark Runner**:
+```javascript
+// OpenCVJsLoader.jsx
+let opencvReady = false;
+let cv = null;
+
+export const loadOpenCVJs = async () => {
+  if (opencvReady) return cv;
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = '/opencv.js';
+    script.onload = () => {
+      cv.onRuntimeInitialized = () => {
+        opencvReady = true;
+        resolve(cv);
+      };
+    };
+    document.body.appendChild(script);
+  });
+};
+
+export const runOpenCVOperation = (operation, image, params) => {
+  // Map our operation names to opencv.js API
+  const operationMap = {
+    'gaussian_blur': (src, ksize, sigma) => {
+      const dst = new cv.Mat();
+      cv.GaussianBlur(src, dst, new cv.Size(ksize, ksize), sigma);
+      return dst;
+    },
+    'resize': (src, width, height) => {
+      const dst = new cv.Mat();
+      cv.resize(src, dst, new cv.Size(width, height));
+      return dst;
+    },
+    // ... map all 15-20 operations
+  };
+
+  return operationMap[operation](image, ...params);
+};
+```
+
+**Gallery Integration**:
+- Add "Compare with OpenCV.js" toggle to each demo
+- Display three columns: Input | Our Result | OpenCV.js Result
+- Show performance metrics: Our time | OpenCV.js time | Speedup
+- Highlight when our implementation is faster (green) or slower (red)
+- Add aggregate statistics across all operations
+
+**Success Metrics**:
+- All 15-20 core operations have opencv.js comparison
+- Performance data collected and displayed
+- Target: >2x speedup over opencv.js for GPU operations
+- Visual correctness verified side-by-side
+- Easy toggle between comparison modes
+
+**Files to Modify**:
+- `examples/web-benchmark/src/App.jsx` - Add benchmark mode
+- `examples/web-benchmark/src/DemoControls.jsx` - Add comparison toggle
+- `examples/web-benchmark/src/demoRegistry.js` - Add opencv.js mappings
+- `examples/web-benchmark/package.json` - No new deps (load opencv.js from CDN)
+
+---
+
+#### Priority 4: Fix Gallery GPU Marking ⚠️ MEDIUM
 **Issue**: Audit found 24 demos marked `gpuAccelerated: true` but only 18 have shaders
 
 **File**: `examples/web-benchmark/src/demoRegistry.js`
@@ -194,22 +361,26 @@ max_pixel_diff = 3  # More tolerance for edge-preserving filters
 
 **Week 3**: Verify 5 operations
 - [ ] Verify: gaussian_blur, resize, threshold, canny, sobel
-- [ ] Tests: OpenCV parity tests passing
-- [ ] Docs: API documentation written
+- [ ] OpenCV.js API parity: Verified for 5 operations
+- [ ] Tests: OpenCV.js comparison tests passing
+- [ ] Gallery: Benchmark UI showing side-by-side comparison
+- [ ] Docs: API documentation + migration guide
 
 **Week 4**: Verify 10-15 additional operations
 - [ ] Verify: erode, dilate, morphology ops, color conversions, filters
-- [ ] Gallery: All demos updated
-- [ ] Performance: >2x speedup achieved for 90%
+- [ ] OpenCV.js API parity: Verified for all 15-20 operations
+- [ ] Gallery: All demos updated with opencv.js comparison
+- [ ] Performance: >2x speedup vs opencv.js for 90% of operations
+- [ ] Benchmark report: Aggregate statistics published
 
 **Per-Operation Checklist**:
 - [ ] GPU shader ✓
 - [ ] Rust wrapper ✓
-- [ ] WASM binding ✓
-- [ ] OpenCV parity test ✓
-- [ ] Performance benchmark (>2x speedup) ✓
+- [ ] WASM binding (100% API parity with opencv.js) ✓
+- [ ] OpenCV.js correctness test (output matches) ✓
+- [ ] OpenCV.js performance benchmark (>2x speedup target) ✓
 - [ ] API documentation ✓
-- [ ] Gallery demo ✓
+- [ ] Gallery demo with opencv.js comparison ✓
 
 ---
 
@@ -221,9 +392,10 @@ max_pixel_diff = 3  # More tolerance for edge-preserving filters
 - [ ] CI/CD: Automated testing + deployment pipeline
 
 **Week 6**: Release
-- [ ] README: Update with honest claims (15-20 verified ops)
-- [ ] Documentation: Complete for all verified operations
-- [ ] Blog post: "Building Production-Ready GPU-Accelerated OpenCV in Rust"
+- [ ] README: Update with honest claims (15-20 verified ops, OpenCV.js compatible)
+- [ ] Documentation: Complete for all verified operations + migration guide
+- [ ] Blog post: "GPU-Accelerated OpenCV for Web: 2x Faster than OpenCV.js"
+- [ ] Benchmark report: Published performance comparison data
 - [ ] Roadmap: Document path for remaining 80+ operations
 
 ---
@@ -233,16 +405,19 @@ max_pixel_diff = 3  # More tolerance for edge-preserving filters
 ### Quality Metrics
 - **Verified Operations**: 4-5 → **15-20** (375% increase)
 - **Pipeline Caching**: Stub → **Functional** (10-100ms improvement)
-- **Test Coverage**: 396 tests → **450+ tests** (including parity)
-- **GPU Speedup**: Unverified → **>2x for 90% of operations**
+- **Test Coverage**: 396 tests → **450+ tests** (including opencv.js parity)
+- **GPU Speedup vs OpenCV.js**: Unverified → **>2x for 90% of operations**
+- **OpenCV.js API Parity**: Unknown → **100% for all 15-20 operations**
 
 ### Technical Metrics
 - **Pipeline Cache Hit Rate**: Target >80%
 - **GPU Initialization Time**: Target <1 second
 - **Memory Usage**: Target <100MB GPU memory for typical operations
+- **Gallery Benchmark**: Side-by-side comparison with opencv.js for all operations
 
 ### Project Health
 - **Documentation Coverage**: Target 100% for verified operations
+- **Migration Guide**: Complete guide for opencv.js → our WASM migration
 - **Known Issues**: Document all limitations honestly
 - **CI Pass Rate**: Target >95%
 - **Performance Regressions**: Zero tolerance
@@ -282,13 +457,16 @@ max_pixel_diff = 3  # More tolerance for edge-preserving filters
 2. ❌ **Ignoring Pipeline Caching**: Critical for performance
    - ✅ Make it Priority 1, even if it delays other work
 
-3. ❌ **Skipping OpenCV Parity**: Can't claim "verified" without it
-   - ✅ Automate comparison testing in CI
+3. ❌ **Breaking OpenCV.js API Compatibility**: Different API = migration friction
+   - ✅ Maintain 100% signature parity, test every operation
 
-4. ❌ **Maintaining Overstated Claims**: Undermines credibility
+4. ❌ **Skipping OpenCV.js Benchmarks**: Can't prove GPU advantage without data
+   - ✅ Integrate opencv.js comparison in gallery, collect real metrics
+
+5. ❌ **Maintaining Overstated Claims**: Undermines credibility
    - ✅ Update README honestly, build trust through quality
 
-5. ❌ **Batch Updates**: Trying to verify 10 operations at once
+6. ❌ **Batch Updates**: Trying to verify 10 operations at once
    - ✅ Verify 1-2 operations at a time, learn and iterate
 
 ---
@@ -321,9 +499,10 @@ max_pixel_diff = 3  # More tolerance for edge-preserving filters
 
 **First commit should include**:
 1. Pipeline cache skeleton (even if not complete)
-2. Test infrastructure setup (`tests/opencv_reference/`)
-3. Gallery GPU marking fixes
-4. README update with honest claims
+2. OpenCV.js test infrastructure setup (`tests/opencv_js_reference/`)
+3. Gallery benchmark UI components
+4. Gallery GPU marking fixes
+5. README update with honest claims
 
 **Commands**:
 ```bash
@@ -331,15 +510,18 @@ max_pixel_diff = 3  # More tolerance for edge-preserving filters
 cd src/gpu
 # Edit pipeline_cache.rs - remove placeholder, implement real caching
 
-# 2. Create test infrastructure
-mkdir -p tests/opencv_reference
-# Create generate_tests.py script
+# 2. Create OpenCV.js test infrastructure
+mkdir -p tests/opencv_js_reference
+# Create compare_apis.js, generate_tests.js, benchmark_suite.js
 
-# 3. Fix gallery GPU marking
+# 3. Create gallery benchmark components
 cd examples/web-benchmark/src
+# Create OpenCVJsLoader.jsx and BenchmarkComparison.jsx
+
+# 4. Fix gallery GPU marking
 # Audit demoRegistry.js, fix 6 incorrect GPU marks
 
-# 4. Update project status
+# 5. Update project status
 # Edit README.md to reflect honest current state
 ```
 
@@ -352,26 +534,54 @@ cd examples/web-benchmark/src
 - 102 gallery demos (18% GPU-accelerated) ⚠️
 - 4-5 verified complete operations (4%) ❌
 - Pipeline caching: stub only ❌
+- OpenCV.js API parity: not verified ❌
+- OpenCV.js benchmark: not available ❌
 - Test parity: not systematic ❌
 
 ### Recommended Next Steps
 1. **Focus on quality over quantity**: 15-20 production-ready operations
 2. **Fix critical infrastructure**: Implement pipeline caching
-3. **Establish methodology**: OpenCV parity testing
-4. **Be honest**: Update claims to match reality
-5. **Build foundation**: Template for completing remaining work
+3. **Ensure API compatibility**: 100% parity with opencv.js for easy migration
+4. **Demonstrate competitive advantage**: Side-by-side benchmarks in gallery
+5. **Establish methodology**: OpenCV.js comparison testing
+6. **Be honest**: Update claims to match reality
+7. **Build foundation**: Template for completing remaining work
 
 ### Why This Matters
-This project has **impressive infrastructure** and **substantial progress**, but overstated claims undermine credibility. By focusing on production-ready quality for core operations, we:
-1. Deliver real value to users
-2. Establish credibility
-3. Create template for future expansion
-4. Build sustainable momentum
+This project has **impressive infrastructure** and **substantial progress**, but overstated claims undermine credibility. By focusing on production-ready quality for core operations with **100% OpenCV.js API compatibility** and **GPU-accelerated performance**, we:
 
-**Let's build something genuinely complete rather than superficially comprehensive.**
+1. **Deliver real value**: >2x speedup over opencv.js (industry baseline)
+2. **Enable easy migration**: 100% API parity = drop-in replacement
+3. **Prove competitive advantage**: Side-by-side benchmarks in gallery
+4. **Establish credibility**: Honest assessment + measurable results
+5. **Create template**: Methodology for completing remaining 80+ operations
+6. **Build sustainable momentum**: Quality foundation for future expansion
+
+### The Competitive Position
+
+**OpenCV.js (current web standard)**:
+- CPU-only (SIMD optimizations)
+- Mature, stable, widely adopted
+- Large binary size (~8-10MB)
+- Limited by single-threaded JS execution
+
+**Our Implementation (competitive advantages)**:
+- **GPU-accelerated** via WebGPU (massive parallel compute)
+- **100% API compatible** (drop-in replacement)
+- **Smaller binary** (Rust/WASM efficiency)
+- **Type-safe** (compile-time guarantees)
+- **Modern architecture** (async/await, pipeline caching)
+
+**Target**: **>2x performance improvement** over opencv.js for GPU operations while maintaining complete API compatibility.
+
+**Let's build something genuinely complete, measurably better, and compatible rather than superficially comprehensive.**
 
 ---
 
 **Status**: Ready for implementation
 **Timeline**: 6 weeks to 15-20 production-ready operations
+**Key Requirements**:
+1. Pipeline caching (Priority 1 - performance)
+2. OpenCV.js API parity (Priority 2 - compatibility)
+3. Gallery benchmarks (Priority 3 - proof of advantage)
 **Next Step**: Implement pipeline caching (Priority 1)
