@@ -3,6 +3,8 @@
 //! This module provides JavaScript-compatible bindings for running opencv-rust
 //! in the browser via WebAssembly.
 
+mod backend;
+
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -47,6 +49,52 @@ pub async fn init_gpu_wasm() -> bool {
 pub async fn init_gpu_wasm() -> bool {
     web_sys::console::log_1(&"GPU feature not enabled in this build".into());
     false
+}
+
+/// Set the backend execution mode
+///
+/// # Arguments
+/// * `backend` - "auto" | "webgpu" | "gpu" | "cpu"
+///
+/// # Examples
+/// ```javascript
+/// import init, { setBackend } from './opencv_rust.js';
+///
+/// await init();
+///
+/// // Try GPU first, fall back to CPU (default)
+/// setBackend('auto');
+///
+/// // Force GPU (error if unavailable)
+/// setBackend('webgpu');
+///
+/// // Force CPU
+/// setBackend('cpu');
+/// ```
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = setBackend)]
+pub fn set_backend_wasm(backend: &str) {
+    backend::set_backend(backend);
+}
+
+/// Get the current backend setting
+///
+/// # Returns
+/// "auto" | "webgpu" | "cpu"
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = getBackend)]
+pub fn get_backend_wasm() -> String {
+    backend::get_backend_name().to_string()
+}
+
+/// Get the resolved backend (only meaningful in Auto mode)
+///
+/// # Returns
+/// "gpu" | "cpu" | "unresolved"
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = getResolvedBackend)]
+pub fn get_resolved_backend_wasm() -> String {
+    backend::get_resolved_backend_name().to_string()
 }
 
 /// WASM-compatible Mat wrapper
@@ -139,34 +187,41 @@ pub async fn gaussian_blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::gaussian_blur_gpu_async(
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::gaussian_blur_gpu_async(
+                    &src.inner,
+                    &mut dst,
+                    Size::new(ksize as i32, ksize as i32),
+                    sigma,
+                ).await
+                .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+
+                return Ok(WasmMat { inner: dst });
+            }
+
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
+            }
+        }
+        _ => {
+            // CPU path
+            crate::imgproc::gaussian_blur(
                 &src.inner,
                 &mut dst,
                 Size::new(ksize as i32, ksize as i32),
                 sigma,
-            ).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU blur failed, falling back to CPU".into());
-                }
-            }
+            )
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            Ok(WasmMat { inner: dst })
         }
     }
-
-    // CPU fallback
-    crate::imgproc::gaussian_blur(
-        &src.inner,
-        &mut dst,
-        Size::new(ksize as i32, ksize as i32),
-        sigma,
-    )
-    .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
 }
 
 /// Resize operation (WASM-compatible, GPU-accelerated, ASYNC)
@@ -221,52 +276,60 @@ pub async fn threshold_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::threshold_gpu_async(
-                &src.inner,
-                &mut dst,
-                thresh as u8,
-                max_val as u8,
-            ).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU threshold failed, falling back to CPU".into());
-                }
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::threshold_gpu_async(
+                    &src.inner,
+                    &mut dst,
+                    thresh as u8,
+                    max_val as u8,
+                ).await
+                .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+
+                return Ok(WasmMat { inner: dst });
+            }
+
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
             }
         }
-    }
+        _ => {
+            // CPU path
+            // Convert to grayscale if needed
+            let gray = if src.inner.channels() > 1 {
+                let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                crate::imgproc::cvt_color(
+                    &src.inner,
+                    &mut gray,
+                    ColorConversionCode::BgrToGray,
+                )
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                gray
+            } else {
+                src.inner.clone()
+            };
 
-    // CPU fallback - convert to grayscale if needed
-    let gray = if src.inner.channels() > 1 {
-        let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
+            dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            crate::imgproc::threshold(
+                &gray,
+                &mut dst,
+                thresh,
+                max_val,
+                ThresholdType::Binary,
+            )
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        crate::imgproc::cvt_color(
-            &src.inner,
-            &mut gray,
-            ColorConversionCode::BgrToGray,
-        )
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        gray
-    } else {
-        src.inner.clone()
-    };
 
-    dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    crate::imgproc::threshold(
-        &gray,
-        &mut dst,
-        thresh,
-        max_val,
-        ThresholdType::Binary,
-    )
-    .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+            Ok(WasmMat { inner: dst })
+        }
+    }
 }
 
 /// Canny edge detection (WASM-compatible, GPU-accelerated, ASYNC)

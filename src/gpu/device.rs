@@ -4,6 +4,9 @@ use wgpu;
 #[cfg(feature = "gpu")]
 use super::pipeline_cache::PipelineCache;
 
+#[cfg(all(feature = "gpu", target_arch = "wasm32"))]
+use web_sys;
+
 #[cfg(feature = "gpu")]
 pub struct GpuContext {
     pub device: wgpu::Device,
