@@ -1661,3 +1661,261 @@ pub async fn approx_poly_dp_wasm(src: &WasmMat, threshold_value: f64, epsilon: f
 
     Ok(WasmMat { inner: result })
 }
+
+// ==================== Batch 4: Advanced Filters, Transforms & Analysis ====================
+
+/// Anisotropic diffusion - edge-preserving noise reduction
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = anisotropicDiffusion)]
+pub async fn anisotropic_diffusion_wasm(
+    src: &WasmMat,
+    iterations: i32,
+    kappa: f64,
+    lambda: f64,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::advanced_filter::anisotropic_diffusion;
+
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    anisotropic_diffusion(&src.inner, &mut dst, iterations as usize, kappa as f32, lambda as f32)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological top hat
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = morphologyTophat)]
+pub async fn morphology_tophat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    morphology_ex(&src.inner, &mut dst, MorphType::TopHat, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Morphological black hat
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = morphologyBlackhat)]
+pub async fn morphology_blackhat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::core::types::Size;
+
+    let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    morphology_ex(&src.inner, &mut dst, MorphType::BlackHat, &kernel)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Warp perspective transformation
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = warpPerspective)]
+pub async fn warp_perspective_wasm(
+    src: &WasmMat,
+    m11: f64, m12: f64, m13: f64,
+    m21: f64, m22: f64, m23: f64,
+    m31: f64, m32: f64, m33: f64,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::geometric::warp_perspective;
+    use crate::core::types::{InterpolationFlag, Size};
+
+    let transform_matrix = [
+        [m11, m12, m13],
+        [m21, m22, m23],
+        [m31, m32, m33],
+    ];
+
+    let dsize = Size::new(src.inner.cols() as i32, src.inner.rows() as i32);
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    warp_perspective(&src.inner, &mut dst, &transform_matrix, dsize)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Get rotation matrix 2D and apply rotation
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = getRotationMatrix2D)]
+pub async fn get_rotation_matrix_2d_wasm(
+    src: &WasmMat,
+    center_x: f64,
+    center_y: f64,
+    angle: f64,
+    scale: f64,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::geometric::{get_rotation_matrix_2d, warp_affine};
+    use crate::core::types::{Point2f, InterpolationFlag, Size};
+
+    let center = Point2f::new(center_x as f32, center_y as f32);
+    let rotation_matrix = get_rotation_matrix_2d(center, angle, scale);
+
+    let dsize = Size::new(src.inner.cols() as i32, src.inner.rows() as i32);
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    warp_affine(&src.inner, &mut dst, &rotation_matrix, dsize)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Normalize histogram (returns visualization)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = normalizeHistogram)]
+pub async fn normalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::histogram::{calc_hist, normalize_hist};
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::drawing::rectangle;
+    use crate::core::types::{Rect, Scalar};
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    // Calculate and normalize histogram
+    let mut hist = calc_hist(&gray, 256, (0.0, 256.0))
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    normalize_hist(&mut hist, 0.0, 1.0);
+
+    // Create visualization
+    let hist_img_size = 256;
+    let mut hist_img = Mat::new(hist_img_size, hist_img_size, 3, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Fill white background
+    for row in 0..hist_img_size {
+        for col in 0..hist_img_size {
+            let pixel = hist_img.at_mut(row, col)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            pixel[0] = 255;
+            pixel[1] = 255;
+            pixel[2] = 255;
+        }
+    }
+
+    // Draw normalized histogram bars
+    let bin_width = hist_img_size / 256;
+    for i in 0..256 {
+        let bin_height = (hist[i] * hist_img_size as f32) as i32;
+        if bin_height > 0 {
+            let rect = Rect::new(
+                i as i32 * bin_width as i32,
+                hist_img_size as i32 - bin_height,
+                bin_width as i32,
+                bin_height,
+            );
+            let _ = rectangle(&mut hist_img, rect, Scalar::new(0.0, 255.0, 0.0, 255.0), -1);
+        }
+    }
+
+    Ok(WasmMat { inner: hist_img })
+}
+
+/// Compare histograms (returns similarity score)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = compareHistograms)]
+pub async fn compare_histograms_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<f64, JsValue> {
+    use crate::imgproc::histogram::{calc_hist, compare_hist, HistCompMethod};
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    // Convert both to grayscale
+    let gray1 = if src1.inner.channels() > 1 {
+        let mut g = Mat::new(src1.inner.rows(), src1.inner.cols(), 1, src1.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src1.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src1.inner.clone()
+    };
+
+    let gray2 = if src2.inner.channels() > 1 {
+        let mut g = Mat::new(src2.inner.rows(), src2.inner.cols(), 1, src2.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src2.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src2.inner.clone()
+    };
+
+    // Calculate histograms
+    let hist1 = calc_hist(&gray1, 256, (0.0, 256.0))
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let hist2 = calc_hist(&gray2, 256, (0.0, 256.0))
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Compare using correlation method
+    let similarity = compare_hist(&hist1, &hist2, HistCompMethod::Correlation)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    Ok(similarity)
+}
+
+/// Back projection
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = backProjection)]
+pub async fn back_projection_wasm(src: &WasmMat, model: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::histogram::{calc_back_project, calc_hist};
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+
+    // Convert both to grayscale
+    let gray_src = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let gray_model = if model.inner.channels() > 1 {
+        let mut g = Mat::new(model.inner.rows(), model.inner.cols(), 1, model.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&model.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        model.inner.clone()
+    };
+
+    // Calculate histogram of model image
+    let model_hist = calc_hist(&gray_model, 256, (0.0, 256.0))
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let mut dst = Mat::new(gray_src.rows(), gray_src.cols(), 1, gray_src.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    calc_back_project(&gray_src, &model_hist, (0.0, 256.0), &mut dst)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
