@@ -100,14 +100,14 @@ async fn execute_in_range_impl(
         height,
         channels,
         _pad: 0,
-        lower_b: lower_bound.0[0] as u32,
-        lower_g: if channels > 1 { lower_bound.0[1] as u32 } else { 0 },
-        lower_r: if channels > 2 { lower_bound.0[2] as u32 } else { 0 },
-        lower_a: if channels > 3 { lower_bound.0[3] as u32 } else { 0 },
-        upper_b: upper_bound.0[0] as u32,
-        upper_g: if channels > 1 { upper_bound.0[1] as u32 } else { 255 },
-        upper_r: if channels > 2 { upper_bound.0[2] as u32 } else { 255 },
-        upper_a: if channels > 3 { upper_bound.0[3] as u32 } else { 255 },
+        lower_b: lower_bound.val[0] as u32,
+        lower_g: if channels > 1 { lower_bound.val[1] as u32 } else { 0 },
+        lower_r: if channels > 2 { lower_bound.val[2] as u32 } else { 0 },
+        lower_a: if channels > 3 { lower_bound.val[3] as u32 } else { 0 },
+        upper_b: upper_bound.val[0] as u32,
+        upper_g: if channels > 1 { upper_bound.val[1] as u32 } else { 255 },
+        upper_r: if channels > 2 { upper_bound.val[2] as u32 } else { 255 },
+        upper_a: if channels > 3 { upper_bound.val[3] as u32 } else { 255 },
     };
     let params_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Params Buffer"),
@@ -217,7 +217,7 @@ async fn execute_in_range_impl(
     buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
         let _ = sender.send(result);
     });
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     receiver
         .await

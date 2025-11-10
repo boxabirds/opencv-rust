@@ -167,7 +167,7 @@ async fn execute_add_impl(ctx: &GpuContext, src1: &Mat, src2: &Mat, dst: &mut Ma
     let buffer_slice = staging_buffer.slice(..);
     let (sender, receiver) = futures::channel::oneshot::channel();
     buffer_slice.map_async(wgpu::MapMode::Read, move |result| { let _ = sender.send(result); });
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     receiver.await.map_err(|_| Error::GpuError("Failed to receive map result".to_string()))?.map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
 

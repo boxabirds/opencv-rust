@@ -197,7 +197,7 @@ async fn execute_box_blur_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, ksize
         let _ = sender.send(result);
     });
 
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     receiver
         .await

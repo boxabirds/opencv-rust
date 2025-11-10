@@ -108,7 +108,7 @@ async fn execute_erode_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, ksize: i
     let buffer_slice = staging_buffer.slice(..);
     let (sender, receiver) = futures::channel::oneshot::channel();
     buffer_slice.map_async(wgpu::MapMode::Read, move |result| { let _ = sender.send(result); });
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
     receiver.await.map_err(|_| Error::GpuError("Failed to receive map result".to_string()))?.map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
     { let data = buffer_slice.get_mapped_range(); dst.data_mut().copy_from_slice(&data[..]); }
     staging_buffer.unmap();

@@ -169,7 +169,7 @@ async fn execute_laplacian_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> R
     let buffer_slice = staging_buffer.slice(..);
     let (sender, receiver) = futures::channel::oneshot::channel();
     buffer_slice.map_async(wgpu::MapMode::Read, move |result| { let _ = sender.send(result); });
-    ctx.device.poll(wgpu::MaintainBase::Wait);
+    // ctx.device.poll(wgpu::Maintain::Wait); // No longer needed in wgpu 27
 
     receiver
         .await
