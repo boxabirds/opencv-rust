@@ -1,9 +1,10 @@
 # GPU Operations Implementation Status
 
 **Last Updated**: 2025-11-10
-**Total GPU Operations**: 47 (42 standalone + 5 composites)
+**Total GPU Operations**: 58 (53 standalone + 5 composites)
 **Batch 1**: 25 operations ✅
 **Batch 2**: 22 operations ✅
+**Batch 3**: 11 operations ✅
 
 ## Status Legend
 - ✅ = Complete and verified
@@ -71,31 +72,62 @@
 | 46 | Multiply | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Element-wise multiply |
 | 47 | Normalize | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Range normalization |
 
+### Batch 3: Advanced Processing (11 operations)
+
+| # | Operation | CPU | GPU Shader | GPU Rust | WASM Binding | Gallery Entry | OpenCV Test Parity | Notes |
+|---|-----------|-----|------------|----------|--------------|---------------|-------------------|-------|
+| 48 | Filter2D | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Generic 2D convolution |
+| 49 | Warp Perspective | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | 3x3 perspective transform |
+| 50 | InRange | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Color/value range masking |
+| 51 | Split | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Split multi-channel image |
+| 52 | Merge | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Merge single-channel images |
+| 53 | Remap | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Generic pixel remapping |
+| 54 | Pow | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Element-wise power |
+| 55 | Exp | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Element-wise exponential |
+| 56 | Log | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Element-wise logarithm |
+| 57 | Sqrt | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Element-wise square root |
+| 58 | LUT | 🆕 | ✅ | ✅ | 🔧 | ✅ | ⏳ | Lookup table transform |
+
 ## Statistics Summary
 
 ### Overall Progress
-- **Total Operations**: 47
-- **GPU Shaders**: 40/47 (85%) - 5 composites use existing shaders
-- **Rust Implementation**: 42/47 (89%) - 5 composites use Rust composition
-- **Verified Complete**: 5/47 (11%)
-- **Needs WASM Integration**: 42/47 (89%)
-- **Needs Testing**: 42/47 (89%)
+- **Total Operations**: 58
+- **GPU Shaders**: 51/58 (88%) - 5 composites use existing shaders
+- **Rust Implementation**: 53/58 (91%) - 5 composites use Rust composition
+- **Verified Complete**: 5/58 (9%)
+- **Needs WASM Integration**: 53/58 (91%)
+- **Needs Testing**: 53/58 (91%)
 
 ### By Component Status
 
 | Component | Complete | In Progress | Not Started |
 |-----------|----------|-------------|-------------|
-| CPU Implementation | 47 | 0 | 0 |
-| GPU Shaders | 40 | 0 | 0 |
-| GPU Rust Wrappers | 42 | 0 | 0 |
-| WASM Bindings | 5 | 42 | 0 |
-| Gallery Entries | 47 | 0 | 0 |
-| OpenCV Test Parity | 5 | 0 | 42 |
+| CPU Implementation | 58 | 0 | 0 |
+| GPU Shaders | 51 | 0 | 2 |
+| GPU Rust Wrappers | 53 | 0 | 0 |
+| WASM Bindings | 5 | 53 | 0 |
+| Gallery Entries | 58 | 0 | 0 |
+| OpenCV Test Parity | 5 | 0 | 53 |
 
 ### Compilation Status
 - ✅ Native build: Compiles successfully
 - ✅ WASM build: Compiles successfully
 - ✅ All operations export correctly from `src/gpu/ops/mod.rs`
+
+### Batch 3 Highlights
+
+**Generic Transformations**:
+- Filter2D: Arbitrary 2D convolution with custom kernels
+- Warp Perspective: 3x3 projective transformations with bilinear interpolation
+- Remap: Generic pixel remapping with arbitrary mapping functions
+
+**Channel Operations**:
+- Split/Merge: Efficient channel separation and recombination
+- InRange: Multi-channel range-based masking
+
+**Math Operations**:
+- Element-wise functions: pow, exp, log, sqrt
+- LUT: Fast lookup table transformations
 
 ## Implementation Details
 
@@ -143,7 +175,7 @@ All GPU operations follow consistent patterns:
 ## Next Steps
 
 ### Phase 1: WASM Integration (Priority)
-For each of the 42 operations marked with 🔧:
+For each of the 53 operations marked with 🔧:
 1. Add async wrapper to appropriate imgproc module (filter.rs, color.rs, etc.)
 2. Update WASM binding in `src/wasm/mod.rs` to use GPU version with `use_gpu: true`
 3. Test in web gallery
@@ -165,17 +197,19 @@ For each operation:
 
 ```
 src/gpu/
-├── shaders/          # 40 WGSL compute shaders
+├── shaders/          # 51 WGSL compute shaders
 │   ├── blur.wgsl
 │   ├── resize.wgsl
 │   ├── threshold.wgsl
 │   ├── ...
+│   ├── lut.wgsl
 │   └── normalize.wgsl
-├── ops/              # 42 Rust GPU operation wrappers
+├── ops/              # 53 Rust GPU operation wrappers
 │   ├── blur.rs
 │   ├── resize.rs
 │   ├── threshold.rs
 │   ├── ...
+│   ├── lut.rs
 │   ├── normalize.rs
 │   └── mod.rs        # Exports all operations
 └── device.rs         # GPU context management
@@ -183,5 +217,5 @@ src/gpu/
 
 ---
 
-**Last Updated**: 2025-11-10 18:45
-**Status**: Batch 2 Complete - All GPU operations implemented and compile successfully
+**Last Updated**: 2025-11-10 20:15
+**Status**: Batch 3 Complete - 58 GPU operations implemented and compile successfully
