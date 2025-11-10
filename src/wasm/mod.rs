@@ -917,14 +917,19 @@ pub async fn warp_affine_wasm(
         [matrix[3], matrix[4], matrix[5]],
     ];
 
-    let mut dst = Mat::new(height as i32, width as i32, src.inner.channels(), src.inner.depth())
+    let mut dst = Mat::new(height, width, src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Try GPU first if available
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::warp_affine_gpu_async(&src.inner, &mut dst, &m).await {
+            // Convert matrix to GPU format: [[f64; 3]; 2] -> [f32; 6]
+            let m_gpu: [f32; 6] = [
+                matrix[0] as f32, matrix[1] as f32, matrix[2] as f32,
+                matrix[3] as f32, matrix[4] as f32, matrix[5] as f32,
+            ];
+            match crate::gpu::ops::warp_affine_gpu_async(&src.inner, &mut dst, &m_gpu, (width, height)).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU warp affine failed, falling back to CPU".into());
@@ -3174,7 +3179,10 @@ pub async fn csrt_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32, search_window_size: i32) -> Result<WasmMat, JsValue> {
     use crate::photo::fast_nl_means_denoising;
 
-    let dst = fast_nl_means_denoising(&src.inner, h, template_window_size, search_window_size)
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    fast_nl_means_denoising(&src.inner, &mut dst, h, template_window_size, search_window_size)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -3214,26 +3222,26 @@ pub async fn merge_debevec_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = svmClassifier)]
 pub async fn svm_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::ml::svm::SVM;
+    use crate::ml::svm::{SVM, SVMType, SVMKernelType};
     use crate::imgproc::drawing::put_text;
     use crate::core::types::{Point, Scalar};
 
     // Create simple training data (bright vs dark regions)
     let mut train_data = Vec::new();
     let mut labels = Vec::new();
-    
+
     // Sample from image
     for row in (0..src.inner.rows()).step_by(20) {
         for col in (0..src.inner.cols()).step_by(20) {
             let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
+            let intensity = pixel[0] as f64;
             train_data.push(vec![intensity]);
             labels.push(if intensity > 128.0 { 1.0 } else { -1.0 });
         }
     }
 
     // Train SVM
-    let mut svm = SVM::new();
+    let mut svm = SVM::new(SVMType::CSvc, SVMKernelType::RBF);
     svm.train(&train_data, &labels)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -3260,14 +3268,14 @@ pub async fn decision_tree_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     for row in (0..src.inner.rows()).step_by(20) {
         for col in (0..src.inner.cols()).step_by(20) {
             let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
+            let intensity = pixel[0] as f64;
             train_data.push(vec![intensity]);
-            labels.push(if intensity > 128.0 { 1 } else { 0 });
+            labels.push(if intensity > 128.0 { 1.0 } else { 0.0 });
         }
     }
 
     // Train decision tree
-    let mut tree = DecisionTree::new(5);
+    let mut tree = DecisionTree::classifier();
     tree.train(&train_data, &labels)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -3294,14 +3302,14 @@ pub async fn random_forest_wasm(src: &WasmMat, n_trees: usize) -> Result<WasmMat
     for row in (0..src.inner.rows()).step_by(20) {
         for col in (0..src.inner.cols()).step_by(20) {
             let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
+            let intensity = pixel[0] as f64;
             train_data.push(vec![intensity]);
-            labels.push(if intensity > 128.0 { 1 } else { 0 });
+            labels.push(if intensity > 128.0 { 1.0 } else { 0.0 });
         }
     }
 
     // Train random forest
-    let mut rf = RandomForest::new(n_trees, 5);
+    let mut rf = RandomForest::classifier(n_trees);
     rf.train(&train_data, &labels)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -3328,14 +3336,14 @@ pub async fn knn_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
     for row in (0..src.inner.rows()).step_by(20) {
         for col in (0..src.inner.cols()).step_by(20) {
             let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
+            let intensity = pixel[0] as f64;
             train_data.push(vec![intensity]);
-            labels.push(if intensity > 128.0 { 1 } else { 0 });
+            labels.push(if intensity > 128.0 { 1.0 } else { 0.0 });
         }
     }
 
     // Train KNN
-    let mut knn_model = KNearest::new(k);
+    let mut knn_model = KNearest::classifier(k);
     knn_model.train(&train_data, &labels)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -3358,11 +3366,11 @@ pub async fn neural_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     // Create simple training data
     let mut train_data = Vec::new();
     let mut labels = Vec::new();
-    
+
     for row in (0..src.inner.rows()).step_by(20) {
         for col in (0..src.inner.cols()).step_by(20) {
             let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32 / 255.0;
+            let intensity = pixel[0] as f64 / 255.0;
             train_data.push(vec![intensity]);
             labels.push(vec![if intensity > 0.5 { 1.0 } else { 0.0 }]);
         }
@@ -3370,8 +3378,8 @@ pub async fn neural_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     // Train neural network
     let layer_sizes = vec![1, 5, 1];
-    let mut nn = AnnMlp::new(&layer_sizes);
-    nn.train(&train_data, &labels, 100, 0.1)
+    let mut nn = AnnMlp::new(layer_sizes);
+    nn.train(&train_data, &labels, 100)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Visualize
@@ -3404,7 +3412,7 @@ pub async fn cascade_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 
     // Create classifier (would need cascade file in production)
     let cascade = CascadeClassifier::new();
-    let detections = cascade.detect_multi_scale(&gray, 1.1, 3, 30, 100)
+    let detections = cascade.detect_multi_scale(&gray, 1.1, 3, (30, 30), (100, 100))
         .unwrap_or_else(|_| vec![]);
 
     // Draw detections
@@ -3547,9 +3555,10 @@ pub async fn feather_blender_wasm(src: &WasmMat, blend_strength: f32) -> Result<
         for col in 0..result.cols() {
             let edge_dist = col.min(result.cols() - col).min(row).min(result.rows() - row) as f32;
             let alpha = (edge_dist * blend_strength).min(1.0);
-            
+
+            let num_channels = result.channels();
             let pixel = result.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            for ch in 0..result.channels() {
+            for ch in 0..num_channels {
                 pixel[ch] = (pixel[ch] as f32 * alpha) as u8;
             }
         }
@@ -3561,7 +3570,7 @@ pub async fn feather_blender_wasm(src: &WasmMat, blend_strength: f32) -> Result<
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = stereoRectification)]
 pub async fn stereo_rectification_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::calib3d::stereo::stereo_rectify;
+    use crate::calib3d::stereo::{stereo_rectify, StereoParameters};
     use crate::calib3d::camera::{CameraMatrix, DistortionCoefficients};
     
     // Create simplified stereo rectification demo
@@ -3574,39 +3583,43 @@ pub async fn stereo_rectification_wasm(src: &WasmMat) -> Result<WasmMat, JsValue
     let camera_left = CameraMatrix {
         fx, fy,
         cx, cy,
-        skew: 0.0,
     };
-    
+
     let camera_right = CameraMatrix {
         fx, fy,
         cx: cx + 50.0, // Slight offset for stereo
         cy,
-        skew: 0.0,
     };
-    
+
     let dist_left = DistortionCoefficients {
-        k1: 0.0, k2: 0.0, k3: 0.0,
-        p1: 0.0, p2: 0.0,
+        k: [0.0, 0.0, 0.0],
+        p: [0.0, 0.0],
     };
     
     let dist_right = dist_left.clone();
-    
+
     let rotation = [[1.0, 0.0, 0.0],
                     [0.0, 1.0, 0.0],
                     [0.0, 0.0, 1.0]];
-    
+
     let translation = [100.0, 0.0, 0.0]; // 100mm baseline
-    
+
     let image_size = (src.inner.cols(), src.inner.rows());
-    
-    let (r1, r2, p1, p2, _q) = stereo_rectify(
-        &camera_left,
-        &camera_right,
-        &dist_left,
-        &dist_right,
+
+    let stereo_params = StereoParameters {
+        camera_matrix_left: camera_left,
+        camera_matrix_right: camera_right,
+        dist_coeffs_left: dist_left,
+        dist_coeffs_right: dist_right,
+        rotation,
+        translation,
+        essential_matrix: [[0.0; 3]; 3],
+        fundamental_matrix: [[0.0; 3]; 3],
+    };
+
+    let (r1, r2, p1, p2) = stereo_rectify(
+        &stereo_params,
         image_size,
-        &rotation,
-        &translation,
     ).map_err(|e| JsValue::from_str(&e.to_string()))?;
     
     // Draw grid overlay to show rectification effect
@@ -3708,13 +3721,12 @@ pub async fn load_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     
     // Add a simple convolutional layer for demo
     // Note: This is a simplified demo, real networks would be loaded from files
-    let conv_layer = ConvLayer::new(
+    let conv_layer = ConvolutionLayer::new(
         "conv1".to_string(),
-        3, // input channels
-        16, // output channels
-        3, // kernel size
-        1, // stride
-        1, // padding
+        16, // num_filters (output channels)
+        (3, 3), // kernel size
+        (1, 1), // stride
+        (1, 1), // padding
     );
     network.add_layer(Box::new(conv_layer));
     
@@ -3810,9 +3822,10 @@ pub async fn blob_from_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
             _ => Scalar::new(0.0, 0.0, 255.0, 255.0),
         };
         let _ = rectangle(&mut result, rect, ch_color, -1);
-        
+
         let ch_text = format!("Ch{}", i);
-        let _ = put_text(&mut result, &ch_text, Point::new(x as i32 + 10, (result.rows() - 10) as i32), 0.5, Scalar::new(255.0, 255.0, 255.0, 255.0));
+        let text_y = (result.rows() - 10) as i32;
+        let _ = put_text(&mut result, &ch_text, Point::new(x as i32 + 10, text_y), 0.5, Scalar::new(255.0, 255.0, 255.0, 255.0));
     }
 
     Ok(WasmMat { inner: result })
@@ -4070,7 +4083,7 @@ pub async fn convert_scale_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::convert_scale_gpu_async(&src.inner, &mut dst, alpha as f32, beta as f32).await {
+            match crate::gpu::ops::convert_scale_gpu_async(&src.inner, &mut dst, alpha, beta).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU convertScale failed, falling back to CPU".into());
@@ -4096,10 +4109,10 @@ pub async fn add_weighted_wasm(src1: &WasmMat, alpha: f64, src2: &WasmMat, beta:
         if crate::gpu::gpu_available() {
             match crate::gpu::ops::add_weighted_gpu_async(
                 &src1.inner,
-                alpha as f32,
+                alpha,
                 &src2.inner,
-                beta as f32,
-                gamma as f32,
+                beta,
+                gamma,
                 &mut dst
             ).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
@@ -4377,7 +4390,7 @@ pub async fn filter2d_wasm(src: &WasmMat, kernel: Vec<f32>, ksize: usize) -> Res
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Create Mat from kernel data
-    let mut kernel_mat = Mat::new(ksize as i32, ksize as i32, 1, MatDepth::F32)
+    let mut kernel_mat = Mat::new(ksize, ksize, 1, MatDepth::F32)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Convert Vec<f32> to bytes for Mat
@@ -4489,7 +4502,7 @@ pub async fn pow_wasm(src: &WasmMat, power: f64) -> Result<WasmMat, JsValue> {
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::pow_gpu_async(&src.inner, &mut dst, power as f32).await {
+            match crate::gpu::ops::pow_gpu_async(&src.inner, &mut dst, power).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU pow failed, falling back to CPU".into());
@@ -4537,7 +4550,7 @@ pub async fn multiply_wasm(src1: &WasmMat, src2: &WasmMat, scale: f64) -> Result
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::multiply_gpu_async(&src1.inner, &src2.inner, &mut dst, scale as f32).await {
+            match crate::gpu::ops::multiply_gpu_async(&src1.inner, &src2.inner, &mut dst, scale).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU multiply failed, falling back to CPU".into());
@@ -4636,7 +4649,7 @@ pub async fn lut_wasm(src: &WasmMat, table: Vec<u8>) -> Result<WasmMat, JsValue>
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::lut_gpu_async(&src.inner, &lut_mat, &mut dst).await {
+            match crate::gpu::ops::lut_gpu_async(&src.inner, &mut dst, &lut_mat).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU LUT failed, falling back to CPU".into());
@@ -4658,7 +4671,7 @@ pub async fn normalize_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<Wasm
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::normalize_gpu_async(&src.inner, &mut dst, alpha as f32, beta as f32).await {
+            match crate::gpu::ops::normalize_gpu_async(&src.inner, &mut dst, alpha, beta).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU normalize failed, falling back to CPU".into());
@@ -4677,8 +4690,9 @@ pub async fn split_channels_wasm(src: &WasmMat) -> Result<Vec<WasmMat>, JsValue>
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::split_gpu_async(&src.inner).await {
-                Ok(channels) => {
+            let mut channels = Vec::new();
+            match crate::gpu::ops::split_gpu_async(&src.inner, &mut channels).await {
+                Ok(_) => {
                     return Ok(channels.into_iter().map(|mat| WasmMat { inner: mat }).collect());
                 }
                 Err(_) => {
@@ -4706,7 +4720,7 @@ pub async fn merge_channels_wasm(channels: Vec<WasmMat>) -> Result<WasmMat, JsVa
     let channel_mats: Vec<Mat> = channels.iter().map(|wm| wm.inner.clone()).collect();
     let rows = channel_mats[0].rows();
     let cols = channel_mats[0].cols();
-    let num_channels = channel_mats.len() as i32;
+    let num_channels = channel_mats.len();
 
     let mut dst = Mat::new(rows, cols, num_channels, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
