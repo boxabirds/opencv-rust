@@ -332,7 +332,7 @@ export const demos = [
     name: 'Non-Local Means Denoising',
     description: 'Strong noise removal with NLM algorithm',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -408,7 +408,7 @@ export const demos = [
     name: 'Distance Transform',
     description: 'Compute distance to nearest zero pixel',
     category: 'filters',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -737,7 +737,7 @@ export const demos = [
     name: 'RGB to HSV',
     description: 'Convert RGB to HSV color space',
     category: 'color',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -852,7 +852,7 @@ export const demos = [
     name: 'Calculate Histogram',
     description: 'Compute intensity distribution histogram',
     category: 'histogram',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -877,7 +877,7 @@ export const demos = [
     name: 'Equalize Histogram',
     description: 'Enhance contrast using histogram equalization',
     category: 'histogram',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -953,7 +953,7 @@ export const demos = [
     name: 'Erode',
     description: 'Erosion morphological operation',
     category: 'morphology',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -988,7 +988,7 @@ export const demos = [
     name: 'Dilate',
     description: 'Dilation morphological operation',
     category: 'morphology',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1023,7 +1023,7 @@ export const demos = [
     name: 'Morphological Opening',
     description: 'Erode then dilate to remove noise',
     category: 'morphology',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1049,7 +1049,7 @@ export const demos = [
     name: 'Morphological Closing',
     description: 'Dilate then erode to fill gaps',
     category: 'morphology',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1075,7 +1075,7 @@ export const demos = [
     name: 'Morphological Gradient',
     description: 'Difference between dilation and erosion',
     category: 'morphology',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1137,7 +1137,7 @@ export const demos = [
     name: 'Find Contours',
     description: 'Detect object boundaries in binary images',
     category: 'contours',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1161,7 +1161,7 @@ export const demos = [
     name: 'Approximate Polygon',
     description: 'Simplify contours with Douglas-Peucker',
     category: 'contours',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1186,7 +1186,7 @@ export const demos = [
     name: 'Contour Area',
     description: 'Calculate area enclosed by contour',
     category: 'contours',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -1195,7 +1195,7 @@ export const demos = [
     name: 'Arc Length',
     description: 'Calculate contour perimeter',
     category: 'contours',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1211,7 +1211,7 @@ export const demos = [
     name: 'Bounding Rectangle',
     description: 'Get axis-aligned bounding box',
     category: 'contours',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
@@ -1533,7 +1533,7 @@ export const demos = [
     name: 'Hough Lines (Standard)',
     description: 'Detect infinite lines using Hough transform',
     category: 'hough',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1570,7 +1570,7 @@ export const demos = [
     name: 'Hough Lines P (Probabilistic)',
     description: 'Detect line segments using probabilistic Hough',
     category: 'hough',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1625,7 +1625,7 @@ export const demos = [
     name: 'Hough Circles',
     description: 'Detect circles using Hough transform',
     category: 'hough',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1739,7 +1739,7 @@ export const demos = [
     name: 'ArUco Marker Detection',
     description: 'Detect and decode ArUco markers',
     category: 'detection',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: [
       {
@@ -1756,7 +1756,7 @@ export const demos = [
     name: 'QR Code Detector',
     description: 'Detect and decode QR codes',
     category: 'detection',
-    implemented: false,
+    implemented: true,
     gpuAccelerated: false,
     params: []
   },
