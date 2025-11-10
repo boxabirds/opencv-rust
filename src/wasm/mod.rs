@@ -400,7 +400,7 @@ pub async fn box_blur_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue
     Ok(WasmMat { inner: dst })
 }
 
-/// Median blur (WASM-compatible)
+/// Median blur - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = medianBlur)]
 pub async fn median_blur_wasm(
@@ -415,13 +415,27 @@ pub async fn median_blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::median_blur_gpu_async(&src.inner, &mut dst, ksize as i32).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU median blur failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
     crate::imgproc::median_blur(&src.inner, &mut dst, ksize as i32)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
 
-/// Bilateral filter (WASM-compatible)
+/// Bilateral filter - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bilateralFilter)]
 pub async fn bilateral_filter_wasm(
@@ -438,6 +452,20 @@ pub async fn bilateral_filter_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::bilateral_filter_gpu_async(&src.inner, &mut dst, d, sigma_color, sigma_space).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU bilateral filter failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
     crate::imgproc::bilateral_filter(&src.inner, &mut dst, d, sigma_color, sigma_space)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -826,9 +854,23 @@ pub async fn warp_affine_wasm(
         [matrix[3], matrix[4], matrix[5]],
     ];
 
-    let mut dst = Mat::new(height, width, src.inner.channels(), src.inner.depth())
+    let mut dst = Mat::new(height as i32, width as i32, src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::warp_affine_gpu_async(&src.inner, &mut dst, &m).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU warp affine failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
     warp_affine(&src.inner, &mut dst, &m, Size::new(width as i32, height as i32))
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -1187,6 +1229,20 @@ pub async fn distance_transform_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::distance_transform_gpu_async(&gray, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU distance transform failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
     distance_transform(&gray, &mut dst, crate::imgproc::advanced_filter::DistanceType::L2, 3)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -4543,4 +4599,64 @@ pub async fn normalize_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<Wasm
     }
 
     Err(JsValue::from_str("GPU normalize failed and CPU fallback not yet implemented"))
+}
+
+/// Split multi-channel image into separate channels - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = splitChannels)]
+pub async fn split_channels_wasm(src: &WasmMat) -> Result<Vec<WasmMat>, JsValue> {
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::split_gpu_async(&src.inner).await {
+                Ok(channels) => {
+                    return Ok(channels.into_iter().map(|mat| WasmMat { inner: mat }).collect());
+                }
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU split failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    let channels = crate::core::split(&src.inner)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(channels.into_iter().map(|mat| WasmMat { inner: mat }).collect())
+}
+
+/// Merge separate channels into multi-channel image - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = mergeChannels)]
+pub async fn merge_channels_wasm(channels: Vec<WasmMat>) -> Result<WasmMat, JsValue> {
+    if channels.is_empty() {
+        return Err(JsValue::from_str("At least one channel required"));
+    }
+
+    let channel_mats: Vec<Mat> = channels.iter().map(|wm| wm.inner.clone()).collect();
+    let rows = channel_mats[0].rows();
+    let cols = channel_mats[0].cols();
+    let num_channels = channel_mats.len() as i32;
+
+    let mut dst = Mat::new(rows, cols, num_channels, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::merge_gpu_async(&channel_mats, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU merge failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    crate::core::merge(&channel_mats, &mut dst)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
 }
