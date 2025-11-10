@@ -438,7 +438,9 @@ pub async fn sobel_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::sobel(&gray, &mut dst, dx, dy, ksize)
+    // Use GPU-accelerated version with fallback to CPU
+    crate::imgproc::sobel_async(&gray, &mut dst, dx, dy, ksize, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })

@@ -4,7 +4,34 @@ use crate::error::{Error, Result};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
-/// Calculate Sobel derivatives
+/// Calculate Sobel derivatives with GPU acceleration (async for WASM)
+pub async fn sobel_async(
+    src: &Mat,
+    dst: &mut Mat,
+    dx: i32,
+    dy: i32,
+    ksize: i32,
+    use_gpu: bool,
+) -> Result<()> {
+    // Try GPU if requested and available
+    if use_gpu && ksize == 3 {
+        #[cfg(feature = "gpu")]
+        {
+            use crate::gpu::ops::sobel_gpu_async;
+            match sobel_gpu_async(src, dst, dx, dy).await {
+                Ok(()) => return Ok(()),
+                Err(_) => {
+                    // Fall through to CPU
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    sobel(src, dst, dx, dy, ksize)
+}
+
+/// Calculate Sobel derivatives (CPU-only, sync)
 pub fn sobel(
     src: &Mat,
     dst: &mut Mat,
