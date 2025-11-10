@@ -2879,8 +2879,8 @@ pub async fn meanshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let h = src.inner.rows() as i32;
     let initial_window = Rect::new(w / 4, h / 4, w / 2, h / 2);
 
-    let mut tracker = MeanShiftTracker::new();
-    let result_window = tracker.track(&src.inner, initial_window)
+    let mut tracker = MeanShiftTracker::new(initial_window);
+    let result_window = tracker.track(&src.inner)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Draw tracked region
@@ -2904,8 +2904,8 @@ pub async fn camshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let h = src.inner.rows() as i32;
     let initial_window = Rect::new(w / 4, h / 4, w / 2, h / 2);
 
-    let mut tracker = CamShiftTracker::new();
-    let result_window = tracker.track(&src.inner, initial_window)
+    let mut tracker = CamShiftTracker::new(initial_window);
+    let result_window = tracker.track(&src.inner)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Draw tracked region
@@ -3504,7 +3504,7 @@ pub async fn multiband_blender_wasm(src: &WasmMat, num_bands: usize) -> Result<W
 #[wasm_bindgen(js_name = loadNetwork)]
 pub async fn load_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::dnn::network::Network;
-    use crate::dnn::layers::{ConvLayer, ActivationLayer, ActivationType};
+    use crate::dnn::layers::{ConvolutionLayer, ActivationLayer, ActivationType};
     use crate::dnn::blob::Blob;
     
     // Create a simple demo network
@@ -3729,11 +3729,8 @@ pub async fn pyr_down_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         }
     }
 
-    // CPU fallback
-    crate::imgproc::pyr_down(&src.inner, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU pyrDown failed and CPU fallback not yet implemented"))
 }
 
 /// Pyramid up (upscale image) - GPU-accelerated
@@ -3758,11 +3755,8 @@ pub async fn pyr_up_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         }
     }
 
-    // CPU fallback
-    crate::imgproc::pyr_up(&src.inner, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU pyrUp failed and CPU fallback not yet implemented"))
 }
 
 /// Convert scale (scale and shift pixel values) - GPU-accelerated
@@ -3785,11 +3779,8 @@ pub async fn convert_scale_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<
         }
     }
 
-    // CPU fallback
-    crate::imgproc::convert_scale(&src.inner, &mut dst, alpha, beta)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU convertScale failed and CPU fallback not yet implemented"))
 }
 
 /// Add weighted (blend two images) - GPU-accelerated
@@ -3819,11 +3810,8 @@ pub async fn add_weighted_wasm(src1: &WasmMat, alpha: f64, src2: &WasmMat, beta:
         }
     }
 
-    // CPU fallback
-    crate::imgproc::add_weighted(&src1.inner, alpha, &src2.inner, beta, gamma, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU addWeighted failed and CPU fallback not yet implemented"))
 }
 
 /// Gradient magnitude - GPU-accelerated
@@ -3846,11 +3834,8 @@ pub async fn gradient_magnitude_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
         }
     }
 
-    // CPU fallback
-    crate::imgproc::gradient_magnitude(&src.inner, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU gradientMagnitude failed and CPU fallback not yet implemented"))
 }
 
 /// Integral image - GPU-accelerated
@@ -3873,11 +3858,8 @@ pub async fn integral_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         }
     }
 
-    // CPU fallback
-    crate::imgproc::integral_image(&src.inner, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU integralImage failed and CPU fallback not yet implemented"))
 }
 
 /// Bitwise NOT - GPU-accelerated
@@ -3981,11 +3963,8 @@ pub async fn bitwise_xor_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat,
         }
     }
 
-    // CPU fallback
-    crate::core::bitwise_xor(&src1.inner, &src2.inner, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU bitwiseXor failed and CPU fallback not yet implemented"))
 }
 
 /// Absolute difference - GPU-accelerated
@@ -4009,7 +3988,7 @@ pub async fn absdiff_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsV
     }
 
     // CPU fallback
-    crate::core::absdiff(&src1.inner, &src2.inner, &mut dst)
+    crate::core::abs_diff(&src1.inner, &src2.inner, &mut dst)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -4035,11 +4014,8 @@ pub async fn min_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue
         }
     }
 
-    // CPU fallback
-    crate::core::min(&src1.inner, &src2.inner, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU min failed and CPU fallback not yet implemented"))
 }
 
 /// Element-wise maximum - GPU-accelerated
@@ -4062,11 +4038,8 @@ pub async fn max_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue
         }
     }
 
-    // CPU fallback
-    crate::core::max(&src1.inner, &src2.inner, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU max failed and CPU fallback not yet implemented"))
 }
 
 /// Element-wise addition - GPU-accelerated
@@ -4103,11 +4076,24 @@ pub async fn filter2d_wasm(src: &WasmMat, kernel: Vec<f32>, ksize: usize) -> Res
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Create Mat from kernel data
+    let mut kernel_mat = Mat::new(ksize as i32, ksize as i32, 1, MatDepth::F32)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Convert Vec<f32> to bytes for Mat
+    let kernel_bytes: Vec<u8> = kernel.iter()
+        .flat_map(|&f| f.to_le_bytes())
+        .collect();
+    kernel_mat.data_mut().copy_from_slice(&kernel_bytes);
+
+    // Anchor point is typically the center of the kernel
+    let anchor = ((ksize / 2) as i32, (ksize / 2) as i32);
+
     // Try GPU first if available
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::filter2d_gpu_async(&src.inner, &mut dst, &kernel, ksize as i32).await {
+            match crate::gpu::ops::filter2d_gpu_async(&src.inner, &mut dst, &kernel_mat, anchor).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU filter2D failed, falling back to CPU".into());
@@ -4116,20 +4102,21 @@ pub async fn filter2d_wasm(src: &WasmMat, kernel: Vec<f32>, ksize: usize) -> Res
         }
     }
 
-    // CPU fallback
-    crate::imgproc::filter2d(&src.inner, &mut dst, &kernel, ksize as i32)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU filter2D failed and CPU fallback not yet implemented"))
 }
 
 /// In range (color/value range masking) - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = inRange)]
 pub async fn in_range_wasm(src: &WasmMat, lower_r: u8, lower_g: u8, lower_b: u8, upper_r: u8, upper_g: u8, upper_b: u8) -> Result<WasmMat, JsValue> {
+    use crate::core::types::Scalar;
+
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    let lower_scalar = Scalar::from_rgb(lower_r, lower_g, lower_b);
+    let upper_scalar = Scalar::from_rgb(upper_r, upper_g, upper_b);
     let lower = [lower_r, lower_g, lower_b];
     let upper = [upper_r, upper_g, upper_b];
 
@@ -4137,7 +4124,7 @@ pub async fn in_range_wasm(src: &WasmMat, lower_r: u8, lower_g: u8, lower_b: u8,
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::in_range_gpu_async(&src.inner, &lower, &upper, &mut dst).await {
+            match crate::gpu::ops::in_range_gpu_async(&src.inner, &mut dst, lower_scalar, upper_scalar).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU inRange failed, falling back to CPU".into());
@@ -4146,11 +4133,8 @@ pub async fn in_range_wasm(src: &WasmMat, lower_r: u8, lower_g: u8, lower_b: u8,
         }
     }
 
-    // CPU fallback
-    crate::imgproc::in_range(&src.inner, &lower, &upper, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU inRange failed and CPU fallback not yet implemented"))
 }
 
 /// Remap (generic pixel remapping) - GPU-accelerated
@@ -4160,11 +4144,28 @@ pub async fn remap_wasm(src: &WasmMat, map_x: Vec<f32>, map_y: Vec<f32>) -> Resu
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Create Mat from map data
+    let mut map_x_mat = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::F32)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let mut map_y_mat = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::F32)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Convert Vec<f32> to bytes for Mat
+    let map_x_bytes: Vec<u8> = map_x.iter()
+        .flat_map(|&f| f.to_le_bytes())
+        .collect();
+    let map_y_bytes: Vec<u8> = map_y.iter()
+        .flat_map(|&f| f.to_le_bytes())
+        .collect();
+
+    map_x_mat.data_mut().copy_from_slice(&map_x_bytes);
+    map_y_mat.data_mut().copy_from_slice(&map_y_bytes);
+
     // Try GPU first if available
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::remap_gpu_async(&src.inner, &mut dst, &map_x, &map_y).await {
+            match crate::gpu::ops::remap_gpu_async(&src.inner, &mut dst, &map_x_mat, &map_y_mat).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU remap failed, falling back to CPU".into());
@@ -4173,11 +4174,8 @@ pub async fn remap_wasm(src: &WasmMat, map_x: Vec<f32>, map_y: Vec<f32>) -> Resu
         }
     }
 
-    // CPU fallback
-    crate::imgproc::remap(&src.inner, &mut dst, &map_x, &map_y)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU remap failed and CPU fallback not yet implemented"))
 }
 
 /// Element-wise power - GPU-accelerated
@@ -4200,9 +4198,6 @@ pub async fn pow_wasm(src: &WasmMat, power: f64) -> Result<WasmMat, JsValue> {
         }
     }
 
-    // CPU fallback
-    crate::core::pow(&src.inner, &mut dst, power)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    Ok(WasmMat { inner: dst })
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU pow failed and CPU fallback not yet implemented"))
 }
