@@ -1919,3 +1919,303 @@ pub async fn back_projection_wasm(src: &WasmMat, model: &WasmMat) -> Result<Wasm
 
     Ok(WasmMat { inner: dst })
 }
+
+/// Moments - compute contour moments (visualize centroid)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = moments)]
+pub async fn moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::contours::{find_contours, moments};
+    use crate::imgproc::threshold::threshold;
+    use crate::core::types::{ColorConversionCode, ThresholdType};
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{Point, Scalar};
+
+    // Convert to grayscale and threshold
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut binary = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw centroids on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+    for contour in contours.iter().take(10) {
+        let m = moments(contour);
+        if m.m00 != 0.0 {
+            let cx = (m.m10 / m.m00) as i32;
+            let cy = (m.m01 / m.m00) as i32;
+            let _ = circle(&mut result, Point::new(cx, cy), 5, color);
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// Watershed segmentation
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = watershed)]
+pub async fn watershed_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::advanced_filter::watershed;
+    use crate::imgproc::color::cvt_color;
+    use crate::imgproc::threshold::threshold;
+    use crate::core::types::{ColorConversionCode, ThresholdType};
+
+    // Ensure 3-channel image for watershed
+    let bgr = if src.inner.channels() == 1 {
+        let mut color = Mat::new(src.inner.rows(), src.inner.cols(), 3, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut color, ColorConversionCode::GrayToBgr)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        color
+    } else {
+        src.inner.clone()
+    };
+
+    // Create markers using simple threshold-based initialization
+    let gray = if bgr.channels() > 1 {
+        let mut g = Mat::new(bgr.rows(), bgr.cols(), 1, bgr.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&bgr, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        bgr.clone()
+    };
+
+    let mut markers = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Initialize markers: foreground (label 1), background (label 2), unknown (0)
+    for row in 0..markers.rows() {
+        for col in 0..markers.cols() {
+            let val = gray.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0];
+            markers.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0] = if val < 50 {
+                1 // Foreground
+            } else if val > 200 {
+                2 // Background
+            } else {
+                0 // Unknown
+            };
+        }
+    }
+
+    watershed(&bgr, &mut markers)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Visualize markers - multiply by 50 to make labels visible
+    let mut result = Mat::new(markers.rows(), markers.cols(), 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    for row in 0..markers.rows() {
+        for col in 0..markers.cols() {
+            let marker = markers.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0];
+            result.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?[0] = (marker.saturating_mul(50)).min(255);
+        }
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// SIFT feature detection and visualization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = sift)]
+pub async fn sift_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
+    use crate::features2d::SIFTF32;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{Point, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let sift = SIFTF32::new(n_features);
+    let (keypoints, _) = sift.detect_and_compute(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw keypoints on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+    for kp in keypoints.iter() {
+        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+        let radius = (kp.size / 2.0) as i32;
+        let _ = circle(&mut result, pt, radius, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// ORB feature detection and visualization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = orb)]
+pub async fn orb_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
+    use crate::features2d::ORB;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{Point, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let orb = ORB::new(n_features);
+    let (keypoints, _) = orb.detect_and_compute(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw keypoints on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
+
+    for kp in keypoints.iter() {
+        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+        let radius = (kp.size / 2.0) as i32;
+        let _ = circle(&mut result, pt, radius, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// BRISK feature detection and visualization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = brisk)]
+pub async fn brisk_wasm(src: &WasmMat, threshold: i32) -> Result<WasmMat, JsValue> {
+    use crate::features2d::BRISK;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{Point, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let brisk = BRISK::new(threshold, 3);
+    let (keypoints, _) = brisk.detect_and_compute(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw keypoints on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(0.0, 255.0, 255.0, 255.0);
+
+    for kp in keypoints.iter() {
+        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+        let radius = (kp.size / 2.0) as i32;
+        let _ = circle(&mut result, pt, radius, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// AKAZE feature detection and visualization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = akaze)]
+pub async fn akaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::features2d::AKAZE;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{Point, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let akaze = AKAZE::new();
+    let (keypoints, _) = akaze.detect_and_compute(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw keypoints on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
+
+    for kp in keypoints.iter() {
+        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+        let radius = (kp.size / 2.0) as i32;
+        let _ = circle(&mut result, pt, radius, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
+
+/// KAZE feature detection and visualization
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = kaze)]
+pub async fn kaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    use crate::features2d::KAZE;
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::ColorConversionCode;
+    use crate::imgproc::drawing::circle;
+    use crate::core::types::{Point, Scalar};
+
+    // Convert to grayscale
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let kaze = KAZE::new(false, false);
+    let (keypoints, _) = kaze.detect_and_compute(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw keypoints on original image
+    let mut result = src.inner.clone();
+    let color = Scalar::new(255.0, 0.0, 255.0, 255.0);
+
+    for kp in keypoints.iter() {
+        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+        let radius = (kp.size / 2.0) as i32;
+        let _ = circle(&mut result, pt, radius, color);
+    }
+
+    Ok(WasmMat { inner: result })
+}
