@@ -2,6 +2,9 @@
 use wgpu;
 
 #[cfg(feature = "gpu")]
+use super::pipeline_cache::PipelineCache;
+
+#[cfg(feature = "gpu")]
 pub struct GpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
@@ -88,6 +91,9 @@ impl GpuContext {
             adapter,
         };
 
+        // Initialize pipeline cache with pre-compiled pipelines
+        PipelineCache::init_async(&ctx.device).await;
+
         // Store in global context
         let _ = GPU_CONTEXT.set(Some(ctx));
         true
@@ -157,6 +163,11 @@ impl GpuContext {
             queue,
             adapter,
         };
+
+        // Initialize pipeline cache with pre-compiled pipelines
+        web_sys::console::log_1(&"Initializing pipeline cache...".into());
+        PipelineCache::init_async(&ctx.device).await;
+        web_sys::console::log_1(&"✓ Pipeline cache initialized".into());
 
         // Store in thread-local context
         GPU_CONTEXT.with(|context| *context.borrow_mut() = Some(ctx));
