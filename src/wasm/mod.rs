@@ -3751,6 +3751,56 @@ pub async fn rgb_to_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Ok(WasmMat { inner: dst })
 }
 
+/// Convert RGB to Lab color space (GPU-accelerated)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = rgbToLab)]
+pub async fn rgb_to_lab_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::rgb_to_lab_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU RGB to Lab failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToLab)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Convert RGB to YCrCb color space (GPU-accelerated)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = rgbToYCrCb)]
+pub async fn rgb_to_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::rgb_to_ycrcb_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU RGB to YCrCb failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToYCrCb)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
 /// Convert HSV to RGB color space (GPU-accelerated)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = hsvToRgb)]
@@ -4325,4 +4375,172 @@ pub async fn pow_wasm(src: &WasmMat, power: f64) -> Result<WasmMat, JsValue> {
 
     // CPU fallback not yet implemented
     Err(JsValue::from_str("GPU pow failed and CPU fallback not yet implemented"))
+}
+
+/// Element-wise subtract - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = subtract)]
+pub async fn subtract_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::subtract_gpu_async(&src1.inner, &src2.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU subtract failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    crate::core::subtract(&src1.inner, &src2.inner, &mut dst)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Element-wise multiply - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = multiply)]
+pub async fn multiply_wasm(src1: &WasmMat, src2: &WasmMat, scale: f64) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::multiply_gpu_async(&src1.inner, &src2.inner, &mut dst, scale as f32).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU multiply failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    crate::core::multiply(&src1.inner, &src2.inner, &mut dst, scale)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+/// Element-wise exponential - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = exp)]
+pub async fn exp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::exp_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU exp failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    Err(JsValue::from_str("GPU exp failed and CPU fallback not yet implemented"))
+}
+
+/// Element-wise logarithm - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = log)]
+pub async fn log_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::log_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU log failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    Err(JsValue::from_str("GPU log failed and CPU fallback not yet implemented"))
+}
+
+/// Element-wise square root - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = sqrt)]
+pub async fn sqrt_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::sqrt_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU sqrt failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    Err(JsValue::from_str("GPU sqrt failed and CPU fallback not yet implemented"))
+}
+
+/// Lookup table transform - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = lut)]
+pub async fn lut_wasm(src: &WasmMat, table: Vec<u8>) -> Result<WasmMat, JsValue> {
+    if table.len() != 256 {
+        return Err(JsValue::from_str("LUT table must have exactly 256 entries"));
+    }
+
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let mut lut_mat = Mat::new(1, 256, 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    lut_mat.data_mut().copy_from_slice(&table);
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::lut_gpu_async(&src.inner, &lut_mat, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU LUT failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    Err(JsValue::from_str("GPU LUT failed and CPU fallback not yet implemented"))
+}
+
+/// Normalize image - GPU-accelerated
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = normalize)]
+pub async fn normalize_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::normalize_gpu_async(&src.inner, &mut dst, alpha as f32, beta as f32).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU normalize failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    Err(JsValue::from_str("GPU normalize failed and CPU fallback not yet implemented"))
 }
