@@ -184,7 +184,7 @@ export const demos = [
     description: 'Remove salt & pepper noise with median filter',
     category: 'filters',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -203,7 +203,7 @@ export const demos = [
     description: 'Edge-preserving smoothing filter',
     category: 'filters',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'diameter',
@@ -409,7 +409,7 @@ export const demos = [
     description: 'Compute distance to nearest zero pixel',
     category: 'filters',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'distanceType',
@@ -527,7 +527,7 @@ export const demos = [
     description: 'High-accuracy gradient computation',
     category: 'edges',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'dx',
@@ -555,7 +555,7 @@ export const demos = [
     description: 'Second derivative edge detection',
     category: 'edges',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -605,7 +605,7 @@ export const demos = [
     description: 'Flip image horizontally or vertically',
     category: 'transform',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'flipCode',
@@ -622,7 +622,7 @@ export const demos = [
     description: 'Rotate image by 90, 180, or 270 degrees',
     category: 'transform',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'angle',
@@ -641,7 +641,7 @@ export const demos = [
     description: 'Apply affine transformation (translate, rotate, scale, shear)',
     category: 'transform',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'angle',
@@ -678,7 +678,7 @@ export const demos = [
     description: 'Apply perspective transformation for document scanning',
     category: 'transform',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'mode',
@@ -804,7 +804,7 @@ export const demos = [
     description: 'Adaptive thresholding for varying lighting',
     category: 'color',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'maxval',
@@ -954,7 +954,7 @@ export const demos = [
     description: 'Erosion morphological operation',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -989,7 +989,7 @@ export const demos = [
     description: 'Dilation morphological operation',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -1024,7 +1024,7 @@ export const demos = [
     description: 'Erode then dilate to remove noise',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -1050,7 +1050,7 @@ export const demos = [
     description: 'Dilate then erode to fill gaps',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -1076,7 +1076,7 @@ export const demos = [
     description: 'Difference between dilation and erosion',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
