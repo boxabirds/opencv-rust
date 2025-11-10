@@ -165,7 +165,7 @@ export const demos = [
     description: 'Fast smoothing with box filter',
     category: 'filters',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -729,7 +729,7 @@ export const demos = [
     description: 'Convert color image to grayscale',
     category: 'color',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: []
   },
   {
@@ -738,7 +738,7 @@ export const demos = [
     description: 'Convert RGB to HSV color space',
     category: 'color',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: []
   },
   {
@@ -1095,7 +1095,7 @@ export const demos = [
     description: 'Original minus opening',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
@@ -1114,7 +1114,7 @@ export const demos = [
     description: 'Closing minus original',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: false,
+    gpuAccelerated: true,
     params: [
       {
         id: 'ksize',
