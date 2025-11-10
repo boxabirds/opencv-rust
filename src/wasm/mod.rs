@@ -1119,11 +1119,11 @@ pub async fn morphology_gradient_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
     Ok(WasmMat { inner: dst })
 }
 
-/// Morphological top hat
+/// Morphological top hat - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyTopHat)]
 pub async fn morphology_top_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::imgproc::morphology::{morphology_ex_async, get_structuring_element, MorphShape, MorphType};
     use crate::core::types::Size;
 
     let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
@@ -1135,17 +1135,19 @@ pub async fn morphology_top_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    morphology_ex(&src.inner, &mut dst, MorphType::TopHat, &kernel)
+    // Try GPU first (composes opening operation on GPU)
+    morphology_ex_async(&src.inner, &mut dst, MorphType::TopHat, &kernel, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
 
-/// Morphological black hat
+/// Morphological black hat - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyBlackHat)]
 pub async fn morphology_black_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::morphology::{morphology_ex, get_structuring_element, MorphShape, MorphType};
+    use crate::imgproc::morphology::{morphology_ex_async, get_structuring_element, MorphShape, MorphType};
     use crate::core::types::Size;
 
     let kernel = get_structuring_element(MorphShape::Rect, Size::new(ksize, ksize));
@@ -1157,17 +1159,18 @@ pub async fn morphology_black_hat_wasm(src: &WasmMat, ksize: i32) -> Result<Wasm
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    morphology_ex(&src.inner, &mut dst, MorphType::BlackHat, &kernel)
+    // Try GPU first (composes closing operation on GPU)
+    morphology_ex_async(&src.inner, &mut dst, MorphType::BlackHat, &kernel, true)
+        .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
 
-/// Equalize histogram for contrast enhancement
+/// Equalize histogram for contrast enhancement - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = equalizeHistogram)]
 pub async fn equalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::histogram::equalize_hist;
     use crate::core::types::ColorConversionCode;
     use crate::imgproc::color::cvt_color;
 
@@ -1185,6 +1188,21 @@ pub async fn equalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::equalize_hist_gpu_async(&gray, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU equalize histogram failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    use crate::imgproc::histogram::equalize_hist;
     equalize_hist(&gray, &mut dst)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
@@ -1870,7 +1888,7 @@ pub async fn morphology_blackhat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
     Ok(WasmMat { inner: dst })
 }
 
-/// Warp perspective transformation
+/// Warp perspective transformation - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = warpPerspective)]
 pub async fn warp_perspective_wasm(
@@ -1879,8 +1897,7 @@ pub async fn warp_perspective_wasm(
     m21: f64, m22: f64, m23: f64,
     m31: f64, m32: f64, m33: f64,
 ) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::geometric::warp_perspective;
-    use crate::core::types::{InterpolationFlag, Size};
+    use crate::core::types::Size;
 
     let transform_matrix = [
         [m11, m12, m13],
@@ -1892,6 +1909,21 @@ pub async fn warp_perspective_wasm(
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::warp_perspective_gpu_async(&src.inner, &mut dst, &transform_matrix, dsize).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU warp perspective failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback
+    use crate::imgproc::geometric::warp_perspective;
     warp_perspective(&src.inner, &mut dst, &transform_matrix, dsize)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
