@@ -202,10 +202,12 @@ pub async fn guided_filter_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch (CPU implementation for complex filter)
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU guided filter not yet implemented. Try setBackend('cpu')"));
+            // Guided filter uses CPU implementation
+            guided_filter(&src.inner, &guide, &mut dst, radius, eps)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             guided_filter(&src.inner, &guide, &mut dst, radius, eps)
@@ -246,10 +248,12 @@ pub async fn gabor_filter_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch (CPU implementation for complex filter)
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU gabor filter not yet implemented. Try setBackend('cpu')"));
+            // Gabor filter uses CPU implementation
+            gabor_filter(&gray, &mut dst, ksize, sigma, theta, lambda, gamma, psi)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             gabor_filter(&gray, &mut dst, ksize, sigma, theta, lambda, gamma, psi)
@@ -279,10 +283,12 @@ pub async fn nlm_denoising_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch (CPU implementation for iterative algorithm)
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU NLM denoising not yet implemented. Try setBackend('cpu')"));
+            // NLM denoising uses CPU implementation
+            non_local_means_denoising(&src.inner, &mut dst, h as f32, template_window_size, search_window_size)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             non_local_means_denoising(&src.inner, &mut dst, h as f32, template_window_size, search_window_size)
@@ -312,10 +318,12 @@ pub async fn anisotropic_diffusion_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch (CPU implementation for iterative algorithm)
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU anisotropic diffusion not yet implemented. Try setBackend('cpu')"));
+            // Anisotropic diffusion uses CPU implementation
+            anisotropic_diffusion(&src.inner, &mut dst, iterations as usize, kappa as f32, lambda as f32)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             anisotropic_diffusion(&src.inner, &mut dst, iterations as usize, kappa as f32, lambda as f32)
@@ -335,10 +343,12 @@ pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch (CPU implementation)
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU fast NLM denoising not yet implemented. Try setBackend('cpu')"));
+            // Fast NLM denoising uses CPU implementation
+            fast_nl_means_denoising(&src.inner, &mut dst, h, template_window_size, search_window_size)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             fast_nl_means_denoising(&src.inner, &mut dst, h, template_window_size, search_window_size)

@@ -64,7 +64,9 @@ pub async fn hough_lines_wasm(
 
     let lines = crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not implemented for hough_lines"));
+            // Hough transform uses CPU implementation
+            crate::imgproc::hough::hough_lines(&gray, 1.0, std::f64::consts::PI / 180.0, threshold)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
         }
         cpu => {
             crate::imgproc::hough::hough_lines(&gray, 1.0, std::f64::consts::PI / 180.0, threshold)
@@ -472,7 +474,8 @@ pub async fn gradient_magnitude_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for gradient_magnitude"));
+            crate::imgproc::gradient::gradient_magnitude(&src.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -493,7 +496,8 @@ pub async fn integral_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for integral_image"));
+            crate::imgproc::integral::integral(&src.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -514,7 +518,8 @@ pub async fn normalize_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<Wasm
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for normalize"));
+            crate::core::normalize(&src.inner, &mut dst, 0.0, 255.0)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 

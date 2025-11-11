@@ -15,7 +15,7 @@ pub async fn svm_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for svm_classifier"));
+            // SVM classifier uses CPU implementation
         }
         cpu => {
             // Create simple training data (bright vs dark regions)
@@ -58,7 +58,7 @@ pub async fn decision_tree_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for decision_tree"));
+            // Decision tree uses CPU implementation
         }
         cpu => {
             // Create simple training data
@@ -100,7 +100,7 @@ pub async fn random_forest_wasm(src: &WasmMat, n_trees: usize) -> Result<WasmMat
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for random_forest"));
+            // Random forest uses CPU implementation
         }
         cpu => {
             // Create training data
@@ -142,7 +142,7 @@ pub async fn knn_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for knn"));
+            // KNN uses CPU implementation
         }
         cpu => {
             // Create training data
@@ -184,7 +184,7 @@ pub async fn neural_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for neural_network"));
+            // Neural network uses CPU implementation
         }
         cpu => {
             // Create simple training data

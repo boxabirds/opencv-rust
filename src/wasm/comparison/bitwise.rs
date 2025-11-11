@@ -83,7 +83,8 @@ pub async fn bitwise_xor_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat,
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for bitwise_xor"));
+            crate::core::bitwise_xor(&src1.inner, &src2.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -126,7 +127,8 @@ pub async fn min_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for min"));
+            crate::core::min(&src1.inner, &src2.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -147,7 +149,8 @@ pub async fn max_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for max"));
+            crate::core::max(&src1.inner, &src2.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -173,7 +176,8 @@ pub async fn in_range_wasm(src: &WasmMat, lower_r: u8, lower_g: u8, lower_b: u8,
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for in_range"));
+            crate::core::in_range(&src.inner, &mut dst, lower_scalar, upper_scalar)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -202,7 +206,8 @@ pub async fn lut_wasm(src: &WasmMat, table: Vec<u8>) -> Result<WasmMat, JsValue>
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for lut"));
+            crate::core::lut(&src.inner, &lut_mat, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 

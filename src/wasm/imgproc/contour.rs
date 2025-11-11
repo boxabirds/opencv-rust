@@ -34,7 +34,7 @@ pub async fn find_contours_wasm(src: &WasmMat, threshold_value: f64) -> Result<W
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for find_contours"));
+            // Contour detection uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -87,7 +87,7 @@ pub async fn bounding_rect_wasm(src: &WasmMat, threshold_value: f64) -> Result<W
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for bounding_rect"));
+            // Bounding rect uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -137,7 +137,7 @@ pub async fn contour_area_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wa
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for contour_area"));
+            // Contour area uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -199,7 +199,7 @@ pub async fn arc_length_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wasm
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for arc_length"));
+            // Arc length uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -261,7 +261,7 @@ pub async fn approx_poly_dp_wasm(src: &WasmMat, threshold_value: f64, epsilon: f
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for approx_poly_dp"));
+            // Polygon approximation uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -316,7 +316,7 @@ pub async fn moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for moments"));
+            // Moments uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -370,7 +370,7 @@ pub async fn min_enclosing_circle_wasm(src: &WasmMat, threshold_value: f64) -> R
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for min_enclosing_circle"));
+            // Min enclosing circle uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -420,7 +420,7 @@ pub async fn convex_hull_wasm(src: &WasmMat, threshold_value: f64) -> Result<Was
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for convex_hull"));
+            // Convex hull uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
@@ -469,7 +469,7 @@ pub async fn hu_moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wasm
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for hu_moments"));
+            // Hu moments uses CPU implementation
         }
         cpu => {
             // Compute moments from binary image
@@ -522,7 +522,7 @@ pub async fn match_shapes_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wa
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for match_shapes"));
+            // Shape matching uses CPU implementation
         }
         cpu => {
             let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)

@@ -17,7 +17,8 @@ pub async fn convert_scale_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for convert_scale"));
+            crate::core::convert_scale_abs(&src.inner, &mut dst, alpha, beta)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -45,7 +46,8 @@ pub async fn add_weighted_wasm(src1: &WasmMat, alpha: f64, src2: &WasmMat, beta:
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for add_weighted"));
+            crate::core::add_weighted(&src1.inner, alpha, &src2.inner, beta, gamma, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -88,7 +90,8 @@ pub async fn pow_wasm(src: &WasmMat, power: f64) -> Result<WasmMat, JsValue> {
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for pow"));
+            crate::core::pow(&src.inner, power, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -153,7 +156,8 @@ pub async fn exp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for exp"));
+            crate::core::exp(&src.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -174,7 +178,8 @@ pub async fn log_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for log"));
+            crate::core::log(&src.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
@@ -195,7 +200,8 @@ pub async fn sqrt_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
-            return Err(JsValue::from_str("CPU not yet implemented for sqrt"));
+            crate::core::sqrt(&src.inner, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
 
