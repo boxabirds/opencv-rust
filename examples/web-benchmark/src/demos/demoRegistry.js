@@ -729,7 +729,7 @@ export const demos = [
     description: 'Convert color image to grayscale',
     category: 'color',
     implemented: true,
-    gpuAccelerated: true,
+    gpuAccelerated: false,
     params: []
   },
   {
@@ -738,7 +738,7 @@ export const demos = [
     description: 'Convert RGB to HSV color space',
     category: 'color',
     implemented: true,
-    gpuAccelerated: true,
+    gpuAccelerated: false,
     params: []
   },
   {
@@ -1024,7 +1024,7 @@ export const demos = [
     description: 'Erode then dilate to remove noise',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: true,
+    gpuAccelerated: false,
     params: [
       {
         id: 'ksize',
@@ -1050,7 +1050,7 @@ export const demos = [
     description: 'Dilate then erode to fill gaps',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: true,
+    gpuAccelerated: false,
     params: [
       {
         id: 'ksize',
@@ -1076,7 +1076,7 @@ export const demos = [
     description: 'Difference between dilation and erosion',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: true,
+    gpuAccelerated: false,
     params: [
       {
         id: 'ksize',
@@ -1095,7 +1095,7 @@ export const demos = [
     description: 'Original minus opening',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: true,
+    gpuAccelerated: false,
     params: [
       {
         id: 'ksize',
@@ -1114,7 +1114,7 @@ export const demos = [
     description: 'Closing minus original',
     category: 'morphology',
     implemented: true,
-    gpuAccelerated: true,
+    gpuAccelerated: false,
     params: [
       {
         id: 'ksize',

@@ -11,21 +11,21 @@
 
 | Component | Status | Reality |
 |-----------|--------|---------|
-| **GPU Operations** | 58 implemented with WASM | ✅ 58 exist, ⚠️ 40 orphaned (no demos) |
-| **Gallery Demos** | 102 total | ⚠️ Only 18 (18%) have GPU, 84 CPU-only |
+| **GPU Operations** | 58 implemented with WASM | ✅ 58 exist, ⚠️ 41 orphaned (no demos) |
+| **Gallery Demos** | 102 total | ⚠️ Only 17 (17%) have GPU, 85 CPU-only |
 | **Verified Complete** | 4-5 operations | ❌ Only 4% of 102 demos fully verified |
-| **Pipeline Caching** | Stub only | ❌ Critical performance gap (10-100ms/call) |
-| **Test Parity** | 396 tests exist | ❌ No systematic OpenCV comparison |
+| **Pipeline Caching** | Infrastructure complete | ✅ 928 lines implemented, ❌ NOT INTEGRATED (0 ops use it) |
+| **Test Parity** | 551+ tests exist | ❌ No systematic OpenCV comparison |
 | **OpenCV.js API Parity** | Unknown | ❌ Not verified against opencv.js |
 | **OpenCV.js Benchmark** | Not available | ❌ Gallery lacks opencv.js comparison |
-| **WASM Quality** | 153 functions | ✅ **Project strength** |
+| **WASM Quality** | 151 functions | ✅ **Project strength** |
 
 ### Key Insight
 
 **Two parallel tracks exist with minimal overlap:**
 1. **GPU Operations Track**: 58 operations (shaders + Rust + WASM)
 2. **Gallery Demos Track**: 102 demonstrations (mostly CPU-only)
-3. **Gap**: Only 18 operations bridge both tracks (18%)
+3. **Gap**: Only 17 operations bridge both tracks (17%)
 
 ---
 
@@ -56,12 +56,12 @@
 
 ### ❌ Critical Gaps
 
-1. **Pipeline Caching**: Stub only - pipelines recreated every call (severe performance impact)
+1. **Pipeline Caching Integration**: Infrastructure complete (928 lines) but NOT USED - 0 operations integrated
 2. **OpenCV.js API Parity**: No verification that our WASM API matches opencv.js
 3. **OpenCV.js Benchmark**: Gallery lacks side-by-side comparison with opencv.js
-4. **84 Demos Without GPU**: 82% of gallery runs CPU-only
-5. **40 Orphaned GPU Ops**: No corresponding demos
-6. **Test Parity**: No systematic OpenCV comparison
+4. **85 Demos Without GPU**: 83% of gallery runs CPU-only
+5. **41 Orphaned GPU Ops**: No corresponding demos
+6. **Test Parity**: No systematic OpenCV comparison (551+ tests exist, not 396)
 7. **Verification**: Only 4-5/102 operations fully verified (4%)
 
 ---
@@ -101,41 +101,73 @@
 
 ### Phase 1: Infrastructure (Week 1-2)
 
-#### Priority 1: Implement Pipeline Caching 🔴 CRITICAL
-**Current**: `src/gpu/pipeline_cache.rs` is a 61-line stub
-**Impact**: 10-100ms saved per operation
+#### Priority 1: Integrate Pipeline Caching 🔴 CRITICAL
+**Current**: `src/gpu/pipeline_cache.rs` is **928 lines - COMPLETE**, but **NOT INTEGRATED**
+**Impact**: 10-100ms saved per operation (once integrated)
 
-**Implementation**:
+**Status**:
 ```rust
+// ✅ Infrastructure DONE (src/gpu/pipeline_cache.rs):
 pub struct PipelineCache {
-    // Pre-compiled pipelines for common operations
-    gaussian_blur: ComputePipeline,
-    resize: ComputePipeline,
-    threshold: ComputePipeline,
-    // ... (15-20 core operations)
+    // Pre-compiled pipelines (8 operations ready)
+    pub threshold: Option<CachedPipeline>,      // ✅ Pre-compiled at init
+    pub resize: Option<CachedPipeline>,         // ✅ Pre-compiled at init
+    pub sobel: Option<CachedPipeline>,          // ✅ Pre-compiled at init
+    pub rgb_to_gray: Option<CachedPipeline>,    // ✅ Pre-compiled at init
+    pub erode: Option<CachedPipeline>,          // ✅ Pre-compiled at init
+    pub dilate: Option<CachedPipeline>,         // ✅ Pre-compiled at init
+    pub flip: Option<CachedPipeline>,           // ✅ Pre-compiled at init
+    pub laplacian: Option<CachedPipeline>,      // ✅ Pre-compiled at init
+    // ... (12 more slots available)
 
-    // Dynamic cache for parameterized operations
-    dynamic_cache: LruCache<PipelineKey, ComputePipeline>,
+    // ✅ Dynamic cache with HashMap
+    dynamic_cache: HashMap<String, Arc<wgpu::ComputePipeline>>,
 }
 
-impl PipelineCache {
-    pub fn new(device: &Device) -> Self {
-        // Pre-compile all common pipelines at startup
-        // Target: <1 second initialization
-    }
-}
+// ✅ Cache initialized in src/gpu/device.rs:97-173
+PipelineCache::init_async(&ctx.device).await;
+```
+
+**Problem**: ❌ **ZERO operations actually USE the cache**
+- All 58 GPU operations still call `device.create_compute_pipeline(...)` with `cache: None`
+- Performance benefit: **0ms** (cache exists but unused)
+
+**Integration Work Needed**:
+```rust
+// Example: src/gpu/ops/threshold.rs:190
+// BEFORE (current - slow):
+let compute_pipeline = ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+    label: Some("Threshold Pipeline"),
+    layout: Some(&pipeline_layout),
+    module: &shader,
+    entry_point: Some("threshold_binary"),
+    compilation_options: Default::default(),
+    cache: None,  // ❌ Recreates every call!
+});
+
+// AFTER (integrated - fast):
+let cached = PipelineCache::get_threshold_pipeline()
+    .ok_or("Pipeline cache not initialized")?;
+// ✅ Reuses pre-compiled pipeline!
 ```
 
 **Success Metrics**:
+- 8 operations integrated with pre-compiled cache (Week 1)
 - Pipeline creation moves from per-call to once at startup
-- Cache hit rate >80% in typical usage
 - Performance improvement: 10-100ms per operation
-- Memory overhead: <50MB for all cached pipelines
+- Cache hit rate: 100% for pre-compiled operations
 
 **Files to Modify**:
-- `src/gpu/pipeline_cache.rs` (61 lines → ~300 lines)
-- `src/gpu/device.rs` (integrate cache)
-- `src/gpu/ops/*.rs` (use cached pipelines - 15-20 files)
+- `src/gpu/ops/threshold.rs` (line 190 - use cached pipeline)
+- `src/gpu/ops/resize.rs` (line 187 - use cached pipeline)
+- `src/gpu/ops/sobel.rs` (line 198 - use cached pipeline)
+- `src/gpu/ops/rgb_to_gray.rs` (line 134 - use cached pipeline)
+- `src/gpu/ops/erode.rs` (line 96 - use cached pipeline)
+- `src/gpu/ops/dilate.rs` (similar to erode - use cached pipeline)
+- `src/gpu/ops/flip.rs` (line 119 - use cached pipeline)
+- `src/gpu/ops/laplacian.rs` (line 133 - use cached pipeline)
+
+**Estimated Effort**: 16 hours (2 days), NOT 2-4 weeks - infrastructure already complete!
 
 ---
 
@@ -346,14 +378,25 @@ export const runOpenCVOperation = (operation, image, params) => {
 ---
 
 #### Priority 4: Fix Gallery GPU Marking ⚠️ MEDIUM
-**Issue**: Audit found 24 demos marked `gpuAccelerated: true` but only 18 have shaders
+**Issue**: Audit found 24 demos marked `gpuAccelerated: true` but only 17 have shaders
 
 **File**: `examples/web-benchmark/src/demoRegistry.js`
 
+**7 demos incorrectly marked GPU-accelerated**:
+1. `cvt_color_gray` - uses `rgb_to_gray.wgsl` but not mapped in demo
+2. `cvt_color_hsv` - uses `rgb_to_hsv.wgsl` but not mapped in demo
+3. `morphology_opening` - composite operation (erode+dilate), no dedicated shader
+4. `morphology_closing` - composite operation (dilate+erode), no dedicated shader
+5. `morphology_gradient` - composite operation (dilate-erode), no dedicated shader
+6. `morphology_tophat` - composite operation, no dedicated shader
+7. `morphology_blackhat` - composite operation, no dedicated shader
+
 **Action**:
-1. Identify which 6 of 24 marked demos lack shaders
-2. Either add shader OR remove GPU flag
-3. Update gallery metadata for accuracy
+1. ✅ Mark these 7 demos as `gpuAccelerated: false`
+2. Gallery will correctly show 17 GPU demos (17%), not 24 (24%)
+3. **DONE** - Fixed in this commit
+
+**Estimated Effort**: 30 minutes - **COMPLETE**
 
 ---
 
@@ -531,12 +574,12 @@ cd examples/web-benchmark/src
 
 ### Current State (Honest)
 - 58 GPU operations with shaders and WASM bindings ✅
-- 102 gallery demos (18% GPU-accelerated) ⚠️
+- 102 gallery demos (17% GPU-accelerated - 17 demos) ⚠️
 - 4-5 verified complete operations (4%) ❌
-- Pipeline caching: stub only ❌
+- Pipeline caching: infrastructure complete (928 lines) but NOT integrated ⚠️
 - OpenCV.js API parity: not verified ❌
 - OpenCV.js benchmark: not available ❌
-- Test parity: not systematic ❌
+- Test parity: 551+ tests exist, not systematic with OpenCV ⚠️
 
 ### Recommended Next Steps
 1. **Focus on quality over quantity**: 15-20 production-ready operations
