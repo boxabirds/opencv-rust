@@ -28,8 +28,15 @@ pub async fn draw_line_wasm(
     let pt2 = Point::new(x2, y2);
     let color = Scalar::new(b as f64, g as f64, r as f64, 255.0);
 
-    line(&mut img, pt1, pt2, color, thickness)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for draw_line"));
+        }
+        cpu => {
+            line(&mut img, pt1, pt2, color, thickness)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: img })
 }
@@ -55,8 +62,15 @@ pub async fn draw_rectangle_wasm(
     let rect = Rect::new(x, y, width, height);
     let color = Scalar::new(b as f64, g as f64, r as f64, 255.0);
 
-    rectangle(&mut img, rect, color, thickness)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for draw_rectangle"));
+        }
+        cpu => {
+            rectangle(&mut img, rect, color, thickness)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: img })
 }
@@ -80,8 +94,15 @@ pub async fn draw_circle_wasm(
     let center = Point::new(center_x, center_y);
     let color = Scalar::new(b as f64, g as f64, r as f64, 255.0);
 
-    circle(&mut img, center, radius, color)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for draw_circle"));
+        }
+        cpu => {
+            circle(&mut img, center, radius, color)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: img })
 }
@@ -98,8 +119,15 @@ pub async fn draw_ellipse_wasm(src: &WasmMat, cx: i32, cy: i32, width: i32, heig
     let axes = (width / 2, height / 2);
     let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
 
-    ellipse(&mut result, center, axes, angle, 0.0, 360.0, color)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for draw_ellipse"));
+        }
+        cpu => {
+            ellipse(&mut result, center, axes, angle, 0.0, 360.0, color)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: result })
 }
@@ -124,8 +152,15 @@ pub async fn draw_polylines_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         Point::new(w / 4, h / 2),
     ];
 
-    polylines(&mut result, &pts, true, color, 2)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for draw_polylines"));
+        }
+        cpu => {
+            polylines(&mut result, &pts, true, color, 2)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: result })
 }
@@ -141,8 +176,15 @@ pub async fn put_text_wasm(src: &WasmMat, text: String, x: i32, y: i32, font_sca
     let org = Point::new(x, y);
     let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
 
-    put_text(&mut result, &text, org, font_scale, color)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for put_text"));
+        }
+        cpu => {
+            put_text(&mut result, &text, org, font_scale, color)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: result })
 }
