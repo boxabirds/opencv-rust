@@ -28,30 +28,18 @@ pub async fn gaussian_blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::gaussian_blur_gpu_async(
-                    &src.inner,
-                    &mut dst,
-                    Size::new(ksize as i32, ksize as i32),
-                    sigma,
-                ).await
-                .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-
-                return Ok(WasmMat { inner: dst });
-            }
-
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::gaussian_blur_gpu_async(
+                &src.inner,
+                &mut dst,
+                Size::new(ksize as i32, ksize as i32),
+                sigma,
+            ).await
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::gaussian_blur(
                 &src.inner,
                 &mut dst,
@@ -59,10 +47,10 @@ pub async fn gaussian_blur_wasm(
                 sigma,
             )
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-            Ok(WasmMat { inner: dst })
         }
     }
+
+    Ok(WasmMat { inner: dst })
 }
 
 /// Box blur (WASM-compatible)
@@ -80,24 +68,14 @@ pub async fn blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path - use box blur as approximation
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::box_blur_gpu_async(&src.inner, &mut dst, ksize as i32)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::box_blur_gpu_async(&src.inner, &mut dst, ksize as i32)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::blur(&src.inner, &mut dst, Size::new(ksize as i32, ksize as i32))
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -113,24 +91,14 @@ pub async fn box_blur_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::box_blur_gpu_async(&src.inner, &mut dst, ksize)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::box_blur_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::blur(&src.inner, &mut dst, Size::new(ksize, ksize))
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -154,24 +122,14 @@ pub async fn median_blur_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::median_blur_gpu_async(&src.inner, &mut dst, ksize as i32)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::median_blur_gpu_async(&src.inner, &mut dst, ksize as i32)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::median_blur(&src.inner, &mut dst, ksize as i32)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -197,24 +155,14 @@ pub async fn bilateral_filter_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::bilateral_filter_gpu_async(&src.inner, &mut dst, d, sigma_color, sigma_space)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::bilateral_filter_gpu_async(&src.inner, &mut dst, d, sigma_color, sigma_space)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::bilateral_filter(&src.inner, &mut dst, d, sigma_color, sigma_space)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -254,21 +202,12 @@ pub async fn guided_filter_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now, future-proof for GPU)
-    match backend::get_backend() {
-        1 => {
-            // GPU path not yet implemented
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU guided filter not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU guided filter not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
-            // CPU path
+        cpu => {
             guided_filter(&src.inner, &guide, &mut dst, radius, eps)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -307,21 +246,12 @@ pub async fn gabor_filter_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now, future-proof for GPU)
-    match backend::get_backend() {
-        1 => {
-            // GPU path not yet implemented
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU gabor filter not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU gabor filter not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
-            // CPU path
+        cpu => {
             gabor_filter(&gray, &mut dst, ksize, sigma, theta, lambda, gamma, psi)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -349,21 +279,12 @@ pub async fn nlm_denoising_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now, future-proof for GPU)
-    match backend::get_backend() {
-        1 => {
-            // GPU path not yet implemented
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU NLM denoising not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU NLM denoising not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
-            // CPU path
+        cpu => {
             non_local_means_denoising(&src.inner, &mut dst, h as f32, template_window_size, search_window_size)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -391,21 +312,12 @@ pub async fn anisotropic_diffusion_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now, future-proof for GPU)
-    match backend::get_backend() {
-        1 => {
-            // GPU path not yet implemented
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU anisotropic diffusion not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU anisotropic diffusion not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
-            // CPU path
+        cpu => {
             anisotropic_diffusion(&src.inner, &mut dst, iterations as usize, kappa as f32, lambda as f32)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -423,21 +335,12 @@ pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now, future-proof for GPU)
-    match backend::get_backend() {
-        1 => {
-            // GPU path not yet implemented
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU fast NLM denoising not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU fast NLM denoising not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
-            // CPU path
+        cpu => {
             fast_nl_means_denoising(&src.inner, &mut dst, h, template_window_size, search_window_size)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -466,27 +369,19 @@ pub async fn filter2d_wasm(src: &WasmMat, kernel: Vec<f32>, ksize: usize) -> Res
     // Anchor point is typically the center of the kernel
     let anchor = ((ksize / 2) as i32, (ksize / 2) as i32);
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::filter2d_gpu_async(&src.inner, &mut dst, &kernel_mat, anchor)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::filter2d_gpu_async(&src.inner, &mut dst, &kernel_mat, anchor)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU fallback not yet implemented
+        cpu => {
             return Err(JsValue::from_str("CPU filter2D not yet implemented"));
         }
     }
+
+    Ok(WasmMat { inner: dst })
 }
 
 
