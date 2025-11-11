@@ -30,18 +30,26 @@ pub async fn find_contours_wasm(src: &WasmMat, threshold_value: f64) -> Result<W
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw contours on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
 
-    for contour in contours.iter().take(100) { // Limit to 100 contours
-        for i in 0..contour.len() {
-            let p1 = contour[i];
-            let p2 = contour[(i + 1) % contour.len()];
-            let _ = line(&mut result, p1, p2, color, 2);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for find_contours"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw contours on original image
+            let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
+
+            for contour in contours.iter().take(100) { // Limit to 100 contours
+                for i in 0..contour.len() {
+                    let p1 = contour[i];
+                    let p2 = contour[(i + 1) % contour.len()];
+                    let _ = line(&mut result, p1, p2, color, 2);
+                }
+            }
         }
     }
 
@@ -75,16 +83,24 @@ pub async fn bounding_rect_wasm(src: &WasmMat, threshold_value: f64) -> Result<W
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw bounding rectangles
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 0.0, 0.0, 255.0); // Blue
 
-    for contour in contours.iter().take(100) {
-        let rect = bounding_rect(&contour);
-        let _ = rectangle(&mut result, rect, color, 2);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for bounding_rect"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw bounding rectangles
+            let color = Scalar::new(255.0, 0.0, 0.0, 255.0); // Blue
+
+            for contour in contours.iter().take(100) {
+                let rect = bounding_rect(&contour);
+                let _ = rectangle(&mut result, rect, color, 2);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -117,28 +133,35 @@ pub async fn contour_area_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wa
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw contours colored by area
     let mut result = src.inner.clone();
 
-    for contour in contours.iter().take(100) {
-        let area = contour_area(&contour);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for contour_area"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        // Color based on area (larger = more red, smaller = more blue)
-        let normalized_area = (area / 10000.0).min(1.0);
-        let color = Scalar::new(
-            (1.0 - normalized_area) * 255.0,
-            0.0,
-            normalized_area * 255.0,
-            255.0
-        );
+            // Draw contours colored by area
+            for contour in contours.iter().take(100) {
+                let area = contour_area(&contour);
 
-        for i in 0..contour.len() {
-            let p1 = contour[i];
-            let p2 = contour[(i + 1) % contour.len()];
-            let _ = line(&mut result, p1, p2, color, 2);
+                // Color based on area (larger = more red, smaller = more blue)
+                let normalized_area = (area / 10000.0).min(1.0);
+                let color = Scalar::new(
+                    (1.0 - normalized_area) * 255.0,
+                    0.0,
+                    normalized_area * 255.0,
+                    255.0
+                );
+
+                for i in 0..contour.len() {
+                    let p1 = contour[i];
+                    let p2 = contour[(i + 1) % contour.len()];
+                    let _ = line(&mut result, p1, p2, color, 2);
+                }
+            }
         }
     }
 
@@ -172,28 +195,35 @@ pub async fn arc_length_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wasm
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw contours colored by perimeter
     let mut result = src.inner.clone();
 
-    for contour in contours.iter().take(100) {
-        let perimeter = arc_length(&contour, true);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for arc_length"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        // Color based on perimeter
-        let normalized_perimeter = (perimeter / 1000.0).min(1.0);
-        let color = Scalar::new(
-            0.0,
-            normalized_perimeter * 255.0,
-            (1.0 - normalized_perimeter) * 255.0,
-            255.0
-        );
+            // Draw contours colored by perimeter
+            for contour in contours.iter().take(100) {
+                let perimeter = arc_length(&contour, true);
 
-        for i in 0..contour.len() {
-            let p1 = contour[i];
-            let p2 = contour[(i + 1) % contour.len()];
-            let _ = line(&mut result, p1, p2, color, 2);
+                // Color based on perimeter
+                let normalized_perimeter = (perimeter / 1000.0).min(1.0);
+                let color = Scalar::new(
+                    0.0,
+                    normalized_perimeter * 255.0,
+                    (1.0 - normalized_perimeter) * 255.0,
+                    255.0
+                );
+
+                for i in 0..contour.len() {
+                    let p1 = contour[i];
+                    let p2 = contour[(i + 1) % contour.len()];
+                    let _ = line(&mut result, p1, p2, color, 2);
+                }
+            }
         }
     }
 
@@ -227,20 +257,28 @@ pub async fn approx_poly_dp_wasm(src: &WasmMat, threshold_value: f64, epsilon: f
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw approximated polygons
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 255.0, 0.0, 255.0); // Yellow
 
-    for contour in contours.iter().take(100) {
-        let approx = approx_poly_dp(&contour, epsilon, true);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for approx_poly_dp"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        for i in 0..approx.len() {
-            let p1 = approx[i];
-            let p2 = approx[(i + 1) % approx.len()];
-            let _ = line(&mut result, p1, p2, color, 3);
+            // Draw approximated polygons
+            let color = Scalar::new(255.0, 255.0, 0.0, 255.0); // Yellow
+
+            for contour in contours.iter().take(100) {
+                let approx = approx_poly_dp(&contour, epsilon, true);
+
+                for i in 0..approx.len() {
+                    let p1 = approx[i];
+                    let p2 = approx[(i + 1) % approx.len()];
+                    let _ = line(&mut result, p1, p2, color, 3);
+                }
+            }
         }
     }
 
@@ -274,19 +312,27 @@ pub async fn moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw centroids on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
 
-    for contour in contours.iter().take(10) {
-        let m = moments(contour);
-        if m.m00 != 0.0 {
-            let cx = (m.m10 / m.m00) as i32;
-            let cy = (m.m01 / m.m00) as i32;
-            let _ = circle(&mut result, Point::new(cx, cy), 5, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for moments"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw centroids on original image
+            let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+            for contour in contours.iter().take(10) {
+                let m = moments(contour);
+                if m.m00 != 0.0 {
+                    let cx = (m.m10 / m.m00) as i32;
+                    let cy = (m.m01 / m.m00) as i32;
+                    let _ = circle(&mut result, Point::new(cx, cy), 5, color);
+                }
+            }
         }
     }
 
@@ -320,16 +366,24 @@ pub async fn min_enclosing_circle_wasm(src: &WasmMat, threshold_value: f64) -> R
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw minimum enclosing circles
     let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
 
-    for contour in contours.iter().take(10) {
-        let (center, radius) = min_enclosing_circle(contour);
-        let _ = circle(&mut result, center, radius as i32, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for min_enclosing_circle"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw minimum enclosing circles
+            let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+            for contour in contours.iter().take(10) {
+                let (center, radius) = min_enclosing_circle(contour);
+                let _ = circle(&mut result, center, radius as i32, color);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -362,16 +416,24 @@ pub async fn convex_hull_wasm(src: &WasmMat, threshold_value: f64) -> Result<Was
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw convex hulls
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
 
-    for contour in contours.iter().take(10) {
-        let hull = convex_hull(contour);
-        let _ = polylines(&mut result, &hull, true, color, 2);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for convex_hull"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw convex hulls
+            let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
+
+            for contour in contours.iter().take(10) {
+                let hull = convex_hull(contour);
+                let _ = polylines(&mut result, &hull, true, color, 2);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -403,18 +465,26 @@ pub async fn hu_moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wasm
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Compute moments from binary image
-    let m = compute_moments(&binary)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-    let hu = hu_moments(&m);
-
-    // Display first 3 Hu moments
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 255.0, 255.0, 255.0);
 
-    for (i, &h) in hu.iter().take(3).enumerate() {
-        let text = format!("Hu{}: {:.2e}", i + 1, h);
-        let _ = put_text(&mut result, &text, Point::new(10, 30 + i as i32 * 30), 0.6, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for hu_moments"));
+        }
+        cpu => {
+            // Compute moments from binary image
+            let m = compute_moments(&binary)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let hu = hu_moments(&m);
+
+            // Display first 3 Hu moments
+            let color = Scalar::new(255.0, 255.0, 255.0, 255.0);
+
+            for (i, &h) in hu.iter().take(3).enumerate() {
+                let text = format!("Hu{}: {:.2e}", i + 1, h);
+                let _ = put_text(&mut result, &text, Point::new(10, 30 + i as i32 * 30), 0.6, color);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -448,30 +518,37 @@ pub async fn match_shapes_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wa
     threshold(&gray, &mut binary, threshold_value, 255.0, ThresholdType::Binary)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
     let mut result = src.inner.clone();
 
-    // Compare first contour with others using whole binary image moments
-    if contours.len() >= 2 {
-        let ref_moments = compute_moments(&binary)
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for match_shapes"));
+        }
+        cpu => {
+            let contours = find_contours(&binary, crate::imgproc::contours::RetrievalMode::External, crate::imgproc::contours::ChainApproxMode::Simple)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        let _ = polylines(&mut result, &contours[0], true, Scalar::new(0.0, 255.0, 0.0, 255.0), 2);
+            // Compare first contour with others using whole binary image moments
+            if contours.len() >= 2 {
+                let ref_moments = compute_moments(&binary)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        for (i, contour) in contours.iter().skip(1).take(5).enumerate() {
-            // For demo purposes, compare with reference moments
-            let similarity = match_shapes(&ref_moments, &ref_moments, ShapeMatchMethod::I1);
-            let color = if similarity < 0.5 {
-                Scalar::new(0.0, 255.0, 0.0, 255.0)
-            } else {
-                Scalar::new(0.0, 0.0, 255.0, 255.0)
-            };
-            let _ = polylines(&mut result, contour, true, color, 1);
+                let _ = polylines(&mut result, &contours[0], true, Scalar::new(0.0, 255.0, 0.0, 255.0), 2);
 
-            let text = format!("S{}: {:.2}", i + 1, similarity);
-            let _ = put_text(&mut result, &text, Point::new(10, 30 + i as i32 * 25), 0.5, Scalar::new(255.0, 255.0, 255.0, 255.0));
+                for (i, contour) in contours.iter().skip(1).take(5).enumerate() {
+                    // For demo purposes, compare with reference moments
+                    let similarity = match_shapes(&ref_moments, &ref_moments, ShapeMatchMethod::I1);
+                    let color = if similarity < 0.5 {
+                        Scalar::new(0.0, 255.0, 0.0, 255.0)
+                    } else {
+                        Scalar::new(0.0, 0.0, 255.0, 255.0)
+                    };
+                    let _ = polylines(&mut result, contour, true, color, 1);
+
+                    let text = format!("S{}: {:.2}", i + 1, similarity);
+                    let _ = put_text(&mut result, &text, Point::new(10, 30 + i as i32 * 25), 0.5, Scalar::new(255.0, 255.0, 255.0, 255.0));
+                }
+            }
         }
     }
 

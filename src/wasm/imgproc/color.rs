@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 use crate::core::{Mat, MatDepth};
 use crate::core::types::ColorConversionCode;
 use crate::wasm::WasmMat;
+use crate::wasm::backend;
 
 /// Convert to grayscale (GPU-accelerated)
 #[wasm_bindgen(js_name = cvtColorGray)]
@@ -19,9 +20,18 @@ pub async fn cvt_color_gray_wasm(
         ColorConversionCode::RgbToGray
     };
 
-    crate::imgproc::cvt_color_async(&src.inner, &mut dst, code, true)
-        .await
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_gray_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, code)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }
@@ -39,9 +49,18 @@ pub async fn cvt_color_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    cvt_color_async(&src.inner, &mut dst, ColorConversionCode::RgbToHsv, true)
-        .await
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_hsv_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToHsv)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }
@@ -54,8 +73,18 @@ pub async fn cvt_color_lab_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToLab)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_lab_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToLab)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }
@@ -68,8 +97,18 @@ pub async fn cvt_color_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToYCrCb)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_ycrcb_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            cvt_color(&src.inner, &mut dst, ColorConversionCode::BgrToYCrCb)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }
@@ -80,22 +119,18 @@ pub async fn rgb_to_gray_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::rgb_to_gray_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU RGB to Gray failed, falling back to CPU".into());
-                }
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_gray_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToGray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    // CPU fallback
-    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToGray)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -106,22 +141,18 @@ pub async fn rgb_to_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::rgb_to_hsv_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU RGB to HSV failed, falling back to CPU".into());
-                }
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_hsv_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToHsv)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    // CPU fallback
-    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToHsv)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -132,20 +163,18 @@ pub async fn rgb_to_lab_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::rgb_to_lab_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU RGB to Lab failed, falling back to CPU".into());
-                }
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_lab_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToLab)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToLab)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -156,20 +185,18 @@ pub async fn rgb_to_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::rgb_to_ycrcb_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU RGB to YCrCb failed, falling back to CPU".into());
-                }
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::rgb_to_ycrcb_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToYCrCb)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::RgbToYCrCb)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -180,22 +207,18 @@ pub async fn hsv_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::hsv_to_rgb_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU HSV to RGB failed, falling back to CPU".into());
-                }
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::hsv_to_rgb_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::HsvToRgb)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    // CPU fallback
-    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::HsvToRgb)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -206,22 +229,18 @@ pub async fn lab_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::lab_to_rgb_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU Lab to RGB failed, falling back to CPU".into());
-                }
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::lab_to_rgb_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::LabToRgb)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    // CPU fallback
-    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::LabToRgb)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -232,22 +251,18 @@ pub async fn ycrcb_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 3, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::ycrcb_to_rgb_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU YCrCb to RGB failed, falling back to CPU".into());
-                }
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::ycrcb_to_rgb_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::YCrCbToRgb)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    // CPU fallback
-    crate::imgproc::cvt_color(&src.inner, &mut dst, ColorConversionCode::YCrCbToRgb)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }

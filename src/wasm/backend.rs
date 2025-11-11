@@ -5,6 +5,9 @@
 //! or automatically fall back from GPU to CPU when GPU is unavailable.
 
 use std::sync::atomic::{AtomicU8, Ordering};
+use std::future::Future;
+use crate::core::Mat;
+use crate::error::{Error, Result};
 
 /// User-facing backend setting
 #[repr(u8)]
@@ -115,6 +118,54 @@ pub fn get_resolved_backend_name() -> &'static str {
         2 => "cpu",
         _ => "unresolved",
     }
+}
+
+/// Helper function to dispatch operations to GPU or CPU based on backend selection
+///
+/// This eliminates code duplication across WASM operations by centralizing the
+/// backend selection logic, compile-time checks, and error handling.
+///
+/// # Arguments
+/// * `gpu_fn` - Closure that returns a Future for GPU execution
+/// * `cpu_fn` - Closure that executes CPU code
+///
+/// # Example
+/// ```ignore
+/// let mut dst = Mat::new(...)?;
+/// dispatch_backend(
+///     || async { crate::gpu::ops::canny_gpu_async(&src, &mut dst, t1, t2).await },
+///     || crate::imgproc::canny(&src, &mut dst, t1, t2),
+/// ).await?;
+/// ```
+pub async fn dispatch_backend<F, Fut, G>(
+    gpu_fn: F,
+    cpu_fn: G,
+) -> Result<()>
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Result<()>>,
+    G: FnOnce() -> Result<()>,
+{
+    match get_backend() {
+        1 => {
+            // GPU backend selected
+            #[cfg(feature = "gpu")]
+            {
+                gpu_fn().await?;
+            }
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(Error::GpuNotAvailable(
+                    "GPU not compiled into this build. Use setBackend('cpu')".to_string()
+                ));
+            }
+        }
+        _ => {
+            // CPU backend (includes auto-fallback)
+            cpu_fn()?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
