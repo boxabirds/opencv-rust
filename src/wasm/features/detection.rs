@@ -29,17 +29,25 @@ pub async fn harris_corners_wasm(
         src.inner.clone()
     };
 
-    // Detect corners
-    let keypoints = harris_corners(&gray, block_size, ksize, k, threshold)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
 
-    for kp in keypoints {
-        circle(&mut result, kp.pt, 3, color)
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for harris_corners"));
+        }
+        cpu => {
+            // Detect corners
+            let keypoints = harris_corners(&gray, block_size, ksize, k, threshold)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
+
+            for kp in keypoints {
+                circle(&mut result, kp.pt, 3, color)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -70,17 +78,25 @@ pub async fn good_features_to_track_wasm(
         src.inner.clone()
     };
 
-    // Detect corners
-    let keypoints = good_features_to_track(&gray, max_corners, quality_level, min_distance, block_size)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 0.0, 255.0, 255.0); // Red
 
-    for kp in keypoints {
-        circle(&mut result, kp.pt, 5, color)
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for good_features_to_track"));
+        }
+        cpu => {
+            // Detect corners
+            let keypoints = good_features_to_track(&gray, max_corners, quality_level, min_distance, block_size)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 0.0, 255.0, 255.0); // Red
+
+            for kp in keypoints {
+                circle(&mut result, kp.pt, 5, color)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -109,17 +125,25 @@ pub async fn fast_wasm(
         src.inner.clone()
     };
 
-    // Detect keypoints
-    let keypoints = fast(&gray, threshold, nonmax_suppression)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 255.0, 0.0, 255.0); // Cyan
 
-    for kp in keypoints {
-        circle(&mut result, kp.pt, 2, color)
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for fast"));
+        }
+        cpu => {
+            // Detect keypoints
+            let keypoints = fast(&gray, threshold, nonmax_suppression)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 255.0, 0.0, 255.0); // Cyan
+
+            for kp in keypoints {
+                circle(&mut result, kp.pt, 2, color)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -145,18 +169,26 @@ pub async fn sift_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsVa
         src.inner.clone()
     };
 
-    let sift = SIFTF32::new(n_features);
-    let (keypoints, _) = sift.detect_and_compute(&gray)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
 
-    for kp in keypoints.iter() {
-        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
-        let radius = (kp.size / 2.0) as i32;
-        let _ = circle(&mut result, pt, radius, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for sift"));
+        }
+        cpu => {
+            let sift = SIFTF32::new(n_features);
+            let (keypoints, _) = sift.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -182,18 +214,26 @@ pub async fn orb_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsVal
         src.inner.clone()
     };
 
-    let orb = ORB::new(n_features);
-    let (keypoints, _) = orb.detect_and_compute(&gray)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
 
-    for kp in keypoints.iter() {
-        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
-        let radius = (kp.size / 2.0) as i32;
-        let _ = circle(&mut result, pt, radius, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for orb"));
+        }
+        cpu => {
+            let orb = ORB::new(n_features);
+            let (keypoints, _) = orb.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -219,18 +259,26 @@ pub async fn brisk_wasm(src: &WasmMat, threshold: i32) -> Result<WasmMat, JsValu
         src.inner.clone()
     };
 
-    let brisk = BRISK::new(threshold, 3);
-    let (keypoints, _) = brisk.detect_and_compute(&gray)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 255.0, 255.0);
 
-    for kp in keypoints.iter() {
-        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
-        let radius = (kp.size / 2.0) as i32;
-        let _ = circle(&mut result, pt, radius, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for brisk"));
+        }
+        cpu => {
+            let brisk = BRISK::new(threshold, 3);
+            let (keypoints, _) = brisk.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 255.0, 255.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -256,18 +304,26 @@ pub async fn akaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         src.inner.clone()
     };
 
-    let akaze = AKAZE::new();
-    let (keypoints, _) = akaze.detect_and_compute(&gray)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
 
-    for kp in keypoints.iter() {
-        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
-        let radius = (kp.size / 2.0) as i32;
-        let _ = circle(&mut result, pt, radius, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for akaze"));
+        }
+        cpu => {
+            let akaze = AKAZE::new();
+            let (keypoints, _) = akaze.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
@@ -293,18 +349,26 @@ pub async fn kaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         src.inner.clone()
     };
 
-    let kaze = KAZE::new(false, false);
-    let (keypoints, _) = kaze.detect_and_compute(&gray)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Draw keypoints on original image
     let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 0.0, 255.0, 255.0);
 
-    for kp in keypoints.iter() {
-        let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
-        let radius = (kp.size / 2.0) as i32;
-        let _ = circle(&mut result, pt, radius, color);
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not yet implemented for kaze"));
+        }
+        cpu => {
+            let kaze = KAZE::new(false, false);
+            let (keypoints, _) = kaze.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 0.0, 255.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+            }
+        }
     }
 
     Ok(WasmMat { inner: result })
