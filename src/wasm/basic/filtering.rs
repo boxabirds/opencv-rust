@@ -263,3 +263,107 @@ pub async fn gabor_filter_wasm(
 
     Ok(WasmMat { inner: dst })
 }
+
+
+// ===== nlmDenoising =====
+#[wasm_bindgen(js_name = nlmDenoising)]
+pub async fn nlm_denoising_wasm(
+    src: &WasmMat,
+    h: f64,
+    template_window_size: i32,
+    search_window_size: i32,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::non_local_means_denoising;
+
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    non_local_means_denoising(&src.inner, &mut dst, h as f32, template_window_size, search_window_size)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+
+// ===== anisotropicDiffusion =====
+#[wasm_bindgen(js_name = anisotropicDiffusion)]
+pub async fn anisotropic_diffusion_wasm(
+    src: &WasmMat,
+    iterations: i32,
+    kappa: f64,
+    lambda: f64,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::advanced_filter::anisotropic_diffusion;
+
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        src.inner.depth(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    anisotropic_diffusion(&src.inner, &mut dst, iterations as usize, kappa as f32, lambda as f32)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+
+// ===== fastNlMeans =====
+#[wasm_bindgen(js_name = fastNlMeans)]
+pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32, search_window_size: i32) -> Result<WasmMat, JsValue> {
+    use crate::photo::fast_nl_means_denoising;
+
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    fast_nl_means_denoising(&src.inner, &mut dst, h, template_window_size, search_window_size)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
+
+
+// ===== filter2D =====
+#[wasm_bindgen(js_name = filter2D)]
+pub async fn filter2d_wasm(src: &WasmMat, kernel: Vec<f32>, ksize: usize) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Create Mat from kernel data
+    let mut kernel_mat = Mat::new(ksize, ksize, 1, MatDepth::F32)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Convert Vec<f32> to bytes for Mat
+    let kernel_bytes: Vec<u8> = kernel.iter()
+        .flat_map(|&f| f.to_le_bytes())
+        .collect();
+    kernel_mat.data_mut().copy_from_slice(&kernel_bytes);
+
+    // Anchor point is typically the center of the kernel
+    let anchor = ((ksize / 2) as i32, (ksize / 2) as i32);
+
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::filter2d_gpu_async(&src.inner, &mut dst, &kernel_mat, anchor).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU filter2D failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU filter2D failed and CPU fallback not yet implemented"))
+}
+
+

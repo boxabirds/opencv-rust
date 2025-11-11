@@ -24,3 +24,9 @@ pub use geometric::{
     resize_wasm, flip_wasm, rotate_wasm, warp_affine_wasm,
     warp_perspective_wasm, get_rotation_matrix_2d_wasm, remap_wasm
 };
+#[cfg(target_arch = "wasm32")]
+pub use color::{
+    cvt_color_gray_wasm, cvt_color_hsv_wasm, cvt_color_lab_wasm, cvt_color_ycrcb_wasm,
+    rgb_to_gray_wasm, rgb_to_hsv_wasm, rgb_to_lab_wasm, rgb_to_ycrcb_wasm,
+    hsv_to_rgb_wasm, lab_to_rgb_wasm, ycrcb_to_rgb_wasm
+};

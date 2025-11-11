@@ -243,3 +243,57 @@ pub async fn remap_wasm(src: &WasmMat, map_x: Vec<f32>, map_y: Vec<f32>) -> Resu
     // CPU fallback not yet implemented
     Err(JsValue::from_str("GPU remap failed and CPU fallback not yet implemented"))
 }
+
+
+// ===== pyrDown =====
+#[wasm_bindgen(js_name = pyrDown)]
+pub async fn pyr_down_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let dst_width = src.inner.cols() / 2;
+    let dst_height = src.inner.rows() / 2;
+    let mut dst = Mat::new(dst_height, dst_width, src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::pyrdown_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU pyrDown failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU pyrDown failed and CPU fallback not yet implemented"))
+}
+
+
+// ===== pyrUp =====
+#[wasm_bindgen(js_name = pyrUp)]
+pub async fn pyr_up_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
+    let dst_width = src.inner.cols() * 2;
+    let dst_height = src.inner.rows() * 2;
+    let mut dst = Mat::new(dst_height, dst_width, src.inner.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Try GPU first if available
+    #[cfg(feature = "gpu")]
+    {
+        if crate::gpu::gpu_available() {
+            match crate::gpu::ops::pyrup_gpu_async(&src.inner, &mut dst).await {
+                Ok(_) => return Ok(WasmMat { inner: dst }),
+                Err(_) => {
+                    web_sys::console::log_1(&"GPU pyrUp failed, falling back to CPU".into());
+                }
+            }
+        }
+    }
+
+    // CPU fallback not yet implemented
+    Err(JsValue::from_str("GPU pyrUp failed and CPU fallback not yet implemented"))
+}
+
+
