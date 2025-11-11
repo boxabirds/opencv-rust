@@ -116,32 +116,100 @@ await cv.Canny(dst, dst, 50, 150);
 console.log('Canny:', dst.toImageData());
 ```
 
-### Automated Testing (TODO)
+### Bit-Level Verification
 
-Create automated tests comparing outputs:
+**Goal**: Pixel-perfect comparison between opencv.js and opencv-rust outputs
+
+**Test Infrastructure**:
+- `bit_level_tests.js` - Main test harness with pixel comparison
+- `test_runner.html` - Browser-based test interface
+- `tolerances.json` - Acceptable difference thresholds per operation
+- `test_images/` - Standard test images for consistent comparison
+
+**Verification Process**:
+
+1. **Load Test Image**: Use standard test images (checkerboard, gradient, photo)
+2. **Run OpenCV.js**: Execute operation, capture raw pixel data
+3. **Run opencv-rust**: Execute same operation with same parameters
+4. **Bit-Level Compare**:
+   - Compare every pixel channel (R, G, B, A)
+   - Calculate metrics: max diff, mean diff, RMSE, percentage of different pixels
+   - Check against tolerance thresholds
+5. **Report Results**: Pass/fail with detailed statistics
+
+**Comparison Metrics**:
 
 ```javascript
-// tests/opencv_js_parity/compare_outputs.js
-import cv from 'opencv.js';
-import cvRust from './opencv_compat.js';
-
-async function compareGaussianBlur(testImage) {
-  // opencv.js
-  const srcJs = cv.matFromImageData(testImage);
-  const dstJs = new cv.Mat();
-  cv.GaussianBlur(srcJs, dstJs, new cv.Size(5, 5), 1.5);
-  const outputJs = dstJs.data;
-
-  // opencv-rust
-  const srcRust = new cvRust.Mat(0, 0, 0, testImage);
-  const dstRust = new cvRust.Mat();
-  await cvRust.GaussianBlur(srcRust, dstRust, {width: 5, height: 5}, 1.5);
-  const outputRust = dstRust.toImageData().data;
-
-  // Compare (allowing for small numerical differences)
-  const maxDiff = comparePixelArrays(outputJs, outputRust);
-  console.assert(maxDiff < 2, `Max pixel difference: ${maxDiff}`);
+{
+  maxDiff: 2,              // Maximum pixel difference (0-255)
+  meanDiff: 0.15,          // Average difference across all pixels
+  rmse: 0.45,              // Root mean square error
+  differentPixels: 12,     // Count of pixels exceeding tolerance
+  percentDifferent: 0.03,  // Percentage of different pixels
+  tolerance: {
+    maxDiff: 2,            // Threshold for this operation
+    percentDifferent: 1.0  // Max acceptable % different
+  }
 }
+```
+
+**Tolerance Configuration** (`tolerances.json`):
+
+```json
+{
+  "gaussianBlur": {
+    "maxDiff": 1,
+    "percentDifferent": 0.1,
+    "reason": "Rounding differences in floating-point convolution"
+  },
+  "bilateralFilter": {
+    "maxDiff": 3,
+    "percentDifferent": 2.0,
+    "reason": "Edge-preserving filter has higher numerical variance"
+  },
+  "canny": {
+    "maxDiff": 0,
+    "percentDifferent": 0.5,
+    "reason": "Binary output, but hysteresis may differ slightly"
+  },
+  "threshold": {
+    "maxDiff": 0,
+    "percentDifferent": 0,
+    "reason": "Should be bit-perfect for simple threshold"
+  }
+}
+```
+
+**Running Tests**:
+
+```bash
+# In browser (recommended)
+open tests/opencv_js_parity/test_runner.html
+
+# Or via Node.js (if opencv.js supports)
+node tests/opencv_js_parity/bit_level_tests.js
+```
+
+**Example Test Output**:
+
+```
+Testing: gaussianBlur (512x512 image)
+├─ opencv.js:     45.2ms
+├─ opencv-rust:   6.8ms (6.6x faster)
+├─ Max diff:      1 (threshold: 1) ✅
+├─ Mean diff:     0.12 (threshold: 0.5) ✅
+├─ RMSE:          0.34
+├─ Different px:  23 (0.009%) (threshold: 0.1%) ✅
+└─ Result: PASS ✅
+
+Testing: threshold (512x512 image)
+├─ opencv.js:     5.1ms
+├─ opencv-rust:   0.9ms (5.7x faster)
+├─ Max diff:      0 (threshold: 0) ✅
+├─ Mean diff:     0.00 (threshold: 0) ✅
+├─ RMSE:          0.00
+├─ Different px:  0 (0%) (threshold: 0%) ✅
+└─ Result: PASS ✅ (Bit-perfect!)
 ```
 
 ## Performance Comparison
