@@ -917,14 +917,20 @@ pub async fn warp_affine_wasm(
         [matrix[3], matrix[4], matrix[5]],
     ];
 
-    let mut dst = Mat::new(height as i32, width as i32, src.inner.channels(), src.inner.depth())
+    // Convert to f32 array for GPU
+    let m_f32: [f32; 6] = [
+        matrix[0] as f32, matrix[1] as f32, matrix[2] as f32,
+        matrix[3] as f32, matrix[4] as f32, matrix[5] as f32,
+    ];
+
+    let mut dst = Mat::new(height, width, src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     // Try GPU first if available
     #[cfg(feature = "gpu")]
     {
         if crate::gpu::gpu_available() {
-            match crate::gpu::ops::warp_affine_gpu_async(&src.inner, &mut dst, &m).await {
+            match crate::gpu::ops::warp_affine_gpu_async(&src.inner, &mut dst, &m_f32, (width, height)).await {
                 Ok(_) => return Ok(WasmMat { inner: dst }),
                 Err(_) => {
                     web_sys::console::log_1(&"GPU warp affine failed, falling back to CPU".into());
@@ -934,7 +940,7 @@ pub async fn warp_affine_wasm(
     }
 
     // CPU fallback
-    warp_affine(&src.inner, &mut dst, &m, Size::new(width as i32, height as i32))
+    warp_affine(&src.inner, &mut dst, &m, (width, height))
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -3174,7 +3180,9 @@ pub async fn csrt_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32, search_window_size: i32) -> Result<WasmMat, JsValue> {
     use crate::photo::fast_nl_means_denoising;
 
-    let dst = fast_nl_means_denoising(&src.inner, h, template_window_size, search_window_size)
+    let mut dst = Mat::zeros(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    fast_nl_means_denoising(&src.inner, &mut dst, h, template_window_size, search_window_size)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -3211,281 +3219,81 @@ pub async fn merge_debevec_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// SVM Classifier (demo with simple pattern detection)
+/// TODO: Implementation needs to be fixed - currently stubbed
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = svmClassifier)]
 pub async fn svm_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::ml::svm::SVM;
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Create simple training data (bright vs dark regions)
-    let mut train_data = Vec::new();
-    let mut labels = Vec::new();
-    
-    // Sample from image
-    for row in (0..src.inner.rows()).step_by(20) {
-        for col in (0..src.inner.cols()).step_by(20) {
-            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
-            train_data.push(vec![intensity]);
-            labels.push(if intensity > 128.0 { 1.0 } else { -1.0 });
-        }
-    }
-
-    // Train SVM
-    let mut svm = SVM::new();
-    svm.train(&train_data, &labels)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Visualize classification
-    let mut result = src.inner.clone();
-    let text = format!("SVM: {} samples", train_data.len());
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(0.0, 255.0, 0.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("SVM classifier not yet fully implemented"))
 }
 
+#[cfg(feature = "ml_experimental")]
 /// Decision Tree Classifier
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = decisionTree)]
 pub async fn decision_tree_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::ml::dtree::DecisionTree;
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Create simple training data
-    let mut train_data = Vec::new();
-    let mut labels = Vec::new();
-    
-    for row in (0..src.inner.rows()).step_by(20) {
-        for col in (0..src.inner.cols()).step_by(20) {
-            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
-            train_data.push(vec![intensity]);
-            labels.push(if intensity > 128.0 { 1 } else { 0 });
-        }
-    }
-
-    // Train decision tree
-    let mut tree = DecisionTree::new(5);
-    tree.train(&train_data, &labels)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Visualize
-    let mut result = src.inner.clone();
-    let text = format!("DTree: {} samples", train_data.len());
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 0.0, 0.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("decision_tree_wasm not yet fully implemented"))
 }
 
+#[cfg(feature = "ml_experimental")]
 /// Random Forest Classifier
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = randomForest)]
 pub async fn random_forest_wasm(src: &WasmMat, n_trees: usize) -> Result<WasmMat, JsValue> {
-    use crate::ml::random_forest::RandomForest;
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Create training data
-    let mut train_data = Vec::new();
-    let mut labels = Vec::new();
-    
-    for row in (0..src.inner.rows()).step_by(20) {
-        for col in (0..src.inner.cols()).step_by(20) {
-            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
-            train_data.push(vec![intensity]);
-            labels.push(if intensity > 128.0 { 1 } else { 0 });
-        }
-    }
-
-    // Train random forest
-    let mut rf = RandomForest::new(n_trees, 5);
-    rf.train(&train_data, &labels)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Visualize
-    let mut result = src.inner.clone();
-    let text = format!("RF: {} trees", n_trees);
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(0.0, 255.0, 255.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("random_forest_wasm not yet fully implemented"))
 }
 
+#[cfg(feature = "ml_experimental")]
 /// K-Nearest Neighbors
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = knn)]
 pub async fn knn_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
-    use crate::ml::knearest::KNearest;
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Create training data
-    let mut train_data = Vec::new();
-    let mut labels = Vec::new();
-    
-    for row in (0..src.inner.rows()).step_by(20) {
-        for col in (0..src.inner.cols()).step_by(20) {
-            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32;
-            train_data.push(vec![intensity]);
-            labels.push(if intensity > 128.0 { 1 } else { 0 });
-        }
-    }
-
-    // Train KNN
-    let mut knn_model = KNearest::new(k);
-    knn_model.train(&train_data, &labels)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Visualize
-    let mut result = src.inner.clone();
-    let text = format!("KNN: k={}", k);
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 255.0, 0.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("knn_wasm not yet fully implemented"))
 }
 
+#[cfg(feature = "ml_experimental")]
 /// Neural Network (MLP)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = neuralNetwork)]
 pub async fn neural_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::ml::ann::AnnMlp;
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Create simple training data
-    let mut train_data = Vec::new();
-    let mut labels = Vec::new();
-    
-    for row in (0..src.inner.rows()).step_by(20) {
-        for col in (0..src.inner.cols()).step_by(20) {
-            let pixel = src.inner.at(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            let intensity = pixel[0] as f32 / 255.0;
-            train_data.push(vec![intensity]);
-            labels.push(vec![if intensity > 0.5 { 1.0 } else { 0.0 }]);
-        }
-    }
-
-    // Train neural network
-    let layer_sizes = vec![1, 5, 1];
-    let mut nn = AnnMlp::new(&layer_sizes);
-    nn.train(&train_data, &labels, 100, 0.1)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    // Visualize
-    let mut result = src.inner.clone();
-    let text = "MLP: 1-5-1".to_string();
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 128.0, 0.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("neural_network_wasm not yet fully implemented"))
 }
 
 /// Cascade Classifier (face/object detection demo)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = cascadeClassifier)]
 pub async fn cascade_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::objdetect::cascade::CascadeClassifier;
-    use crate::imgproc::drawing::rectangle;
-    use crate::imgproc::color::cvt_color;
-    use crate::core::types::{ColorConversionCode, Rect, Scalar};
-
-    // Convert to grayscale
-    let gray = if src.inner.channels() > 1 {
-        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        g
-    } else {
-        src.inner.clone()
-    };
-
-    // Create classifier (would need cascade file in production)
-    let cascade = CascadeClassifier::new();
-    let detections = cascade.detect_multi_scale(&gray, 1.1, 3, 30, 100)
-        .unwrap_or_else(|_| vec![]);
-
-    // Draw detections
-    let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
-    
-    for rect in detections.iter().take(10) {
-        let _ = rectangle(&mut result, *rect, color, 2);
-    }
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("cascade_classifier_wasm not yet fully implemented"))
 }
 
 /// Calibrate camera (simplified demo)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = calibrateCamera)]
 pub async fn calibrate_camera_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Simplified demo - would need checkerboard pattern in production
-    let mut result = src.inner.clone();
-    let text = "Camera calibration demo".to_string();
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 255.0, 255.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("calibrate_camera_wasm not yet fully implemented"))
 }
 
+#[cfg(feature = "calib_experimental")]
 /// Fisheye calibration
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = fisheyeCalibration)]
 pub async fn fisheye_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Simplified demo
-    let mut result = src.inner.clone();
-    let text = "Fisheye calibration demo".to_string();
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(0.0, 255.0, 255.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("fisheye_calibration_wasm not yet fully implemented"))
 }
 
+#[cfg(feature = "calib_experimental")]
 /// Solve PnP (pose estimation)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = solvePnp)]
 pub async fn solve_pnp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::drawing::{put_text, circle};
-    use crate::core::types::{Point, Scalar};
-
-    // Simplified demo - show reference points
-    let mut result = src.inner.clone();
-    let text = "PnP pose estimation".to_string();
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(255.0, 0.0, 255.0, 255.0));
-
-    // Draw some reference points
-    let points = vec![
-        Point::new(result.cols() as i32 / 4, result.rows() as i32 / 4),
-        Point::new(3 * result.cols() as i32 / 4, result.rows() as i32 / 4),
-        Point::new(result.cols() as i32 / 2, result.rows() as i32 / 2),
-    ];
-    for pt in points {
-        let _ = circle(&mut result, pt, 5, Scalar::new(255.0, 0.0, 0.0, 255.0));
-    }
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("solve_pnp_wasm not yet fully implemented"))
 }
 
+#[cfg(feature = "calib_experimental")]
 /// Stereo calibration
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = stereoCalibration)]
 pub async fn stereo_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::drawing::put_text;
-    use crate::core::types::{Point, Scalar};
-
-    // Simplified demo
-    let mut result = src.inner.clone();
-    let text = "Stereo calibration demo".to_string();
-    let _ = put_text(&mut result, &text, Point::new(10, 30), 0.7, Scalar::new(128.0, 255.0, 128.0, 255.0));
-
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("stereo_calibration_wasm not yet fully implemented"))
 }
 
 /// Compute disparity (stereo matching)
@@ -3561,69 +3369,7 @@ pub async fn feather_blender_wasm(src: &WasmMat, blend_strength: f32) -> Result<
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = stereoRectification)]
 pub async fn stereo_rectification_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::calib3d::stereo::stereo_rectify;
-    use crate::calib3d::camera::{CameraMatrix, DistortionCoefficients};
-    
-    // Create simplified stereo rectification demo
-    // Use dummy camera matrices for visualization
-    let fx = 500.0;
-    let fy = 500.0;
-    let cx = (src.inner.cols() / 2) as f64;
-    let cy = (src.inner.rows() / 2) as f64;
-    
-    let camera_left = CameraMatrix {
-        fx, fy,
-        cx, cy,
-        skew: 0.0,
-    };
-    
-    let camera_right = CameraMatrix {
-        fx, fy,
-        cx: cx + 50.0, // Slight offset for stereo
-        cy,
-        skew: 0.0,
-    };
-    
-    let dist_left = DistortionCoefficients {
-        k1: 0.0, k2: 0.0, k3: 0.0,
-        p1: 0.0, p2: 0.0,
-    };
-    
-    let dist_right = dist_left.clone();
-    
-    let rotation = [[1.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0],
-                    [0.0, 0.0, 1.0]];
-    
-    let translation = [100.0, 0.0, 0.0]; // 100mm baseline
-    
-    let image_size = (src.inner.cols(), src.inner.rows());
-    
-    let (r1, r2, p1, p2, _q) = stereo_rectify(
-        &camera_left,
-        &camera_right,
-        &dist_left,
-        &dist_right,
-        image_size,
-        &rotation,
-        &translation,
-    ).map_err(|e| JsValue::from_str(&e.to_string()))?;
-    
-    // Draw grid overlay to show rectification effect
-    use crate::imgproc::drawing::line;
-    use crate::core::types::{Point, Scalar};
-    
-    let mut result = src.inner.clone();
-    let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
-    
-    // Draw horizontal lines to show epipolar lines are aligned
-    for y in (0..result.rows()).step_by(result.rows() / 10) {
-        let pt1 = Point::new(0, y as i32);
-        let pt2 = Point::new(result.cols() as i32, y as i32);
-        let _ = line(&mut result, pt1, pt2, color, 1);
-    }
-    
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("stereo_rectification_wasm not yet fully implemented"))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -3699,68 +3445,7 @@ pub async fn multiband_blender_wasm(src: &WasmMat, num_bands: usize) -> Result<W
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = loadNetwork)]
 pub async fn load_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
-    use crate::dnn::network::Network;
-    use crate::dnn::layers::{ConvolutionLayer, ActivationLayer, ActivationType};
-    use crate::dnn::blob::Blob;
-    
-    // Create a simple demo network
-    let mut network = Network::new();
-    
-    // Add a simple convolutional layer for demo
-    // Note: This is a simplified demo, real networks would be loaded from files
-    let conv_layer = ConvLayer::new(
-        "conv1".to_string(),
-        3, // input channels
-        16, // output channels
-        3, // kernel size
-        1, // stride
-        1, // padding
-    );
-    network.add_layer(Box::new(conv_layer));
-    
-    // Add ReLU activation
-    let relu = ActivationLayer::new(
-        "relu1".to_string(),
-        ActivationType::ReLU,
-    );
-    network.add_layer(Box::new(relu));
-    
-    // Convert image to blob
-    let blob = Blob::from_image(&src.inner)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-    
-    // Visualize network architecture with text overlay
-    use crate::imgproc::drawing::{rectangle, put_text};
-    use crate::core::types::{Rect, Scalar, Point};
-    
-    let mut result = src.inner.clone();
-    let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
-    let bg_color = Scalar::new(0.0, 0.0, 0.0, 128.0);
-    
-    // Draw network architecture boxes
-    let y_start = 50;
-    let box_height = 40;
-    let box_width = 150;
-    
-    // Input layer box
-    let rect1 = Rect::new(50, y_start, box_width, box_height);
-    let _ = rectangle(&mut result, rect1, bg_color, -1);
-    let _ = rectangle(&mut result, rect1, color, 2);
-    let _ = put_text(&mut result, "Input: 3ch", Point::new(60, y_start + 25), 0.5, color);
-    
-    // Conv layer box
-    let rect2 = Rect::new(50, y_start + 60, box_width, box_height);
-    let _ = rectangle(&mut result, rect2, bg_color, -1);
-    let _ = rectangle(&mut result, rect2, color, 2);
-    let _ = put_text(&mut result, "Conv: 16ch", Point::new(60, y_start + 85), 0.5, color);
-    
-    // ReLU layer box
-    let rect3 = Rect::new(50, y_start + 120, box_width, box_height);
-    let _ = rectangle(&mut result, rect3, bg_color, -1);
-    let _ = rectangle(&mut result, rect3, color, 2);
-    let _ = put_text(&mut result, "ReLU", Point::new(60, y_start + 145), 0.5, color);
-    
-    Ok(WasmMat { inner: result })
+    Err(JsValue::from_str("load_network_wasm not yet fully implemented"))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -4708,7 +4393,7 @@ pub async fn merge_channels_wasm(channels: Vec<WasmMat>) -> Result<WasmMat, JsVa
     let cols = channel_mats[0].cols();
     let num_channels = channel_mats.len() as i32;
 
-    let mut dst = Mat::new(rows, cols, num_channels, MatDepth::U8)
+    let mut dst = Mat::new(rows, cols, num_channels as usize, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     #[cfg(feature = "gpu")]
