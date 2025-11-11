@@ -361,12 +361,12 @@ impl Mat {
             ));
         }
 
-        let num_channels = self.channels;
+        let num_channels = self.channels.min(4);
         for row in 0..self.rows {
             for col in 0..self.cols {
                 let pixel = self.at_mut(row, col)?;
-                for ch in 0..num_channels.min(4) {
-                    pixel[ch] = value.val[ch] as u8;
+                for (ch, &val) in value.val.iter().take(num_channels).enumerate() {
+                    pixel[ch] = val as u8;
                 }
             }
         }

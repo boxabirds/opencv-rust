@@ -106,7 +106,7 @@ fn bgr_to_gray(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
         let channels = src.channels();
 
         dst.data_mut().par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
-            for col in 0..cols {
+            for (col, dst_pixel) in dst_row.iter_mut().enumerate() {
                 let src_idx = (row * cols + col) * channels;
                 let src_data = src.data();
                 let (r, g, b) = if is_bgr {
@@ -117,7 +117,7 @@ fn bgr_to_gray(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 
                 // Using standard RGB to grayscale conversion weights
                 let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
-                dst_row[col] = gray;
+                *dst_pixel = gray;
             }
         });
     }
@@ -162,7 +162,7 @@ fn rgba_to_gray(src: &Mat, dst: &mut Mat, is_bgra: bool) -> Result<()> {
         let channels = src.channels();
 
         dst.data_mut().par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
-            for col in 0..cols {
+            for (col, dst_pixel) in dst_row.iter_mut().enumerate() {
                 let src_idx = (row * cols + col) * channels;
                 let src_data = src.data();
                 let (r, g, b) = if is_bgra {
@@ -172,7 +172,7 @@ fn rgba_to_gray(src: &Mat, dst: &mut Mat, is_bgra: bool) -> Result<()> {
                 };
 
                 let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
-                dst_row[col] = gray;
+                *dst_pixel = gray;
             }
         });
     }
