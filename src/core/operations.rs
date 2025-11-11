@@ -87,7 +87,7 @@ pub fn multiply(src1: &Mat, src2: &Mat, dst: &mut Mat, scale: f64) -> Result<()>
             let pd = dst.at_mut(row, col)?;
 
             for ch in 0..src1.channels() {
-                let val = (p1[ch] as f64 * p2[ch] as f64 * scale).min(255.0).max(0.0);
+                let val = (p1[ch] as f64 * p2[ch] as f64 * scale).clamp(0.0, 255.0);
                 pd[ch] = val as u8;
             }
         }

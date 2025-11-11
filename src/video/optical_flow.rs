@@ -168,8 +168,8 @@ pub fn calc_optical_flow_farneback(
             }
 
             let flow_pixel = flow.at_mut(row, col)?;
-            flow_pixel[0] = ((best_dx + 128).max(0).min(255)) as u8;
-            flow_pixel[1] = ((best_dy + 128).max(0).min(255)) as u8;
+            flow_pixel[0] = (best_dx + 128).clamp(0, 255) as u8;
+            flow_pixel[1] = (best_dy + 128).clamp(0, 255) as u8;
         }
     }
 

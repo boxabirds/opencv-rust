@@ -169,7 +169,7 @@ pub fn guided_filter(
 
             let dst_pixel = dst.at_mut(row, col)?;
             for ch in 0..src.channels() {
-                dst_pixel[ch] = result.max(0.0).min(255.0) as u8;
+                dst_pixel[ch] = result.clamp(0.0, 255.0) as u8;
             }
         }
     }
@@ -660,7 +660,7 @@ pub fn anisotropic_diffusion(
                 let update = lambda * (c_n * grad_n + c_s * grad_s + c_e * grad_e + c_w * grad_w);
                 let new_val = center + update;
 
-                dst.at_mut(row, col)?[0] = new_val.max(0.0).min(255.0) as u8;
+                dst.at_mut(row, col)?[0] = new_val.clamp(0.0, 255.0) as u8;
             }
         }
     }

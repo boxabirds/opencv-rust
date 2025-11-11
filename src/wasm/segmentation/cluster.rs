@@ -107,7 +107,7 @@ pub async fn kmeans_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
             let center = &centers[label % centers.len()];
             let pixel = result.at_mut(row, col).map_err(|e| JsValue::from_str(&e.to_string()))?;
             for ch in 0..channels {
-                pixel[ch] = center[ch].min(255.0).max(0.0) as u8;
+                pixel[ch] = center[ch].clamp(0.0, 255.0) as u8;
             }
         }
     }

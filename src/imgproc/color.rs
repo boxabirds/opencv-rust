@@ -399,9 +399,9 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let b_lab = 200.0 * (fy - fz);
 
             let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = (l * 2.55).min(255.0).max(0.0) as u8;  // L in [0, 255]
-            dst_pixel[1] = ((a + 128.0)).min(255.0).max(0.0) as u8;  // a in [0, 255]
-            dst_pixel[2] = ((b_lab + 128.0)).min(255.0).max(0.0) as u8;  // b in [0, 255]
+            dst_pixel[0] = (l * 2.55).clamp(0.0, 255.0) as u8;  // L in [0, 255]
+            dst_pixel[1] = ((a + 128.0)).clamp(0.0, 255.0) as u8;  // a in [0, 255]
+            dst_pixel[2] = ((b_lab + 128.0)).clamp(0.0, 255.0) as u8;  // b in [0, 255]
         }
     }
 
@@ -441,9 +441,9 @@ fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let b_linear = xn * 0.0557 + yn * -0.2040 + zn * 1.0570;
 
             let gamma = |t: f32| if t > 0.0031308 { 1.055 * t.powf(1.0 / 2.4) - 0.055 } else { 12.92 * t };
-            let r = (gamma(r_linear) * 255.0).min(255.0).max(0.0) as u8;
-            let g = (gamma(g_linear) * 255.0).min(255.0).max(0.0) as u8;
-            let b_rgb = (gamma(b_linear) * 255.0).min(255.0).max(0.0) as u8;
+            let r = (gamma(r_linear) * 255.0).clamp(0.0, 255.0) as u8;
+            let g = (gamma(g_linear) * 255.0).clamp(0.0, 255.0) as u8;
+            let b_rgb = (gamma(b_linear) * 255.0).clamp(0.0, 255.0) as u8;
 
             let dst_pixel = dst.at_mut(row, col)?;
             if is_bgr {
@@ -486,9 +486,9 @@ fn rgb_to_ycrcb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let cb = (b - y) * 0.564 + 128.0;
 
             let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = y.min(255.0).max(0.0) as u8;
-            dst_pixel[1] = cr.min(255.0).max(0.0) as u8;
-            dst_pixel[2] = cb.min(255.0).max(0.0) as u8;
+            dst_pixel[0] = y.clamp(0.0, 255.0) as u8;
+            dst_pixel[1] = cr.clamp(0.0, 255.0) as u8;
+            dst_pixel[2] = cb.clamp(0.0, 255.0) as u8;
         }
     }
 
@@ -519,13 +519,13 @@ fn ycrcb_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 
             let dst_pixel = dst.at_mut(row, col)?;
             if is_bgr {
-                dst_pixel[0] = b.min(255.0).max(0.0) as u8;
-                dst_pixel[1] = g.min(255.0).max(0.0) as u8;
-                dst_pixel[2] = r.min(255.0).max(0.0) as u8;
+                dst_pixel[0] = b.clamp(0.0, 255.0) as u8;
+                dst_pixel[1] = g.clamp(0.0, 255.0) as u8;
+                dst_pixel[2] = r.clamp(0.0, 255.0) as u8;
             } else {
-                dst_pixel[0] = r.min(255.0).max(0.0) as u8;
-                dst_pixel[1] = g.min(255.0).max(0.0) as u8;
-                dst_pixel[2] = b.min(255.0).max(0.0) as u8;
+                dst_pixel[0] = r.clamp(0.0, 255.0) as u8;
+                dst_pixel[1] = g.clamp(0.0, 255.0) as u8;
+                dst_pixel[2] = b.clamp(0.0, 255.0) as u8;
             }
         }
     }
