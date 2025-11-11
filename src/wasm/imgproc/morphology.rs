@@ -26,24 +26,14 @@ pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::erode_gpu_async(&src.inner, &mut dst, ksize)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::erode_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             erode(&src.inner, &mut dst, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -68,24 +58,14 @@ pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> 
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::dilate_gpu_async(&src.inner, &mut dst, ksize)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::dilate_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             dilate(&src.inner, &mut dst, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -110,19 +90,12 @@ pub async fn morphology_opening_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for composite ops, GPU would need special handling)
-    match backend::get_backend() {
-        1 => {
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
+        cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::Open, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -147,19 +120,12 @@ pub async fn morphology_closing_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for composite ops, GPU would need special handling)
-    match backend::get_backend() {
-        1 => {
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
+        cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::Close, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -184,19 +150,12 @@ pub async fn morphology_gradient_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for composite ops, GPU would need special handling)
-    match backend::get_backend() {
-        1 => {
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
+        cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::Gradient, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -221,19 +180,12 @@ pub async fn morphology_top_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now)
-    match backend::get_backend() {
-        1 => {
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
+        cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::TopHat, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -258,19 +210,12 @@ pub async fn morphology_black_hat_wasm(src: &WasmMat, ksize: i32) -> Result<Wasm
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now)
-    match backend::get_backend() {
-        1 => {
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
+        cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::BlackHat, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -290,19 +235,12 @@ pub async fn morphology_tophat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now)
-    match backend::get_backend() {
-        1 => {
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
+        cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::TopHat, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -322,19 +260,12 @@ pub async fn morphology_blackhat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection (CPU-only for now)
-    match backend::get_backend() {
-        1 => {
-            #[cfg(feature = "gpu")]
-            {
-                return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch (CPU-only for now)
+    crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
         }
-        _ => {
+        cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::BlackHat, &kernel)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
