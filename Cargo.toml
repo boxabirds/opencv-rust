@@ -49,6 +49,7 @@ default = ["rayon"]
 gpu = ["wgpu", "pollster", "bytemuck", "futures"]
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys", "web-sys", "console_error_panic_hook", "gpu"]
 wasm-threading = ["wasm", "rayon", "wasm-bindgen-rayon"]
+wasm_modular = []  # New modular WASM structure (experimental)
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false

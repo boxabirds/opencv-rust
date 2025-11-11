@@ -4,7 +4,14 @@
 //! in the browser via WebAssembly.
 
 pub mod backend;
-pub mod core_ops;
+
+// Modular structure (experimental) - enable with: --features wasm_modular
+#[cfg(feature = "wasm_modular")]
+pub mod modular;
+
+// Re-export modular functions when wasm_modular is enabled
+#[cfg(all(target_arch = "wasm32", feature = "wasm_modular"))]
+pub use modular::*;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -13,10 +20,6 @@ use wasm_bindgen::prelude::*;
 use crate::core::{Mat, MatDepth};
 #[cfg(target_arch = "wasm32")]
 use crate::core::types::{Size, InterpolationFlag, ColorConversionCode, ThresholdType};
-
-// Re-export core_ops functions
-#[cfg(target_arch = "wasm32")]
-pub use core_ops::{threshold_wasm, adaptive_threshold_wasm};
 
 /// Initialize the WASM module with panic hooks for better error messages
 #[cfg(target_arch = "wasm32")]
@@ -177,6 +180,7 @@ impl WasmMat {
 }
 
 /// Gaussian blur operation (WASM-compatible, GPU-accelerated, ASYNC)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = gaussianBlur)]
 pub async fn gaussian_blur_wasm(
@@ -265,7 +269,77 @@ pub async fn resize_wasm(
     Ok(WasmMat { inner: dst })
 }
 
-// threshold_wasm moved to src/wasm/core/threshold.rs
+/// Threshold operation (WASM-compatible, GPU-accelerated, ASYNC)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = threshold)]
+pub async fn threshold_wasm(
+    src: &WasmMat,
+    thresh: f64,
+    max_val: f64,
+) -> Result<WasmMat, JsValue> {
+    let mut dst = Mat::new(
+        src.inner.rows(),
+        src.inner.cols(),
+        src.inner.channels(),
+        MatDepth::U8,
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::threshold_gpu_async(
+                    &src.inner,
+                    &mut dst,
+                    thresh as u8,
+                    max_val as u8,
+                ).await
+                .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+
+                return Ok(WasmMat { inner: dst });
+            }
+
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
+            }
+        }
+        _ => {
+            // CPU path
+            // Convert to grayscale if needed
+            let gray = if src.inner.channels() > 1 {
+                let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                crate::imgproc::cvt_color(
+                    &src.inner,
+                    &mut gray,
+                    ColorConversionCode::BgrToGray,
+                )
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                gray
+            } else {
+                src.inner.clone()
+            };
+
+            dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            crate::imgproc::threshold(
+                &gray,
+                &mut dst,
+                thresh,
+                max_val,
+                ThresholdType::Binary,
+            )
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            Ok(WasmMat { inner: dst })
+        }
+    }
+}
 
 /// Canny edge detection (WASM-compatible, GPU-accelerated, ASYNC)
 #[cfg(target_arch = "wasm32")]
@@ -345,6 +419,7 @@ pub fn get_version() -> String {
 // ============================================================================
 
 /// Box blur (WASM-compatible)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = blur)]
 pub async fn blur_wasm(
@@ -372,6 +447,7 @@ pub async fn blur_wasm(
 }
 
 /// Box blur - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = boxBlur)]
 pub async fn box_blur_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -399,6 +475,7 @@ pub async fn box_blur_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue
 }
 
 /// Median blur - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = medianBlur)]
 pub async fn median_blur_wasm(
@@ -434,6 +511,7 @@ pub async fn median_blur_wasm(
 }
 
 /// Bilateral filter - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bilateralFilter)]
 pub async fn bilateral_filter_wasm(
@@ -531,6 +609,7 @@ pub async fn scharr_wasm(
 }
 
 /// Laplacian edge detection (WASM-compatible)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = laplacian)]
 pub async fn laplacian_wasm(
@@ -633,7 +712,47 @@ pub async fn cvt_color_gray_wasm(
     Ok(WasmMat { inner: dst })
 }
 
-// adaptive_threshold_wasm moved to src/wasm/core/threshold.rs
+/// Adaptive threshold (WASM-compatible)
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(js_name = adaptiveThreshold)]
+pub async fn adaptive_threshold_wasm(
+    src: &WasmMat,
+    maxval: f64,
+    block_size: i32,
+    c: f64,
+) -> Result<WasmMat, JsValue> {
+    use crate::imgproc::threshold::AdaptiveThresholdMethod;
+    use crate::core::types::ThresholdType;
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        crate::imgproc::cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
+
+    let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    crate::imgproc::adaptive_threshold_async(
+        &gray,
+        &mut dst,
+        maxval,
+        AdaptiveThresholdMethod::Mean,
+        ThresholdType::Binary,
+        block_size,
+        c,
+        true, // use_gpu=true for WASM
+    )
+    .await
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    Ok(WasmMat { inner: dst })
+}
 
 /// Draw a line on the image
 #[cfg(target_arch = "wasm32")]
@@ -716,6 +835,7 @@ pub async fn draw_circle_wasm(
 }
 
 /// Apply guided filter for edge-preserving smoothing
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = guidedFilter)]
 pub async fn guided_filter_wasm(
@@ -753,6 +873,7 @@ pub async fn guided_filter_wasm(
 }
 
 /// Apply Gabor filter for texture analysis
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = gaborFilter)]
 pub async fn gabor_filter_wasm(
@@ -3950,6 +4071,7 @@ pub async fn add_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue
 }
 
 /// Generic 2D convolution filter - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = filter2D)]
 pub async fn filter2d_wasm(src: &WasmMat, kernel: Vec<f32>, ksize: usize) -> Result<WasmMat, JsValue> {
