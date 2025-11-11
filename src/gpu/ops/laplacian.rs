@@ -1,6 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 use crate::gpu::device::GpuContext;
+use crate::gpu::pipeline_cache::PipelineCache;
 use wgpu;
 use wgpu::util::DeviceExt;
 use bytemuck::{Pod, Zeroable};
@@ -51,12 +52,7 @@ async fn execute_laplacian_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> R
     let width = src.cols() as u32;
     let height = src.rows() as u32;
 
-    let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Laplacian Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/laplacian.wgsl").into()),
-    });
-
-    let input_data = src.data();
+        let input_data = src.data();
     let input_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Input Buffer"),
         contents: input_data,
@@ -78,65 +74,30 @@ async fn execute_laplacian_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> R
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     });
 
-    let bind_group_layout = ctx.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("Laplacian Bind Group Layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ],
-    });
+    // Use cached pipeline if available, otherwise error
+    #[cfg(not(target_arch = "wasm32"))]
+    let (bind_group_layout, compute_pipeline) = {
+        let cached = PipelineCache::get_laplacian_pipeline()
+            .ok_or_else(|| Error::GpuNotAvailable("Pipeline cache not initialized".to_string()))?;
+        (&cached.bind_group_layout, &cached.compute_pipeline)
+    };
 
+    #[cfg(target_arch = "wasm32")]
+    let (bind_group_layout, compute_pipeline) = {
+        PipelineCache::with_laplacian_pipeline(|cached| {
+            (&cached.bind_group_layout, &cached.compute_pipeline)
+        }).ok_or_else(|| Error::GpuNotAvailable("Pipeline cache not initialized".to_string()))?
+    };
+
+    // Create bind group with cached layout
     let bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Laplacian Bind Group"),
-        layout: &bind_group_layout,
+        layout: bind_group_layout,
         entries: &[
             wgpu::BindGroupEntry { binding: 0, resource: input_buffer.as_entire_binding() },
             wgpu::BindGroupEntry { binding: 1, resource: output_buffer.as_entire_binding() },
             wgpu::BindGroupEntry { binding: 2, resource: params_buffer.as_entire_binding() },
         ],
-    });
-
-    let pipeline_layout = ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Laplacian Pipeline Layout"),
-        bind_group_layouts: &[&bind_group_layout],
-        push_constant_ranges: &[],
-    });
-
-    let compute_pipeline = ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("Laplacian Pipeline"),
-        layout: Some(&pipeline_layout),
-        module: &shader,
-        entry_point: Some("main"),
-        compilation_options: Default::default(),
-        cache: None,
     });
 
     let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

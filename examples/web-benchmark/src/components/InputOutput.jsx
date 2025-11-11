@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Upload, Play, Camera } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { imageToImageData } from '../utils/imageUtils';
+import BenchmarkComparison from './BenchmarkComparison';
 
 export default function InputOutput({ onProcess }) {
   const fileInputRef = useRef(null);
@@ -9,8 +10,23 @@ export default function InputOutput({ onProcess }) {
     inputImage,
     outputImage,
     setInputImage,
-    isProcessing
+    isProcessing,
+    selectedDemo,
+    demoParams
   } = useAppStore();
+
+  const [inputImageData, setInputImageData] = useState(null);
+
+  // Convert input image to ImageData for comparison
+  useEffect(() => {
+    if (inputImage && inputImage.dataURL) {
+      imageToImageData(inputImage.dataURL)
+        .then(data => setInputImageData(data))
+        .catch(err => console.error('Failed to convert image:', err));
+    } else {
+      setInputImageData(null);
+    }
+  }, [inputImage]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -117,6 +133,15 @@ export default function InputOutput({ onProcess }) {
           </div>
         </div>
       </div>
+
+      {/* Benchmark Comparison with OpenCV.js */}
+      {inputImageData && outputImage && (
+        <BenchmarkComparison
+          operationName={selectedDemo}
+          imageData={inputImageData}
+          params={demoParams}
+        />
+      )}
     </div>
   );
 }
