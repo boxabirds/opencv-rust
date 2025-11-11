@@ -349,7 +349,7 @@ impl KAZE {
     }
 
     fn compute_main_orientation(&self, step: &EvolutionStep, row: usize, col: usize) -> Result<f32> {
-        let mut hist = vec![0.0f32; 36];
+        let mut hist = [0.0f32; 36];
         let radius = 6;
 
         for dy in -radius..=radius {
