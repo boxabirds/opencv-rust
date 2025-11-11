@@ -272,6 +272,7 @@ pub async fn resize_wasm(
 /// Threshold operation (WASM-compatible, GPU-accelerated, ASYNC)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = threshold)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn threshold_wasm(
     src: &WasmMat,
     thresh: f64,
@@ -344,6 +345,7 @@ pub async fn threshold_wasm(
 /// Canny edge detection (WASM-compatible, GPU-accelerated, ASYNC)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = canny)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn canny_wasm(
     src: &WasmMat,
     threshold1: f64,
@@ -551,6 +553,7 @@ pub async fn bilateral_filter_wasm(
 /// Sobel edge detection (WASM-compatible)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = sobel)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn sobel_wasm(
     src: &WasmMat,
     dx: i32,
@@ -582,6 +585,7 @@ pub async fn sobel_wasm(
 /// Scharr edge detection (WASM-compatible)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = scharr)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn scharr_wasm(
     src: &WasmMat,
     dx: i32,
@@ -640,6 +644,7 @@ pub async fn laplacian_wasm(
 /// Flip image (WASM-compatible)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = flip)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn flip_wasm(
     src: &WasmMat,
     flip_code: i32,
@@ -662,6 +667,7 @@ pub async fn flip_wasm(
 /// Rotate image (WASM-compatible)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = rotate)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn rotate_wasm(
     src: &WasmMat,
     rotate_code: i32,
@@ -693,6 +699,7 @@ pub async fn rotate_wasm(
 /// Convert to grayscale (WASM-compatible)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = cvtColorGray)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn cvt_color_gray_wasm(
     src: &WasmMat,
 ) -> Result<WasmMat, JsValue> {
@@ -758,6 +765,7 @@ pub async fn adaptive_threshold_wasm(
 /// Draw a line on the image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = drawLine)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn draw_line_wasm(
     src: &WasmMat,
     x1: i32,
@@ -786,6 +794,7 @@ pub async fn draw_line_wasm(
 /// Draw a rectangle on the image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = drawRectangle)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn draw_rectangle_wasm(
     src: &WasmMat,
     x: i32,
@@ -813,6 +822,7 @@ pub async fn draw_rectangle_wasm(
 /// Draw a circle on the image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = drawCircle)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn draw_circle_wasm(
     src: &WasmMat,
     center_x: i32,
@@ -913,6 +923,7 @@ pub async fn gabor_filter_wasm(
 /// Apply affine transformation to warp image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = warpAffine)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn warp_affine_wasm(
     src: &WasmMat,
     matrix: Vec<f64>,
@@ -966,6 +977,7 @@ pub async fn warp_affine_wasm(
 /// Detect Harris corners and visualize them
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = harrisCorners)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn harris_corners_wasm(
     src: &WasmMat,
     block_size: i32,
@@ -1008,6 +1020,7 @@ pub async fn harris_corners_wasm(
 /// Detect good features to track and visualize them
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = goodFeaturesToTrack)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn good_features_to_track_wasm(
     src: &WasmMat,
     max_corners: usize,
@@ -1050,6 +1063,7 @@ pub async fn good_features_to_track_wasm(
 /// Detect FAST keypoints and visualize them
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = fast)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn fast_wasm(
     src: &WasmMat,
     threshold: i32,
@@ -1352,6 +1366,7 @@ pub async fn distance_transform_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 /// Non-Local Means denoising
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = nlmDenoising)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn nlm_denoising_wasm(
     src: &WasmMat,
     h: f64,
@@ -1377,6 +1392,7 @@ pub async fn nlm_denoising_wasm(
 /// Hough Lines detection - visualize on image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = houghLines)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn hough_lines_wasm(
     src: &WasmMat,
     threshold: i32,
@@ -1423,6 +1439,7 @@ pub async fn hough_lines_wasm(
 /// Hough Lines P (probabilistic) - visualize on image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = houghLinesP)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn hough_lines_p_wasm(
     src: &WasmMat,
     threshold: i32,
@@ -1462,6 +1479,7 @@ pub async fn hough_lines_p_wasm(
 /// Hough Circles - visualize on image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = houghCircles)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn hough_circles_wasm(
     src: &WasmMat,
     min_dist: f64,
@@ -1503,6 +1521,7 @@ pub async fn hough_circles_wasm(
 /// Find and draw contours
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = findContours)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn find_contours_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::find_contours;
     use crate::imgproc::threshold::threshold;
@@ -1548,6 +1567,7 @@ pub async fn find_contours_wasm(src: &WasmMat, threshold_value: f64) -> Result<W
 /// Find contours and draw bounding rectangles
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = boundingRect)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn bounding_rect_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::{find_contours, bounding_rect};
     use crate::imgproc::threshold::threshold;
@@ -1590,6 +1610,7 @@ pub async fn bounding_rect_wasm(src: &WasmMat, threshold_value: f64) -> Result<W
 /// Calculate histogram (returns visual representation)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = calcHistogram)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn calc_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::imgproc::histogram::calc_hist;
     use crate::imgproc::drawing::rectangle;
@@ -1656,6 +1677,7 @@ pub async fn calc_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Detect ArUco markers and visualize
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = detectAruco)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn detect_aruco_wasm(src: &WasmMat, dict_id: i32) -> Result<WasmMat, JsValue> {
     use crate::objdetect::aruco::{ArucoDetector, ArucoDictionary};
     use crate::imgproc::drawing::{line, circle};
@@ -1706,6 +1728,7 @@ pub async fn detect_aruco_wasm(src: &WasmMat, dict_id: i32) -> Result<WasmMat, J
 /// Detect QR codes and visualize
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = detectQR)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn detect_qr_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::objdetect::qr_detector::QRCodeDetector;
     use crate::imgproc::drawing::line;
@@ -1749,6 +1772,7 @@ pub async fn detect_qr_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Contour area visualization
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = contourArea)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn contour_area_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::{find_contours, contour_area};
     use crate::imgproc::threshold::threshold;
@@ -1804,6 +1828,7 @@ pub async fn contour_area_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wa
 /// Arc length visualization
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = arcLength)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn arc_length_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::{find_contours, arc_length};
     use crate::imgproc::threshold::threshold;
@@ -1859,6 +1884,7 @@ pub async fn arc_length_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wasm
 /// Approximate polygon
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = approxPolyDP)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn approx_poly_dp_wasm(src: &WasmMat, threshold_value: f64, epsilon: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::{find_contours, approx_poly_dp};
     use crate::imgproc::threshold::threshold;
@@ -1908,6 +1934,7 @@ pub async fn approx_poly_dp_wasm(src: &WasmMat, threshold_value: f64, epsilon: f
 /// Anisotropic diffusion - edge-preserving noise reduction
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = anisotropicDiffusion)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn anisotropic_diffusion_wasm(
     src: &WasmMat,
     iterations: i32,
@@ -1997,6 +2024,7 @@ pub async fn warp_perspective_wasm(
 /// Get rotation matrix 2D and apply rotation
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = getRotationMatrix2D)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn get_rotation_matrix_2d_wasm(
     src: &WasmMat,
     center_x: f64,
@@ -2023,6 +2051,7 @@ pub async fn get_rotation_matrix_2d_wasm(
 /// Normalize histogram (returns visualization)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = normalizeHistogram)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn normalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::imgproc::histogram::{calc_hist, normalize_hist};
     use crate::imgproc::color::cvt_color;
@@ -2083,6 +2112,7 @@ pub async fn normalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue>
 /// Compare histograms (returns similarity score)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = compareHistograms)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn compare_histograms_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<f64, JsValue> {
     use crate::imgproc::histogram::{calc_hist, compare_hist, HistCompMethod};
     use crate::imgproc::color::cvt_color;
@@ -2124,6 +2154,7 @@ pub async fn compare_histograms_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<f
 /// Back projection
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = backProjection)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn back_projection_wasm(src: &WasmMat, model: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::imgproc::histogram::{calc_back_project, calc_hist};
     use crate::imgproc::color::cvt_color;
@@ -2166,6 +2197,7 @@ pub async fn back_projection_wasm(src: &WasmMat, model: &WasmMat) -> Result<Wasm
 /// Moments - compute contour moments (visualize centroid)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = moments)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::{find_contours, moments};
     use crate::imgproc::threshold::threshold;
@@ -2212,6 +2244,7 @@ pub async fn moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat
 /// Watershed segmentation
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = watershed)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn watershed_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::imgproc::advanced_filter::watershed;
     use crate::imgproc::color::cvt_color;
@@ -2276,6 +2309,7 @@ pub async fn watershed_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// SIFT feature detection and visualization
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = sift)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn sift_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
     use crate::features2d::SIFTF32;
     use crate::imgproc::color::cvt_color;
@@ -2314,6 +2348,7 @@ pub async fn sift_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsVa
 /// ORB feature detection and visualization
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = orb)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn orb_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
     use crate::features2d::ORB;
     use crate::imgproc::color::cvt_color;
@@ -2352,6 +2387,7 @@ pub async fn orb_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsVal
 /// BRISK feature detection and visualization
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = brisk)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn brisk_wasm(src: &WasmMat, threshold: i32) -> Result<WasmMat, JsValue> {
     use crate::features2d::BRISK;
     use crate::imgproc::color::cvt_color;
@@ -2390,6 +2426,7 @@ pub async fn brisk_wasm(src: &WasmMat, threshold: i32) -> Result<WasmMat, JsValu
 /// AKAZE feature detection and visualization
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = akaze)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn akaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::features2d::AKAZE;
     use crate::imgproc::color::cvt_color;
@@ -2428,6 +2465,7 @@ pub async fn akaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// KAZE feature detection and visualization
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = kaze)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn kaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::features2d::KAZE;
     use crate::imgproc::color::cvt_color;
@@ -2468,6 +2506,7 @@ pub async fn kaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Laplacian of Gaussian (LoG) blob detection
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = logFilter)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn log_filter_wasm(src: &WasmMat, ksize: i32, sigma: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::advanced_filter::laplacian_of_gaussian;
     use crate::imgproc::color::cvt_color;
@@ -2548,6 +2587,7 @@ pub async fn draw_ellipse_wasm(src: &WasmMat, cx: i32, cy: i32, width: i32, heig
 /// Draw polylines on image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = drawPolylines)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn draw_polylines_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::imgproc::drawing::polylines;
     use crate::core::types::{Point, Scalar};
@@ -2574,6 +2614,7 @@ pub async fn draw_polylines_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Put text on image
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = putText)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn put_text_wasm(src: &WasmMat, text: String, x: i32, y: i32, font_scale: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::drawing::put_text;
     use crate::core::types::{Point, Scalar};
@@ -2591,6 +2632,7 @@ pub async fn put_text_wasm(src: &WasmMat, text: String, x: i32, y: i32, font_sca
 /// Compute minimum enclosing circle of contours
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = minEnclosingCircle)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn min_enclosing_circle_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::find_contours;
     use crate::imgproc::threshold::threshold;
@@ -2633,6 +2675,7 @@ pub async fn min_enclosing_circle_wasm(src: &WasmMat, threshold_value: f64) -> R
 /// Compute convex hull of contours
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = convexHull)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn convex_hull_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::find_contours;
     use crate::imgproc::threshold::threshold;
@@ -2675,6 +2718,7 @@ pub async fn convex_hull_wasm(src: &WasmMat, threshold_value: f64) -> Result<Was
 /// Compute Hu moments of contours
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = huMoments)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn hu_moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::threshold::threshold;
     use crate::imgproc::color::cvt_color;
@@ -2718,6 +2762,7 @@ pub async fn hu_moments_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wasm
 /// Inpaint - fill missing regions
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = inpaint)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn inpaint_wasm(src: &WasmMat, radius: i32) -> Result<WasmMat, JsValue> {
     use crate::photo::inpaint;
 
@@ -2752,6 +2797,7 @@ pub async fn inpaint_wasm(src: &WasmMat, radius: i32) -> Result<WasmMat, JsValue
 /// K-means clustering
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = kmeans)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn kmeans_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
     use crate::ml::kmeans::{kmeans, KMeansFlags};
 
@@ -2800,6 +2846,7 @@ pub async fn kmeans_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
 /// Tonemap Drago for HDR images
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = tonemapDrago)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn tonemap_drago_wasm(src: &WasmMat, bias: f64) -> Result<WasmMat, JsValue> {
     use crate::photo::hdr::TonemapDrago;
 
@@ -2813,6 +2860,7 @@ pub async fn tonemap_drago_wasm(src: &WasmMat, bias: f64) -> Result<WasmMat, JsV
 /// Tonemap Reinhard for HDR images
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = tonemapReinhard)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn tonemap_reinhard_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::photo::hdr::TonemapReinhard;
 
@@ -2826,6 +2874,7 @@ pub async fn tonemap_reinhard_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Match shapes using Hu moments
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = matchShapes)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn match_shapes_wasm(src: &WasmMat, threshold_value: f64) -> Result<WasmMat, JsValue> {
     use crate::imgproc::contours::find_contours;
     use crate::imgproc::threshold::threshold;
@@ -2884,6 +2933,7 @@ pub async fn match_shapes_wasm(src: &WasmMat, threshold_value: f64) -> Result<Wa
 /// Find homography between matched points
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = findHomography)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn find_homography_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
     use crate::features2d::SIFTF32;
     use crate::imgproc::color::cvt_color;
@@ -2920,6 +2970,7 @@ pub async fn find_homography_wasm(src: &WasmMat, n_features: usize) -> Result<Wa
 /// Brute force descriptor matcher (simplified - shows keypoint detection)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bruteForceMatcher)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn brute_force_matcher_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsValue> {
     use crate::features2d::SIFTF32;
     use crate::imgproc::color::cvt_color;
@@ -2978,6 +3029,7 @@ pub async fn brute_force_matcher_wasm(src: &WasmMat, n_features: usize) -> Resul
 /// HOG (Histogram of Oriented Gradients) descriptor
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = hogDescriptor)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn hog_descriptor_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::objdetect::hog::HOGDescriptor;
     use crate::imgproc::color::cvt_color;
@@ -3017,6 +3069,7 @@ pub async fn hog_descriptor_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Background subtractor MOG2
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bgSubtractorMog2)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn bg_subtractor_mog2_wasm(src: &WasmMat, learning_rate: f64) -> Result<WasmMat, JsValue> {
     use crate::video::background_subtraction::BackgroundSubtractorMOG2;
 
@@ -3033,6 +3086,7 @@ pub async fn bg_subtractor_mog2_wasm(src: &WasmMat, learning_rate: f64) -> Resul
 /// Background subtractor KNN
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bgSubtractorKnn)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn bg_subtractor_knn_wasm(src: &WasmMat, learning_rate: f64) -> Result<WasmMat, JsValue> {
     use crate::video::background_subtraction::BackgroundSubtractorKNN;
 
@@ -3049,6 +3103,7 @@ pub async fn bg_subtractor_knn_wasm(src: &WasmMat, learning_rate: f64) -> Result
 /// Farneback dense optical flow
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = farnebackOpticalFlow)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn farneback_optical_flow_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::video::optical_flow::calc_optical_flow_farneback;
     use crate::imgproc::color::cvt_color;
@@ -3100,6 +3155,7 @@ pub async fn farneback_optical_flow_wasm(src: &WasmMat) -> Result<WasmMat, JsVal
 /// MeanShift object tracking
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = meanshiftTracker)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn meanshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::video::tracking::MeanShiftTracker;
     use crate::imgproc::drawing::rectangle;
@@ -3125,6 +3181,7 @@ pub async fn meanshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// CAMShift tracking
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = camshiftTracker)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn camshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::video::tracking::CamShiftTracker;
     use crate::imgproc::drawing::rectangle;
@@ -3150,6 +3207,7 @@ pub async fn camshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// MOSSE tracker
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = mosseTracker)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn mosse_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::video::advanced_tracking::MOSSETracker;
     use crate::imgproc::drawing::rectangle;
@@ -3178,6 +3236,7 @@ pub async fn mosse_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// CSRT tracker
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = csrtTracker)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn csrt_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::video::advanced_tracking::CSRTTracker;
     use crate::imgproc::drawing::rectangle;
@@ -3206,6 +3265,7 @@ pub async fn csrt_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Fast NL Means denoising
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = fastNlMeans)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32, search_window_size: i32) -> Result<WasmMat, JsValue> {
     use crate::photo::fast_nl_means_denoising;
 
@@ -3220,6 +3280,7 @@ pub async fn fast_nl_means_wasm(src: &WasmMat, h: f32, template_window_size: i32
 /// Super resolution
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = superResolution)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn super_resolution_wasm(src: &WasmMat, scale: f32) -> Result<WasmMat, JsValue> {
     use crate::photo::super_resolution::SuperResolutionBicubic;
 
@@ -3233,6 +3294,7 @@ pub async fn super_resolution_wasm(src: &WasmMat, scale: f32) -> Result<WasmMat,
 /// Merge Debevec (HDR)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = mergeDebevec)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn merge_debevec_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::photo::hdr::MergeDebevec;
 
@@ -3251,6 +3313,7 @@ pub async fn merge_debevec_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// TODO: Implementation needs to be fixed - currently stubbed
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = svmClassifier)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn svm_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("SVM classifier not yet fully implemented"))
 }
@@ -3259,6 +3322,7 @@ pub async fn svm_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Decision Tree Classifier
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = decisionTree)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn decision_tree_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("decision_tree_wasm not yet fully implemented"))
 }
@@ -3267,6 +3331,7 @@ pub async fn decision_tree_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Random Forest Classifier
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = randomForest)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn random_forest_wasm(src: &WasmMat, n_trees: usize) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("random_forest_wasm not yet fully implemented"))
 }
@@ -3275,6 +3340,7 @@ pub async fn random_forest_wasm(src: &WasmMat, n_trees: usize) -> Result<WasmMat
 /// K-Nearest Neighbors
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = knn)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn knn_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("knn_wasm not yet fully implemented"))
 }
@@ -3283,6 +3349,7 @@ pub async fn knn_wasm(src: &WasmMat, k: usize) -> Result<WasmMat, JsValue> {
 /// Neural Network (MLP)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = neuralNetwork)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn neural_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("neural_network_wasm not yet fully implemented"))
 }
@@ -3290,6 +3357,7 @@ pub async fn neural_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Cascade Classifier (face/object detection demo)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = cascadeClassifier)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn cascade_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("cascade_classifier_wasm not yet fully implemented"))
 }
@@ -3297,6 +3365,7 @@ pub async fn cascade_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 /// Calibrate camera (simplified demo)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = calibrateCamera)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn calibrate_camera_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("calibrate_camera_wasm not yet fully implemented"))
 }
@@ -3305,6 +3374,7 @@ pub async fn calibrate_camera_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Fisheye calibration
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = fisheyeCalibration)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn fisheye_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("fisheye_calibration_wasm not yet fully implemented"))
 }
@@ -3313,6 +3383,7 @@ pub async fn fisheye_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue>
 /// Solve PnP (pose estimation)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = solvePnp)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn solve_pnp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("solve_pnp_wasm not yet fully implemented"))
 }
@@ -3321,6 +3392,7 @@ pub async fn solve_pnp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Stereo calibration
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = stereoCalibration)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn stereo_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("stereo_calibration_wasm not yet fully implemented"))
 }
@@ -3328,6 +3400,7 @@ pub async fn stereo_calibration_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 /// Compute disparity (stereo matching)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = computeDisparity)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn compute_disparity_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::imgproc::color::cvt_color;
     use crate::core::types::ColorConversionCode;
@@ -3360,6 +3433,7 @@ pub async fn compute_disparity_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Panorama stitcher (simplified demo)
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = panoramaStitcher)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn panorama_stitcher_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::imgproc::drawing::put_text;
     use crate::core::types::{Point, Scalar};
@@ -3375,6 +3449,7 @@ pub async fn panorama_stitcher_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Feather blender for stitching
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = featherBlender)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn feather_blender_wasm(src: &WasmMat, blend_strength: f32) -> Result<WasmMat, JsValue> {
     // Simple alpha blending demo
     let mut result = src.inner.clone();
@@ -3397,12 +3472,14 @@ pub async fn feather_blender_wasm(src: &WasmMat, blend_strength: f32) -> Result<
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = stereoRectification)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn stereo_rectification_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("stereo_rectification_wasm not yet fully implemented"))
 }
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = multibandBlender)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn multiband_blender_wasm(src: &WasmMat, num_bands: usize) -> Result<WasmMat, JsValue> {
     use crate::stitching::blending::MultiBandBlender;
     use crate::core::{Mat, MatDepth};
@@ -3473,12 +3550,14 @@ pub async fn multiband_blender_wasm(src: &WasmMat, num_bands: usize) -> Result<W
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = loadNetwork)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn load_network_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     Err(JsValue::from_str("load_network_wasm not yet fully implemented"))
 }
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = blobFromImage)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn blob_from_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::dnn::blob::Blob;
     use crate::imgproc::drawing::{rectangle, put_text};
@@ -3757,6 +3836,7 @@ pub async fn pyr_down_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Pyramid up (upscale image) - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = pyrUp)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn pyr_up_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let dst_width = src.inner.cols() * 2;
     let dst_height = src.inner.rows() * 2;
@@ -3783,6 +3863,7 @@ pub async fn pyr_up_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Convert scale (scale and shift pixel values) - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = convertScale)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn convert_scale_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3807,6 +3888,7 @@ pub async fn convert_scale_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<
 /// Add weighted (blend two images) - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = addWeighted)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn add_weighted_wasm(src1: &WasmMat, alpha: f64, src2: &WasmMat, beta: f64, gamma: f64) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3838,6 +3920,7 @@ pub async fn add_weighted_wasm(src1: &WasmMat, alpha: f64, src2: &WasmMat, beta:
 /// Gradient magnitude - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = gradientMagnitude)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn gradient_magnitude_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3862,6 +3945,7 @@ pub async fn gradient_magnitude_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 /// Integral image - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = integralImage)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn integral_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3886,6 +3970,7 @@ pub async fn integral_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Bitwise NOT - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bitwiseNot)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn bitwise_not_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3913,6 +3998,7 @@ pub async fn bitwise_not_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Bitwise AND - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bitwiseAnd)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn bitwise_and_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3940,6 +4026,7 @@ pub async fn bitwise_and_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat,
 /// Bitwise OR - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bitwiseOr)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn bitwise_or_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3967,6 +4054,7 @@ pub async fn bitwise_or_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, 
 /// Bitwise XOR - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = bitwiseXor)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn bitwise_xor_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -3991,6 +4079,7 @@ pub async fn bitwise_xor_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat,
 /// Absolute difference - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = absdiff)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn absdiff_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4018,6 +4107,7 @@ pub async fn absdiff_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsV
 /// Element-wise minimum - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = min)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn min_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4042,6 +4132,7 @@ pub async fn min_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue
 /// Element-wise maximum - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = max)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn max_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4066,6 +4157,7 @@ pub async fn max_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue
 /// Element-wise addition - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = add)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn add_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4131,6 +4223,7 @@ pub async fn filter2d_wasm(src: &WasmMat, kernel: Vec<f32>, ksize: usize) -> Res
 /// In range (color/value range masking) - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = inRange)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn in_range_wasm(src: &WasmMat, lower_r: u8, lower_g: u8, lower_b: u8, upper_r: u8, upper_g: u8, upper_b: u8) -> Result<WasmMat, JsValue> {
     use crate::core::types::Scalar;
 
@@ -4162,6 +4255,7 @@ pub async fn in_range_wasm(src: &WasmMat, lower_r: u8, lower_g: u8, lower_b: u8,
 /// Remap (generic pixel remapping) - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = remap)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn remap_wasm(src: &WasmMat, map_x: Vec<f32>, map_y: Vec<f32>) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4203,6 +4297,7 @@ pub async fn remap_wasm(src: &WasmMat, map_x: Vec<f32>, map_y: Vec<f32>) -> Resu
 /// Element-wise power - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = pow)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn pow_wasm(src: &WasmMat, power: f64) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4227,6 +4322,7 @@ pub async fn pow_wasm(src: &WasmMat, power: f64) -> Result<WasmMat, JsValue> {
 /// Element-wise subtract - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = subtract)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn subtract_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4252,6 +4348,7 @@ pub async fn subtract_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<WasmMat, Js
 /// Element-wise multiply - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = multiply)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn multiply_wasm(src1: &WasmMat, src2: &WasmMat, scale: f64) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src1.inner.rows(), src1.inner.cols(), src1.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4277,6 +4374,7 @@ pub async fn multiply_wasm(src1: &WasmMat, src2: &WasmMat, scale: f64) -> Result
 /// Element-wise exponential - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = exp)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn exp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4299,6 +4397,7 @@ pub async fn exp_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Element-wise logarithm - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = log)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn log_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4321,6 +4420,7 @@ pub async fn log_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Element-wise square root - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = sqrt)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn sqrt_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4343,6 +4443,7 @@ pub async fn sqrt_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 /// Lookup table transform - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = lut)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn lut_wasm(src: &WasmMat, table: Vec<u8>) -> Result<WasmMat, JsValue> {
     if table.len() != 256 {
         return Err(JsValue::from_str("LUT table must have exactly 256 entries"));
@@ -4373,6 +4474,7 @@ pub async fn lut_wasm(src: &WasmMat, table: Vec<u8>) -> Result<WasmMat, JsValue>
 /// Normalize image - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = normalize)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn normalize_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -4395,6 +4497,7 @@ pub async fn normalize_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<Wasm
 /// Split multi-channel image into separate channels - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = splitChannels)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn split_channels_wasm(src: &WasmMat) -> Result<Vec<WasmMat>, JsValue> {
     #[cfg(feature = "gpu")]
     {
@@ -4420,6 +4523,7 @@ pub async fn split_channels_wasm(src: &WasmMat) -> Result<Vec<WasmMat>, JsValue>
 /// Merge separate channels into multi-channel image - GPU-accelerated
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = mergeChannels)]
+#[cfg(not(feature = "wasm_modular"))]
 pub async fn merge_channels_wasm(channels: Vec<WasmMat>) -> Result<WasmMat, JsValue> {
     if channels.is_empty() {
         return Err(JsValue::from_str("At least one channel required"));
