@@ -141,7 +141,7 @@ pub fn adaptive_threshold(
         let src_data = src.data();
 
         dst_data.par_chunks_mut(cols).enumerate().for_each(|(row, dst_row)| {
-            for col in 0..cols {
+            for (col, dst_pixel) in dst_row.iter_mut().enumerate() {
                 let mut sum = 0u32;
                 let mut count = 0u32;
 
@@ -168,7 +168,7 @@ pub fn adaptive_threshold(
                 let src_idx = row * cols + col;
                 let value = src_data[src_idx];
 
-                dst_row[col] = match thresh_type {
+                *dst_pixel = match thresh_type {
                     ThresholdType::Binary => {
                         if value as f64 > local_thresh {
                             maxval

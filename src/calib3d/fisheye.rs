@@ -3,7 +3,6 @@ use crate::error::{Error, Result};
 
 /// Fisheye camera calibration and distortion model
 /// Uses the equidistant distortion model (Kannala-Brandt)
-
 /// Fisheye camera calibration flags
 #[derive(Debug, Clone, Copy)]
 pub enum FisheyeCalibFlag {

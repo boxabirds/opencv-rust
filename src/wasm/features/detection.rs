@@ -33,9 +33,20 @@ pub async fn harris_corners_wasm(
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for harris_corners"));
+            // Complex feature detection uses CPU implementation
+            // Detect corners
+            let keypoints = harris_corners(&gray, block_size, ksize, k, threshold)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 255.0, 0.0, 255.0); // Green
+
+            for kp in keypoints {
+                circle(&mut result, kp.pt, 3, color)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                    }
         }
-        cpu => {
+cpu => {
             // Detect corners
             let keypoints = harris_corners(&gray, block_size, ksize, k, threshold)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -82,9 +93,20 @@ pub async fn good_features_to_track_wasm(
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for good_features_to_track"));
+            // Complex feature detection uses CPU implementation
+            // Detect corners
+            let keypoints = good_features_to_track(&gray, max_corners, quality_level, min_distance, block_size)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 0.0, 255.0, 255.0); // Red
+
+            for kp in keypoints {
+                circle(&mut result, kp.pt, 5, color)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                    }
         }
-        cpu => {
+cpu => {
             // Detect corners
             let keypoints = good_features_to_track(&gray, max_corners, quality_level, min_distance, block_size)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -129,9 +151,20 @@ pub async fn fast_wasm(
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for fast"));
+            // Complex feature detection uses CPU implementation
+            // Detect keypoints
+            let keypoints = fast(&gray, threshold, nonmax_suppression)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 255.0, 0.0, 255.0); // Cyan
+
+            for kp in keypoints {
+                circle(&mut result, kp.pt, 2, color)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                    }
         }
-        cpu => {
+cpu => {
             // Detect keypoints
             let keypoints = fast(&gray, threshold, nonmax_suppression)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -173,9 +206,21 @@ pub async fn sift_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsVa
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for sift"));
+            // Complex feature detection uses CPU implementation
+            let sift = SIFTF32::new(n_features);
+            let (keypoints, _) = sift.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 255.0, 0.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+                    }
         }
-        cpu => {
+cpu => {
             let sift = SIFTF32::new(n_features);
             let (keypoints, _) = sift.detect_and_compute(&gray)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -218,9 +263,21 @@ pub async fn orb_wasm(src: &WasmMat, n_features: usize) -> Result<WasmMat, JsVal
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for orb"));
+            // Complex feature detection uses CPU implementation
+            let orb = ORB::new(n_features);
+            let (keypoints, _) = orb.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 0.0, 0.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+                    }
         }
-        cpu => {
+cpu => {
             let orb = ORB::new(n_features);
             let (keypoints, _) = orb.detect_and_compute(&gray)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -263,9 +320,21 @@ pub async fn brisk_wasm(src: &WasmMat, threshold: i32) -> Result<WasmMat, JsValu
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for brisk"));
+            // Complex feature detection uses CPU implementation
+            let brisk = BRISK::new(threshold, 3);
+            let (keypoints, _) = brisk.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(0.0, 255.0, 255.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+                    }
         }
-        cpu => {
+cpu => {
             let brisk = BRISK::new(threshold, 3);
             let (keypoints, _) = brisk.detect_and_compute(&gray)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -308,9 +377,21 @@ pub async fn akaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for akaze"));
+            // Complex feature detection uses CPU implementation
+            let akaze = AKAZE::new();
+            let (keypoints, _) = akaze.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+                    }
         }
-        cpu => {
+cpu => {
             let akaze = AKAZE::new();
             let (keypoints, _) = akaze.detect_and_compute(&gray)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -353,9 +434,21 @@ pub async fn kaze_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for kaze"));
+            // Complex feature detection uses CPU implementation
+            let kaze = KAZE::new(false, false);
+            let (keypoints, _) = kaze.detect_and_compute(&gray)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // Draw keypoints on original image
+            let color = Scalar::new(255.0, 0.0, 255.0, 255.0);
+
+            for kp in keypoints.iter() {
+                let pt = Point::new(kp.pt.x as i32, kp.pt.y as i32);
+                let radius = (kp.size / 2.0) as i32;
+                let _ = circle(&mut result, pt, radius, color);
+                    }
         }
-        cpu => {
+cpu => {
             let kaze = KAZE::new(false, false);
             let (keypoints, _) = kaze.detect_and_compute(&gray)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;

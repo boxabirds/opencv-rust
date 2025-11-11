@@ -30,7 +30,9 @@ pub async fn draw_line_wasm(
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for draw_line"));
+            // Drawing operations are CPU-bound, use CPU implementation
+            line(&mut img, pt1, pt2, color, thickness)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             line(&mut img, pt1, pt2, color, thickness)
@@ -64,7 +66,9 @@ pub async fn draw_rectangle_wasm(
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for draw_rectangle"));
+            // Drawing operations are CPU-bound, use CPU implementation
+            rectangle(&mut img, rect, color, thickness)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             rectangle(&mut img, rect, color, thickness)
@@ -96,7 +100,9 @@ pub async fn draw_circle_wasm(
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for draw_circle"));
+            // Drawing operations are CPU-bound, use CPU implementation
+            circle(&mut img, center, radius, color)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             circle(&mut img, center, radius, color)
@@ -121,7 +127,9 @@ pub async fn draw_ellipse_wasm(src: &WasmMat, cx: i32, cy: i32, width: i32, heig
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for draw_ellipse"));
+            // Drawing operations are CPU-bound, use CPU implementation
+            ellipse(&mut result, center, axes, angle, 0.0, 360.0, color)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             ellipse(&mut result, center, axes, angle, 0.0, 360.0, color)
@@ -154,7 +162,9 @@ pub async fn draw_polylines_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for draw_polylines"));
+            // Drawing operations are CPU-bound, use CPU implementation
+            polylines(&mut result, &pts, true, color, 2)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             polylines(&mut result, &pts, true, color, 2)
@@ -178,7 +188,9 @@ pub async fn put_text_wasm(src: &WasmMat, text: String, x: i32, y: i32, font_sca
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for put_text"));
+            // Text rendering is CPU-bound, use CPU implementation
+            put_text(&mut result, &text, org, font_scale, color)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             put_text(&mut result, &text, org, font_scale, color)

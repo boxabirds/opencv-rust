@@ -89,9 +89,9 @@ pub fn erode(src: &Mat, dst: &mut Mat, kernel: &[Vec<bool>]) -> Result<()> {
         for col in 0..src.cols() {
             let mut min_vals = vec![255u8; src.channels()];
 
-            for ky in 0..k_height {
-                for kx in 0..k_width {
-                    if !kernel[ky][kx] {
+            for (ky, kernel_row) in kernel.iter().enumerate() {
+                for (kx, &kernel_val) in kernel_row.iter().enumerate() {
+                    if !kernel_val {
                         continue;
                     }
 

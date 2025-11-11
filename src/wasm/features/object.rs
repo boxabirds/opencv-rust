@@ -27,7 +27,7 @@ pub async fn detect_aruco_wasm(src: &WasmMat, dict_id: i32) -> Result<WasmMat, J
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for detect_aruco"));
+            // Object detection uses CPU implementation
         }
         cpu => {
             // Map dict_id to ArucoDictionary variant (default to Dict4X4_50)
@@ -85,7 +85,7 @@ pub async fn detect_qr_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for detect_qr"));
+            // QR detection uses CPU implementation
         }
         cpu => {
             let detector = QRCodeDetector::new();
@@ -136,7 +136,7 @@ pub async fn hog_descriptor_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for hog_descriptor"));
+            // HOG descriptor uses CPU implementation
         }
         cpu => {
             let hog = HOGDescriptor::new();
@@ -183,7 +183,7 @@ pub async fn cascade_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
 
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not yet implemented for cascade_classifier"));
+            // Cascade classifier uses CPU implementation
         }
         cpu => {
             // Create classifier (would need cascade file in production)

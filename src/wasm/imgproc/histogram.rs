@@ -58,10 +58,12 @@ pub async fn calc_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
         src.inner.clone()
     };
 
-    // Calculate histogram (CPU-only)
+    // Calculate histogram
     let hist = crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not implemented for calc_histogram"));
+            // Histogram calculation uses CPU implementation
+            crate::imgproc::histogram::calc_hist(&gray, 256, (0.0, 256.0))
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
         }
         cpu => {
             crate::imgproc::histogram::calc_hist(&gray, 256, (0.0, 256.0))
@@ -131,10 +133,12 @@ pub async fn normalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue>
         src.inner.clone()
     };
 
-    // Calculate and normalize histogram (CPU-only)
+    // Calculate and normalize histogram
     let mut hist = crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not implemented for normalize_histogram"));
+            // Histogram calculation uses CPU implementation
+            crate::imgproc::histogram::calc_hist(&gray, 256, (0.0, 256.0))
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
         }
         cpu => {
             crate::imgproc::histogram::calc_hist(&gray, 256, (0.0, 256.0))
@@ -205,10 +209,17 @@ pub async fn compare_histograms_wasm(src1: &WasmMat, src2: &WasmMat) -> Result<f
         src2.inner.clone()
     };
 
-    // Calculate histograms and compare (CPU-only)
+    // Calculate histograms and compare
     let similarity = crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not implemented for compare_histograms"));
+            // Histogram comparison uses CPU implementation
+            let hist1 = crate::imgproc::histogram::calc_hist(&gray1, 256, (0.0, 256.0))
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let hist2 = crate::imgproc::histogram::calc_hist(&gray2, 256, (0.0, 256.0))
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            crate::imgproc::histogram::compare_hist(&hist1, &hist2, crate::imgproc::histogram::HistCompMethod::Correlation)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
         }
         cpu => {
             let hist1 = crate::imgproc::histogram::calc_hist(&gray1, 256, (0.0, 256.0))
@@ -255,10 +266,15 @@ pub async fn back_projection_wasm(src: &WasmMat, model: &WasmMat) -> Result<Wasm
     let mut dst = Mat::new(gray_src.rows(), gray_src.cols(), 1, gray_src.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Calculate histogram and back projection (CPU-only)
+    // Calculate histogram and back projection
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU not implemented for back_projection"));
+            // Back projection uses CPU implementation
+            let model_hist = crate::imgproc::histogram::calc_hist(&gray_model, 256, (0.0, 256.0))
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            crate::imgproc::histogram::calc_back_project(&gray_src, &model_hist, (0.0, 256.0), &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             let model_hist = crate::imgproc::histogram::calc_hist(&gray_model, 256, (0.0, 256.0))

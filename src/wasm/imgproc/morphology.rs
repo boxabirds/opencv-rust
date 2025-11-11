@@ -90,10 +90,12 @@ pub async fn morphology_opening_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
+            crate::gpu::ops::morphology_opening_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::Open, &kernel)
@@ -120,10 +122,12 @@ pub async fn morphology_closing_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
+            crate::gpu::ops::morphology_closing_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::Close, &kernel)
@@ -150,10 +154,12 @@ pub async fn morphology_gradient_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
+            crate::gpu::ops::morphology_gradient_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::Gradient, &kernel)
@@ -180,10 +186,12 @@ pub async fn morphology_top_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
+            crate::gpu::ops::morphology_tophat_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::TopHat, &kernel)
@@ -210,10 +218,12 @@ pub async fn morphology_black_hat_wasm(src: &WasmMat, ksize: i32) -> Result<Wasm
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
+            crate::gpu::ops::morphology_blackhat_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::BlackHat, &kernel)
@@ -235,10 +245,12 @@ pub async fn morphology_tophat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
+            crate::gpu::ops::morphology_tophat_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::TopHat, &kernel)
@@ -260,10 +272,12 @@ pub async fn morphology_blackhat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), src.inner.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU-only for now)
+    // Backend dispatch
     crate::backend_dispatch! {
         gpu => {
-            return Err(JsValue::from_str("GPU morphology ex not yet implemented. Try setBackend('cpu')"));
+            crate::gpu::ops::morphology_blackhat_gpu_async(&src.inner, &mut dst, ksize)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {
             morphology_ex(&src.inner, &mut dst, MorphType::BlackHat, &kernel)

@@ -108,7 +108,7 @@ pub fn sobel(
                     }
                 }
 
-                let val = sum.abs().min(255.0).max(0.0) as u8;
+                let val = sum.abs().clamp(0.0, 255.0) as u8;
                 dst_row[col] = val;
             }
         });
@@ -178,7 +178,7 @@ pub fn laplacian(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
                 }
             }
 
-            let val = sum.abs().min(255.0).max(0.0) as u8;
+            let val = sum.abs().clamp(0.0, 255.0) as u8;
             let dst_pixel = dst.at_mut(row, col)?;
             dst_pixel[0] = val;
         }
@@ -410,7 +410,7 @@ pub fn scharr(src: &Mat, dst: &mut Mat, dx: i32, dy: i32) -> Result<()> {
                 }
             }
 
-            let val = sum.abs().min(255.0).max(0.0) as u8;
+            let val = sum.abs().clamp(0.0, 255.0) as u8;
             let dst_pixel = dst.at_mut(row, col)?;
             dst_pixel[0] = val;
         }

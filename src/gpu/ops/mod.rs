@@ -57,6 +57,14 @@ pub mod log;
 pub mod sqrt;
 pub mod lut;
 
+// Batch 4 operations - Morphology composites & Histogram
+pub mod morphology_opening;
+pub mod morphology_closing;
+pub mod morphology_gradient;
+pub mod morphology_tophat;
+pub mod morphology_blackhat;
+pub mod calc_histogram;
+
 // Export sync versions for native
 #[cfg(not(target_arch = "wasm32"))]
 pub use blur::gaussian_blur_gpu;
@@ -164,6 +172,18 @@ pub use log::log_gpu;
 pub use sqrt::sqrt_gpu;
 #[cfg(not(target_arch = "wasm32"))]
 pub use lut::lut_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use morphology_opening::morphology_opening_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use morphology_closing::morphology_closing_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use morphology_gradient::morphology_gradient_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use morphology_tophat::morphology_tophat_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use morphology_blackhat::morphology_blackhat_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use calc_histogram::calc_histogram_gpu;
 
 // Export async versions for WASM
 pub use blur::gaussian_blur_gpu_async;
@@ -219,3 +239,9 @@ pub use exp::exp_gpu_async;
 pub use log::log_gpu_async;
 pub use sqrt::sqrt_gpu_async;
 pub use lut::lut_gpu_async;
+pub use morphology_opening::morphology_opening_gpu_async;
+pub use morphology_closing::morphology_closing_gpu_async;
+pub use morphology_gradient::morphology_gradient_gpu_async;
+pub use morphology_tophat::morphology_tophat_gpu_async;
+pub use morphology_blackhat::morphology_blackhat_gpu_async;
+pub use calc_histogram::calc_histogram_gpu_async;
