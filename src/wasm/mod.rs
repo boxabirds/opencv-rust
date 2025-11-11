@@ -4,6 +4,7 @@
 //! in the browser via WebAssembly.
 
 pub mod backend;
+pub mod macros;
 pub mod basic;
 pub mod imgproc;
 pub mod features;
