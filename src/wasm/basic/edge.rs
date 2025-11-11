@@ -9,6 +9,8 @@ use crate::core::{Mat, MatDepth};
 use crate::core::types::ColorConversionCode;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm::WasmMat;
+#[cfg(target_arch = "wasm32")]
+use crate::wasm::backend;
 
 /// Canny edge detection (WASM-compatible, GPU-accelerated, ASYNC)
 #[cfg(target_arch = "wasm32")]
@@ -26,39 +28,45 @@ pub async fn canny_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::canny_gpu_async(&src.inner, &mut dst, threshold1, threshold2).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU canny failed, falling back to CPU".into());
-                }
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::canny_gpu_async(&src.inner, &mut dst, threshold1, threshold2)
+                    .await
+                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+                return Ok(WasmMat { inner: dst });
+            }
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
             }
         }
+        _ => {
+            // CPU path - convert to grayscale if needed
+            let gray = if src.inner.channels() > 1 {
+                let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                crate::imgproc::cvt_color(
+                    &src.inner,
+                    &mut gray,
+                    ColorConversionCode::BgrToGray,
+                )
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+                gray
+            } else {
+                src.inner.clone()
+            };
+
+            dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            crate::imgproc::canny(&gray, &mut dst, threshold1, threshold2)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
     }
-
-    // CPU fallback - convert to grayscale if needed
-    let gray = if src.inner.channels() > 1 {
-        let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        crate::imgproc::cvt_color(
-            &src.inner,
-            &mut gray,
-            ColorConversionCode::BgrToGray,
-        )
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        gray
-    } else {
-        src.inner.clone()
-    };
-
-    dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    crate::imgproc::canny(&gray, &mut dst, threshold1, threshold2)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -86,10 +94,28 @@ pub async fn sobel_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use GPU-accelerated version with fallback to CPU
-    crate::imgproc::sobel_async(&gray, &mut dst, dx, dy, ksize, true)
-        .await
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::sobel_gpu_async(&gray, &mut dst, dx, dy)
+                    .await
+                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+                return Ok(WasmMat { inner: dst });
+            }
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
+            }
+        }
+        _ => {
+            // CPU path
+            crate::imgproc::sobel(&gray, &mut dst, dx, dy, ksize)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }
@@ -116,9 +142,28 @@ pub async fn scharr_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::scharr_async(&gray, &mut dst, dx, dy, true)
-        .await
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::scharr_gpu_async(&gray, &mut dst, dx, dy)
+                    .await
+                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+                return Ok(WasmMat { inner: dst });
+            }
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
+            }
+        }
+        _ => {
+            // CPU path
+            crate::imgproc::scharr(&gray, &mut dst, dx, dy)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }
@@ -144,9 +189,28 @@ pub async fn laplacian_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::laplacian_async(&gray, &mut dst, ksize, true)
-        .await
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::laplacian_gpu_async(&gray, &mut dst)
+                    .await
+                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+                return Ok(WasmMat { inner: dst });
+            }
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
+            }
+        }
+        _ => {
+            // CPU path
+            crate::imgproc::laplacian(&gray, &mut dst, ksize)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }

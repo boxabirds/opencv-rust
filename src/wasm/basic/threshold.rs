@@ -110,18 +110,41 @@ pub async fn adaptive_threshold_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    crate::imgproc::adaptive_threshold_async(
-        &gray,
-        &mut dst,
-        maxval,
-        AdaptiveThresholdMethod::Mean,
-        ThresholdType::Binary,
-        block_size,
-        c,
-        true, // use_gpu=true for WASM
-    )
-    .await
-    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    // Use backend selection
+    match backend::get_backend() {
+        1 => {
+            // GPU path
+            #[cfg(feature = "gpu")]
+            {
+                crate::gpu::ops::adaptive_threshold_gpu_async(
+                    &gray,
+                    &mut dst,
+                    maxval as u8,
+                    block_size,
+                    c as i32,
+                ).await
+                .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
+                return Ok(WasmMat { inner: dst });
+            }
+            #[cfg(not(feature = "gpu"))]
+            {
+                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
+            }
+        }
+        _ => {
+            // CPU path
+            crate::imgproc::adaptive_threshold(
+                &gray,
+                &mut dst,
+                maxval,
+                AdaptiveThresholdMethod::Mean,
+                ThresholdType::Binary,
+                block_size,
+                c,
+            )
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+    }
 
     Ok(WasmMat { inner: dst })
 }
