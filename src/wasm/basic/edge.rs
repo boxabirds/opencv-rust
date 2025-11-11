@@ -73,24 +73,14 @@ pub async fn sobel_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::sobel_gpu_async(&gray, &mut dst, dx, dy)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::sobel_gpu_async(&gray, &mut dst, dx, dy)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::sobel(&gray, &mut dst, dx, dy, ksize)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -121,24 +111,14 @@ pub async fn scharr_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::scharr_gpu_async(&gray, &mut dst, dx, dy)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::scharr_gpu_async(&gray, &mut dst, dx, dy)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::scharr(&gray, &mut dst, dx, dy)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
@@ -168,24 +148,14 @@ pub async fn laplacian_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::laplacian_gpu_async(&gray, &mut dst)
-                    .await
-                    .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::laplacian_gpu_async(&gray, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::laplacian(&gray, &mut dst, ksize)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
