@@ -3,6 +3,46 @@
 //! These macros eliminate code duplication when adding GPU/CPU backend selection
 //! to WASM operations.
 
+/// Simple backend dispatch macro - generates the match statement inline
+///
+/// This works around borrow checker issues by generating code inline rather than
+/// using closures.
+///
+/// # Example
+/// ```ignore
+/// backend_dispatch! {
+///     gpu => {
+///         crate::gpu::ops::canny_gpu_async(&gray, &mut dst, t1, t2).await?;
+///     }
+///     cpu => {
+///         crate::imgproc::canny(&gray, &mut dst, t1, t2)?;
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! backend_dispatch {
+    (gpu => $gpu_block:block cpu => $cpu_block:block) => {
+        match $crate::wasm::backend::get_backend() {
+            1 => {
+                // GPU backend selected
+                #[cfg(feature = "gpu")]
+                $gpu_block
+
+                #[cfg(not(feature = "gpu"))]
+                {
+                    return Err(wasm_bindgen::JsValue::from_str(
+                        "GPU not available in this build. Use setBackend('cpu')"
+                    ));
+                }
+            }
+            _ => {
+                // CPU backend
+                $cpu_block
+            }
+        }
+    };
+}
+
 /// Execute an operation with automatic GPU/CPU backend selection
 ///
 /// # Usage
