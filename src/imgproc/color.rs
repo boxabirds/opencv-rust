@@ -400,8 +400,8 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 
             let dst_pixel = dst.at_mut(row, col)?;
             dst_pixel[0] = (l * 2.55).clamp(0.0, 255.0) as u8;  // L in [0, 255]
-            dst_pixel[1] = ((a + 128.0)).clamp(0.0, 255.0) as u8;  // a in [0, 255]
-            dst_pixel[2] = ((b_lab + 128.0)).clamp(0.0, 255.0) as u8;  // b in [0, 255]
+            dst_pixel[1] = (a + 128.0).clamp(0.0, 255.0) as u8;  // a in [0, 255]
+            dst_pixel[2] = (b_lab + 128.0).clamp(0.0, 255.0) as u8;  // b in [0, 255]
         }
     }
 
