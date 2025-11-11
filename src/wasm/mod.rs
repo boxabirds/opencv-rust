@@ -713,6 +713,7 @@ pub async fn cvt_color_gray_wasm(
 }
 
 /// Adaptive threshold (WASM-compatible)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = adaptiveThreshold)]
 pub async fn adaptive_threshold_wasm(
@@ -1306,6 +1307,7 @@ pub async fn cvt_color_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Distance transform
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = distanceTransform)]
 pub async fn distance_transform_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -2508,6 +2510,7 @@ pub async fn cvt_color_lab_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Convert RGB/BGR to YCrCb color space
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = cvtColorYCrCb)]
 pub async fn cvt_color_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -2524,6 +2527,7 @@ pub async fn cvt_color_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Draw ellipse on image
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = drawEllipse)]
 pub async fn draw_ellipse_wasm(src: &WasmMat, cx: i32, cy: i32, width: i32, height: i32, angle: f64, thickness: i32) -> Result<WasmMat, JsValue> {
@@ -3560,6 +3564,7 @@ pub async fn rgb_to_gray_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Convert RGB to HSV color space (GPU-accelerated)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = rgbToHsv)]
 pub async fn rgb_to_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -3587,6 +3592,7 @@ pub async fn rgb_to_hsv_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Convert RGB to Lab color space (GPU-accelerated)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = rgbToLab)]
 pub async fn rgb_to_lab_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -3612,6 +3618,7 @@ pub async fn rgb_to_lab_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Convert RGB to YCrCb color space (GPU-accelerated)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = rgbToYCrCb)]
 pub async fn rgb_to_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -3637,6 +3644,7 @@ pub async fn rgb_to_ycrcb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Convert HSV to RGB color space (GPU-accelerated)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = hsvToRgb)]
 pub async fn hsv_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -3664,6 +3672,7 @@ pub async fn hsv_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Convert Lab to RGB color space (GPU-accelerated)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = labToRgb)]
 pub async fn lab_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -3691,6 +3700,7 @@ pub async fn lab_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Convert YCrCb to RGB color space (GPU-accelerated)
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = ycrcbToRgb)]
 pub async fn ycrcb_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -3718,6 +3728,7 @@ pub async fn ycrcb_to_rgb_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 }
 
 /// Pyramid down (downscale image) - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = pyrDown)]
 pub async fn pyr_down_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {

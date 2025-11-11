@@ -7,6 +7,7 @@
 
 pub mod filtering;
 pub mod morphology;
+pub mod color;
 
 // Re-export all filtering functions
 #[cfg(target_arch = "wasm32")]
@@ -34,4 +35,20 @@ pub use morphology::{
     morphology_black_hat_wasm,
     morphology_tophat_wasm,
     morphology_blackhat_wasm,
+};
+
+// Re-export all color conversion functions
+#[cfg(target_arch = "wasm32")]
+pub use color::{
+    cvt_color_gray_wasm,
+    cvt_color_hsv_wasm,
+    cvt_color_lab_wasm,
+    cvt_color_ycrcb_wasm,
+    rgb_to_gray_wasm,
+    rgb_to_hsv_wasm,
+    rgb_to_lab_wasm,
+    rgb_to_ycrcb_wasm,
+    hsv_to_rgb_wasm,
+    lab_to_rgb_wasm,
+    ycrcb_to_rgb_wasm,
 };
