@@ -1,6 +1,7 @@
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 use crate::gpu::device::GpuContext;
+use crate::gpu::pipeline_cache::PipelineCache;
 use wgpu;
 use wgpu::util::DeviceExt;
 use bytemuck::{Pod, Zeroable};
@@ -77,14 +78,6 @@ async fn execute_resize_impl(
     dst_height: u32,
     channels: u32,
 ) -> Result<()> {
-    // Create shader module
-    let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Resize Shader"),
-        source: wgpu::ShaderSource::Wgsl(
-            include_str!("../shaders/resize.wgsl").into()
-        ),
-    });
-
     // Create input buffer
     let input_data = src.data();
     let input_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -120,47 +113,25 @@ async fn execute_resize_impl(
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     });
 
-    // Create bind group layout
-    let bind_group_layout = ctx.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("Resize Bind Group Layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ],
-    });
+    // Use cached pipeline if available, otherwise error
+    #[cfg(not(target_arch = "wasm32"))]
+    let (bind_group_layout, compute_pipeline) = {
+        let cached = PipelineCache::get_resize_pipeline()
+            .ok_or_else(|| Error::GpuNotAvailable("Pipeline cache not initialized".to_string()))?;
+        (&cached.bind_group_layout, &cached.compute_pipeline)
+    };
 
-    // Create bind group
+    #[cfg(target_arch = "wasm32")]
+    let (bind_group_layout, compute_pipeline) = {
+        PipelineCache::with_resize_pipeline(|cached| {
+            (&cached.bind_group_layout, &cached.compute_pipeline)
+        }).ok_or_else(|| Error::GpuNotAvailable("Pipeline cache not initialized".to_string()))?
+    };
+
+    // Create bind group with cached layout
     let bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Resize Bind Group"),
-        layout: &bind_group_layout,
+        layout: bind_group_layout,
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
@@ -175,22 +146,6 @@ async fn execute_resize_impl(
                 resource: params_buffer.as_entire_binding(),
             },
         ],
-    });
-
-    // Create compute pipeline
-    let pipeline_layout = ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Resize Pipeline Layout"),
-        bind_group_layouts: &[&bind_group_layout],
-        push_constant_ranges: &[],
-    });
-
-    let compute_pipeline = ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("Resize Pipeline"),
-        layout: Some(&pipeline_layout),
-        module: &shader,
-        entry_point: Some("resize_bilinear"),
-        compilation_options: Default::default(),
-        cache: None,
     });
 
     // Create command encoder and execute
