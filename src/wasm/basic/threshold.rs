@@ -28,30 +28,18 @@ pub async fn threshold_wasm(
     )
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::threshold_gpu_async(
-                    &src.inner,
-                    &mut dst,
-                    thresh as u8,
-                    max_val as u8,
-                ).await
-                .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-
-                return Ok(WasmMat { inner: dst });
-            }
-
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::threshold_gpu_async(
+                &src.inner,
+                &mut dst,
+                thresh as u8,
+                max_val as u8,
+            ).await
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             // Convert to grayscale if needed
             let gray = if src.inner.channels() > 1 {
                 let mut gray = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
@@ -78,10 +66,10 @@ pub async fn threshold_wasm(
                 ThresholdType::Binary,
             )
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-            Ok(WasmMat { inner: dst })
         }
     }
+
+    Ok(WasmMat { inner: dst })
 }
 
 /// Adaptive threshold (WASM-compatible)
@@ -110,29 +98,19 @@ pub async fn adaptive_threshold_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Use backend selection
-    match backend::get_backend() {
-        1 => {
-            // GPU path
-            #[cfg(feature = "gpu")]
-            {
-                crate::gpu::ops::adaptive_threshold_gpu_async(
-                    &gray,
-                    &mut dst,
-                    maxval as u8,
-                    block_size,
-                    c as i32,
-                ).await
-                .map_err(|e| JsValue::from_str(&format!("GPU error: {}. Try setBackend('auto') or setBackend('cpu')", e)))?;
-                return Ok(WasmMat { inner: dst });
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                return Err(JsValue::from_str("GPU not available in this build. Try setBackend('cpu')"));
-            }
+    // Backend dispatch
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::adaptive_threshold_gpu_async(
+                &gray,
+                &mut dst,
+                maxval as u8,
+                block_size,
+                c as i32,
+            ).await
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
-        _ => {
-            // CPU path
+        cpu => {
             crate::imgproc::adaptive_threshold(
                 &gray,
                 &mut dst,
