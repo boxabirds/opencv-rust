@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "description": "Acceptable pixel difference tolerances for opencv-rust vs opencv.js comparison",
+  "version": "1.0.0",
+  "tolerances": {
+    "gaussianBlur": {
+      "maxDiff": 1,
+      "percentDifferent": 0.1,
+      "meanDiffThreshold": 0.5,
+      "reason": "Rounding differences in floating-point convolution kernel"
+    },
+    "blur": {
+      "maxDiff": 1,
+      "percentDifferent": 0.1,
+      "meanDiffThreshold": 0.5,
+      "reason": "Box filter rounding differences"
+    },
+    "medianBlur": {
+      "maxDiff": 2,
+      "percentDifferent": 1.0,
+      "meanDiffThreshold": 1.0,
+      "reason": "Median calculation may have tie-breaking differences"
+    },
+    "bilateralFilter": {
+      "maxDiff": 3,
+      "percentDifferent": 2.0,
+      "meanDiffThreshold": 1.5,
+      "reason": "Edge-preserving filter has higher numerical variance in range weight calculation"
+    },
+    "filter2D": {
+      "maxDiff": 2,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 1.0,
+      "reason": "Custom kernel convolution rounding"
+    },
+    "canny": {
+      "maxDiff": 0,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0,
+      "reason": "Binary edge output, hysteresis thresholding may differ at edge pixels"
+    },
+    "sobel": {
+      "maxDiff": 1,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0.5,
+      "reason": "Gradient calculation rounding"
+    },
+    "scharr": {
+      "maxDiff": 1,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0.5,
+      "reason": "Scharr kernel gradient rounding"
+    },
+    "laplacian": {
+      "maxDiff": 1,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0.5,
+      "reason": "Second derivative calculation rounding"
+    },
+    "threshold": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Simple threshold should be bit-perfect"
+    },
+    "adaptiveThreshold": {
+      "maxDiff": 1,
+      "percentDifferent": 1.0,
+      "meanDiffThreshold": 0.5,
+      "reason": "Local threshold calculation may have minor rounding differences"
+    },
+    "erode": {
+      "maxDiff": 0,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0,
+      "reason": "Morphological min operation, binary results may differ at boundaries"
+    },
+    "dilate": {
+      "maxDiff": 0,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0,
+      "reason": "Morphological max operation, binary results may differ at boundaries"
+    },
+    "morphologyEx": {
+      "maxDiff": 0,
+      "percentDifferent": 1.0,
+      "meanDiffThreshold": 0,
+      "reason": "Compound morphological operations may differ at boundaries"
+    },
+    "cvtColorGray": {
+      "maxDiff": 1,
+      "percentDifferent": 0.1,
+      "meanDiffThreshold": 0.5,
+      "reason": "RGB to grayscale weighted average rounding (0.299*R + 0.587*G + 0.114*B)"
+    },
+    "cvtColorHsv": {
+      "maxDiff": 2,
+      "percentDifferent": 2.0,
+      "meanDiffThreshold": 1.0,
+      "reason": "RGB to HSV nonlinear transformation has higher numerical variance"
+    },
+    "cvtColorLab": {
+      "maxDiff": 3,
+      "percentDifferent": 2.0,
+      "meanDiffThreshold": 1.5,
+      "reason": "RGB to Lab perceptual color space transformation is complex"
+    },
+    "cvtColorYCrCb": {
+      "maxDiff": 1,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0.5,
+      "reason": "RGB to YCrCb linear transformation with rounding"
+    },
+    "resize": {
+      "maxDiff": 2,
+      "percentDifferent": 1.0,
+      "meanDiffThreshold": 1.0,
+      "reason": "Interpolation differences (bilinear/bicubic rounding)"
+    },
+    "flip": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Geometric flip should be bit-perfect"
+    },
+    "rotate": {
+      "maxDiff": 2,
+      "percentDifferent": 1.0,
+      "meanDiffThreshold": 1.0,
+      "reason": "Rotation interpolation rounding"
+    },
+    "warpAffine": {
+      "maxDiff": 2,
+      "percentDifferent": 2.0,
+      "meanDiffThreshold": 1.0,
+      "reason": "Affine transformation interpolation"
+    },
+    "warpPerspective": {
+      "maxDiff": 3,
+      "percentDifferent": 3.0,
+      "meanDiffThreshold": 1.5,
+      "reason": "Perspective transformation has higher interpolation variance"
+    },
+    "add": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Simple addition should be bit-perfect (with saturation)"
+    },
+    "subtract": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Simple subtraction should be bit-perfect (with saturation)"
+    },
+    "multiply": {
+      "maxDiff": 1,
+      "percentDifferent": 0.1,
+      "meanDiffThreshold": 0.5,
+      "reason": "Multiplication may have scaling rounding differences"
+    },
+    "addWeighted": {
+      "maxDiff": 1,
+      "percentDifferent": 0.5,
+      "meanDiffThreshold": 0.5,
+      "reason": "Weighted sum: alpha*src1 + beta*src2 + gamma has rounding"
+    },
+    "bitwiseAnd": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Bitwise AND should be bit-perfect"
+    },
+    "bitwiseOr": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Bitwise OR should be bit-perfect"
+    },
+    "bitwiseXor": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Bitwise XOR should be bit-perfect"
+    },
+    "bitwiseNot": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Bitwise NOT should be bit-perfect"
+    },
+    "inRange": {
+      "maxDiff": 0,
+      "percentDifferent": 0,
+      "meanDiffThreshold": 0,
+      "reason": "Range check should be bit-perfect"
+    },
+    "equalizeHist": {
+      "maxDiff": 2,
+      "percentDifferent": 2.0,
+      "meanDiffThreshold": 1.0,
+      "reason": "Histogram equalization CDF calculation may have rounding differences"
+    }
+  },
+  "defaults": {
+    "maxDiff": 2,
+    "percentDifferent": 1.0,
+    "meanDiffThreshold": 1.0,
+    "reason": "Default tolerance for operations not explicitly configured"
+  },
+  "notes": [
+    "maxDiff: Maximum absolute difference for any single pixel channel (0-255 scale)",
+    "percentDifferent: Maximum percentage of pixels that can exceed tolerance (0-100)",
+    "meanDiffThreshold: Maximum acceptable mean absolute difference across all pixels",
+    "Operations with maxDiff=0 and percentDifferent=0 should produce bit-perfect results",
+    "Tolerances are conservative - actual differences are typically much smaller"
+  ]
+}

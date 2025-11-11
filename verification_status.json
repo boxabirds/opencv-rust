@@ -1,0 +1,320 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "version": "1.0.0",
+  "lastUpdated": "2025-11-11T00:00:00Z",
+  "description": "Verification status tracking for all 139 WASM API operations across 6 dimensions",
+  "dimensions": {
+    "cpuImplementation": "Real CPU algorithm implementation exists and works",
+    "gpuPipelineCache": "GPU shader + Rust wrapper + (ideally) pipeline cache entry",
+    "backendSelection": "Honors setBackend() with backend_dispatch macro",
+    "galleryBenchmark": "Gallery demo with OpenCV.js performance + pixel comparison",
+    "wasmBindings": "JavaScript-callable WASM binding with proper signature",
+    "testPort": "Comprehensive Rust tests (unit + accuracy + edge cases)"
+  },
+  "statusLevels": {
+    "complete": "✅ Fully verified and working",
+    "partial": "⚠️ Exists but incomplete (e.g., GPU without cache)",
+    "missing": "❌ Not implemented or not verified",
+    "unknown": "❓ Status not yet verified"
+  },
+  "priorityOperations": [
+    "gaussianBlur",
+    "threshold",
+    "resize",
+    "cvtColorGray",
+    "canny",
+    "medianBlur",
+    "bilateralFilter",
+    "sobel",
+    "erode",
+    "dilate",
+    "flip",
+    "rotate",
+    "adaptiveThreshold",
+    "add",
+    "subtract",
+    "warpAffine",
+    "morphologyEx",
+    "equalizeHist",
+    "laplacian",
+    "cvtColorHsv"
+  ],
+  "operations": {
+    "gaussianBlur": {
+      "module": "basic/filtering",
+      "priority": "critical",
+      "wasmLocation": "src/wasm/basic/filtering.rs",
+      "cpuLocation": "src/imgproc/filter.rs",
+      "gpuLocation": "src/gpu/ops/gaussian_blur.rs",
+      "shaderLocation": "src/gpu/shaders/gaussian_blur.wgsl",
+      "dimensions": {
+        "cpuImplementation": {
+          "status": "complete",
+          "verified": true,
+          "notes": "Full separable Gaussian filter implementation"
+        },
+        "gpuPipelineCache": {
+          "status": "partial",
+          "verified": true,
+          "hasShader": true,
+          "hasWrapper": true,
+          "inCache": false,
+          "notes": "GPU shader exists, compiled on-demand (not pre-cached)"
+        },
+        "backendSelection": {
+          "status": "complete",
+          "verified": true,
+          "usesDispatchMacro": true,
+          "notes": "Uses backend_dispatch! macro"
+        },
+        "galleryBenchmark": {
+          "status": "partial",
+          "verified": false,
+          "hasDemo": true,
+          "hasOpencvJsBenchmark": false,
+          "hasBitLevelTest": false,
+          "notes": "Demo exists, needs OpenCV.js comparison"
+        },
+        "wasmBindings": {
+          "status": "complete",
+          "verified": true,
+          "hasBinding": true,
+          "apiParity": true,
+          "jsName": "gaussianBlur",
+          "opencvJsEquivalent": "cv.GaussianBlur()"
+        },
+        "testPort": {
+          "status": "complete",
+          "verified": true,
+          "hasUnitTests": true,
+          "hasAccuracyTests": true,
+          "hasEdgeCaseTests": true,
+          "testFiles": [
+            "tests/test_imgproc.rs",
+            "tests/test_gpu.rs",
+            "tests/accuracy/test_accuracy_gaussian.rs"
+          ]
+        }
+      },
+      "overallStatus": "gpu-ready",
+      "completionPercentage": 83.3,
+      "estimatedTimeToComplete": "2-4 hours",
+      "blockers": [
+        "Gallery OpenCV.js benchmark not implemented"
+      ]
+    },
+    "threshold": {
+      "module": "basic/threshold",
+      "priority": "critical",
+      "wasmLocation": "src/wasm/basic/threshold.rs",
+      "cpuLocation": "src/imgproc/threshold.rs",
+      "gpuLocation": "src/gpu/ops/threshold.rs",
+      "shaderLocation": "src/gpu/shaders/threshold.wgsl",
+      "dimensions": {
+        "cpuImplementation": {
+          "status": "complete",
+          "verified": true,
+          "notes": "All threshold types implemented"
+        },
+        "gpuPipelineCache": {
+          "status": "complete",
+          "verified": true,
+          "hasShader": true,
+          "hasWrapper": true,
+          "inCache": true,
+          "notes": "Pre-compiled in pipeline cache ✅"
+        },
+        "backendSelection": {
+          "status": "complete",
+          "verified": true,
+          "usesDispatchMacro": true
+        },
+        "galleryBenchmark": {
+          "status": "partial",
+          "verified": false,
+          "hasDemo": true,
+          "hasOpencvJsBenchmark": false,
+          "hasBitLevelTest": true,
+          "notes": "Bit-level test exists, needs gallery integration"
+        },
+        "wasmBindings": {
+          "status": "complete",
+          "verified": true,
+          "hasBinding": true,
+          "apiParity": true,
+          "jsName": "threshold",
+          "opencvJsEquivalent": "cv.threshold()"
+        },
+        "testPort": {
+          "status": "complete",
+          "verified": true,
+          "hasUnitTests": true,
+          "hasAccuracyTests": true,
+          "hasEdgeCaseTests": true,
+          "testFiles": [
+            "tests/test_imgproc.rs",
+            "tests/accuracy/test_accuracy_threshold.rs"
+          ]
+        }
+      },
+      "overallStatus": "gpu-ready",
+      "completionPercentage": 91.7,
+      "estimatedTimeToComplete": "1-2 hours",
+      "blockers": [
+        "Gallery OpenCV.js benchmark integration"
+      ]
+    },
+    "resize": {
+      "module": "imgproc/geometric",
+      "priority": "critical",
+      "wasmLocation": "src/wasm/imgproc/geometric.rs",
+      "cpuLocation": "src/imgproc/geometric.rs",
+      "gpuLocation": "src/gpu/ops/resize.rs",
+      "shaderLocation": "src/gpu/shaders/resize.wgsl",
+      "dimensions": {
+        "cpuImplementation": {
+          "status": "complete",
+          "verified": true,
+          "notes": "Multiple interpolation methods"
+        },
+        "gpuPipelineCache": {
+          "status": "complete",
+          "verified": true,
+          "hasShader": true,
+          "hasWrapper": true,
+          "inCache": true,
+          "notes": "Pre-compiled in pipeline cache ✅"
+        },
+        "backendSelection": {
+          "status": "complete",
+          "verified": true,
+          "usesDispatchMacro": true
+        },
+        "galleryBenchmark": {
+          "status": "partial",
+          "verified": false,
+          "hasDemo": true,
+          "hasOpencvJsBenchmark": false,
+          "hasBitLevelTest": false
+        },
+        "wasmBindings": {
+          "status": "complete",
+          "verified": true,
+          "hasBinding": true,
+          "apiParity": true,
+          "jsName": "resize",
+          "opencvJsEquivalent": "cv.resize()"
+        },
+        "testPort": {
+          "status": "complete",
+          "verified": true,
+          "hasUnitTests": true,
+          "hasAccuracyTests": true,
+          "hasEdgeCaseTests": true,
+          "testFiles": [
+            "tests/test_imgproc.rs",
+            "tests/accuracy/test_accuracy_resize.rs"
+          ]
+        }
+      },
+      "overallStatus": "gpu-ready",
+      "completionPercentage": 91.7,
+      "estimatedTimeToComplete": "1-2 hours",
+      "blockers": [
+        "Gallery OpenCV.js benchmark"
+      ]
+    }
+  },
+  "summary": {
+    "totalOperations": 139,
+    "byStatus": {
+      "complete": 0,
+      "gpuReady": 3,
+      "functional": 0,
+      "basic": 0,
+      "missing": 0,
+      "unknown": 136
+    },
+    "byDimension": {
+      "cpuImplementation": {
+        "complete": 120,
+        "partial": 10,
+        "missing": 9,
+        "unknown": 0
+      },
+      "gpuPipelineCache": {
+        "complete": 8,
+        "partial": 50,
+        "missing": 81,
+        "unknown": 0
+      },
+      "backendSelection": {
+        "complete": 100,
+        "partial": 20,
+        "missing": 19,
+        "unknown": 0
+      },
+      "galleryBenchmark": {
+        "complete": 0,
+        "partial": 102,
+        "missing": 37,
+        "unknown": 0
+      },
+      "wasmBindings": {
+        "complete": 139,
+        "partial": 0,
+        "missing": 0,
+        "unknown": 0
+      },
+      "testPort": {
+        "complete": 60,
+        "partial": 40,
+        "missing": 39,
+        "unknown": 0
+      }
+    },
+    "topBlockers": [
+      "Gallery OpenCV.js benchmark integration (affects all 139 operations)",
+      "Pipeline cache expansion (50 ops need pre-compilation)",
+      "Backend selection rollout completion (19 ops missing)",
+      "Test coverage expansion (39 ops missing comprehensive tests)"
+    ]
+  },
+  "nextSteps": [
+    {
+      "priority": 1,
+      "action": "Implement gallery OpenCV.js benchmark infrastructure",
+      "impact": "Enables completion of all operations",
+      "estimatedTime": "1-2 weeks",
+      "dependencies": []
+    },
+    {
+      "priority": 2,
+      "action": "Expand pipeline cache to 20-25 operations",
+      "impact": "Improves performance for common operations",
+      "estimatedTime": "1 week",
+      "dependencies": []
+    },
+    {
+      "priority": 3,
+      "action": "Complete backend selection rollout",
+      "impact": "Enables runtime GPU/CPU choice for all ops",
+      "estimatedTime": "3-4 days",
+      "dependencies": []
+    },
+    {
+      "priority": 4,
+      "action": "Verify and document remaining 136 operations",
+      "impact": "Creates complete verification matrix",
+      "estimatedTime": "2-3 weeks",
+      "dependencies": ["Priority 1", "Priority 2", "Priority 3"]
+    }
+  ],
+  "notes": [
+    "This file tracks verification status for all 139 WASM operations",
+    "Only 3 operations fully documented so far (gaussianBlur, threshold, resize)",
+    "Remaining 136 operations need individual verification",
+    "Summary statistics are estimates based on code audit",
+    "Use scripts/verify_completeness.sh to auto-populate this file"
+  ]
+}
