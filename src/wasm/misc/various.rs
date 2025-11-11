@@ -25,22 +25,17 @@ pub async fn distance_transform_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::distance_transform_gpu_async(&gray, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU distance transform failed, falling back to CPU".into());
-                }
-            }
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::distance_transform_gpu_async(&gray, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            distance_transform(&gray, &mut dst, crate::imgproc::advanced_filter::DistanceType::L2, 3)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    // CPU fallback
-    distance_transform(&gray, &mut dst, crate::imgproc::advanced_filter::DistanceType::L2, 3)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
@@ -52,7 +47,6 @@ pub async fn hough_lines_wasm(
     src: &WasmMat,
     threshold: i32,
 ) -> Result<WasmMat, JsValue> {
-    use crate::imgproc::hough::hough_lines;
     use crate::imgproc::drawing::line;
     use crate::core::types::{ColorConversionCode, Point, Scalar};
     use crate::imgproc::color::cvt_color;
@@ -68,8 +62,15 @@ pub async fn hough_lines_wasm(
         src.inner.clone()
     };
 
-    let lines = hough_lines(&gray, 1.0, std::f64::consts::PI / 180.0, threshold)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let lines = crate::backend_dispatch! {
+        gpu => {
+            return Err(JsValue::from_str("GPU not implemented for hough_lines"));
+        }
+        cpu => {
+            crate::imgproc::hough::hough_lines(&gray, 1.0, std::f64::consts::PI / 180.0, threshold)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
+        }
+    };
 
     // Draw lines on original image
     let mut result = src.inner.clone();
@@ -464,21 +465,18 @@ pub async fn gradient_magnitude_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::gradient_magnitude_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU gradientMagnitude failed, falling back to CPU".into());
-                }
-            }
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::gradient_magnitude_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            return Err(JsValue::from_str("CPU not yet implemented for gradient_magnitude"));
         }
     }
 
-    // CPU fallback not yet implemented
-    Err(JsValue::from_str("GPU gradientMagnitude failed and CPU fallback not yet implemented"))
+    Ok(WasmMat { inner: dst })
 }
 
 
@@ -488,21 +486,18 @@ pub async fn integral_image_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Try GPU first if available
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::integral_image_gpu_async(&src.inner, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU integralImage failed, falling back to CPU".into());
-                }
-            }
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::integral_image_gpu_async(&src.inner, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            return Err(JsValue::from_str("CPU not yet implemented for integral_image"));
         }
     }
 
-    // CPU fallback not yet implemented
-    Err(JsValue::from_str("GPU integralImage failed and CPU fallback not yet implemented"))
+    Ok(WasmMat { inner: dst })
 }
 
 
@@ -512,43 +507,37 @@ pub async fn normalize_wasm(src: &WasmMat, alpha: f64, beta: f64) -> Result<Wasm
     let mut dst = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::normalize_gpu_async(&src.inner, &mut dst, alpha, beta).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU normalize failed, falling back to CPU".into());
-                }
-            }
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::normalize_gpu_async(&src.inner, &mut dst, alpha, beta)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            return Err(JsValue::from_str("CPU not yet implemented for normalize"));
         }
     }
 
-    Err(JsValue::from_str("GPU normalize failed and CPU fallback not yet implemented"))
+    Ok(WasmMat { inner: dst })
 }
 
 
 // ===== splitChannels =====
 #[wasm_bindgen(js_name = splitChannels)]
 pub async fn split_channels_wasm(src: &WasmMat) -> Result<Vec<WasmMat>, JsValue> {
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
+    let channels = crate::backend_dispatch! {
+        gpu => {
             let mut channels = Vec::new();
-            match crate::gpu::ops::split_gpu_async(&src.inner, &mut channels).await {
-                Ok(_) => {
-                    return Ok(channels.into_iter().map(|mat| WasmMat { inner: mat }).collect());
-                }
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU split failed, falling back to CPU".into());
-                }
-            }
+            crate::gpu::ops::split_gpu_async(&src.inner, &mut channels)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            channels
         }
-    }
-
-    // CPU fallback
-    let channels = crate::core::split(&src.inner)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        cpu => {
+            crate::core::split(&src.inner)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
+        }
+    };
 
     Ok(channels.into_iter().map(|mat| WasmMat { inner: mat }).collect())
 }
@@ -569,21 +558,17 @@ pub async fn merge_channels_wasm(channels: Vec<WasmMat>) -> Result<WasmMat, JsVa
     let mut dst = Mat::new(rows, cols, num_channels, MatDepth::U8)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    #[cfg(feature = "gpu")]
-    {
-        if crate::gpu::gpu_available() {
-            match crate::gpu::ops::merge_gpu_async(&channel_mats, &mut dst).await {
-                Ok(_) => return Ok(WasmMat { inner: dst }),
-                Err(_) => {
-                    web_sys::console::log_1(&"GPU merge failed, falling back to CPU".into());
-                }
-            }
+    crate::backend_dispatch! {
+        gpu => {
+            crate::gpu::ops::merge_gpu_async(&channel_mats, &mut dst)
+                .await
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        }
+        cpu => {
+            crate::core::merge(&channel_mats, &mut dst)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
     }
-
-    // CPU fallback
-    crate::core::merge(&channel_mats, &mut dst)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
 }
