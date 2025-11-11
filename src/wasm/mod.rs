@@ -1110,6 +1110,7 @@ pub async fn erode_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
 }
 
 /// Morphological dilation
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = dilate)]
 pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -1133,6 +1134,7 @@ pub async fn dilate_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> 
 }
 
 /// Morphological opening - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyOpening)]
 pub async fn morphology_opening_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -1157,6 +1159,7 @@ pub async fn morphology_opening_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
 }
 
 /// Morphological closing - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyClosing)]
 pub async fn morphology_closing_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -1181,6 +1184,7 @@ pub async fn morphology_closing_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
 }
 
 /// Morphological gradient - GPU-accelerated
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyGradient)]
 pub async fn morphology_gradient_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -1205,6 +1209,7 @@ pub async fn morphology_gradient_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
 }
 
 /// Morphological top hat
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyTopHat)]
 pub async fn morphology_top_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -1227,6 +1232,7 @@ pub async fn morphology_top_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMa
 }
 
 /// Morphological black hat
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyBlackHat)]
 pub async fn morphology_black_hat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -1249,6 +1255,7 @@ pub async fn morphology_black_hat_wasm(src: &WasmMat, ksize: i32) -> Result<Wasm
 }
 
 /// Equalize histogram for contrast enhancement
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = equalizeHistogram)]
 pub async fn equalize_histogram_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
@@ -1939,6 +1946,7 @@ pub async fn morphology_tophat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat
 }
 
 /// Morphological black hat
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = morphologyBlackhat)]
 pub async fn morphology_blackhat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmMat, JsValue> {
@@ -1956,6 +1964,7 @@ pub async fn morphology_blackhat_wasm(src: &WasmMat, ksize: i32) -> Result<WasmM
 }
 
 /// Warp perspective transformation
+#[cfg(not(feature = "wasm_modular"))]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(js_name = warpPerspective)]
 pub async fn warp_perspective_wasm(
