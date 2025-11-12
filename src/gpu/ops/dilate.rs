@@ -43,13 +43,13 @@ pub fn dilate_gpu(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
 }
 
 async fn execute_dilate_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
         let input_data = src.data();
     let input_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("Input Buffer"), contents: input_data, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST });
-    let output_buffer_size = (width * height * channels) as u64;
+    let output_buffer_size = u64::from(width) * u64::from(height) * u64::from(channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor { label: Some("Output Buffer"), size: output_buffer_size, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
     let params = DilateParams { width, height, channels, kernel_size: ksize as u32 };
     let params_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("Params Buffer"), contents: bytemuck::bytes_of(&params), usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST });

@@ -80,8 +80,8 @@ async fn execute_sobel_impl(
     dx: i32,
     dy: i32,
 ) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
 
     // Create input buffer from Mat
     let input_data = src.data();
@@ -94,7 +94,7 @@ async fn execute_sobel_impl(
         });
 
     // Create output buffer
-    let output_buffer_size = (width * height) as u64;
+    let output_buffer_size = u64::from(width) * u64::from(height);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,

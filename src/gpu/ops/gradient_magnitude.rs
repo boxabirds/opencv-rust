@@ -52,8 +52,8 @@ pub fn gradient_magnitude_gpu(src: &Mat, dst: &mut Mat) -> Result<()> {
 }
 
 async fn execute_gradient_magnitude_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("GradientMagnitude Shader"),
@@ -67,7 +67,7 @@ async fn execute_gradient_magnitude_impl(ctx: &GpuContext, src: &Mat, dst: &mut 
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    let output_buffer_size = (width * height) as u64;
+    let output_buffer_size = u64::from(width) * u64::from(height);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,

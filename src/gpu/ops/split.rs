@@ -58,9 +58,9 @@ pub fn split_gpu(src: &Mat, dst: &mut Vec<Mat>) -> Result<()> {
 }
 
 async fn execute_split_impl(ctx: &GpuContext, src: &Mat, dst: &mut Vec<Mat>) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Split Shader"),
@@ -74,7 +74,7 @@ async fn execute_split_impl(ctx: &GpuContext, src: &Mat, dst: &mut Vec<Mat>) -> 
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    let single_channel_size = (width * height) as u64;
+    let single_channel_size = u64::from(width) * u64::from(height);
 
     // Create output buffers for each channel (max 4)
     let mut output_buffers = Vec::new();

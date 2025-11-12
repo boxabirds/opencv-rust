@@ -57,9 +57,9 @@ async fn execute_canny(
     let ctx = GpuContext::get()
         .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
 
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -107,7 +107,7 @@ async fn execute_canny_impl(
     });
 
     // Create output buffer
-    let output_size = (width * height * channels) as u64;
+    let output_size = u64::from(width) * u64::from(height) * u64::from(channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Canny Output Buffer"),
         size: output_size,

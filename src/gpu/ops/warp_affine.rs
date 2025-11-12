@@ -72,11 +72,11 @@ async fn execute_warp_affine_impl(
     dst: &mut Mat,
     m: &[f32; 6],
 ) -> Result<()> {
-    let src_width = src.cols() as u32;
-    let src_height = src.rows() as u32;
-    let dst_width = dst.cols() as u32;
-    let dst_height = dst.rows() as u32;
-    let channels = src.channels() as u32;
+    let src_width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let src_height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let dst_width = u32::try_from(dst.cols()).unwrap_or(u32::MAX);
+    let dst_height = u32::try_from(dst.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("WarpAffine Shader"),

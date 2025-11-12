@@ -52,8 +52,8 @@ pub fn integral_image_gpu(src: &Mat, dst: &mut Mat) -> Result<()> {
 }
 
 async fn execute_integral_image_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("IntegralImage Shader"),

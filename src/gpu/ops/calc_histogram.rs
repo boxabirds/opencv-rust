@@ -45,9 +45,9 @@ pub fn calc_histogram_gpu(src: &Mat, num_bins: usize) -> Result<Vec<f32>> {
 }
 
 async fn execute_calc_histogram_impl(ctx: &GpuContext, src: &Mat, num_bins: usize) -> Result<Vec<f32>> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
     let shader_source = r#"
 @group(0) @binding(0) var<storage, read> input: array<u32>;
