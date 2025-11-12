@@ -50,7 +50,7 @@ import init, {
   morphologyTophat as wasmMorphologyTophat,
   morphologyBlackhat as wasmMorphologyBlackhat,
   warpPerspective as wasmWarpPerspective,
-  getRotationMatrix2d as wasmGetRotationMatrix2d,
+  getRotationMatrix2D as wasmGetRotationMatrix2d,
   normalizeHistogram as wasmNormalizeHistogram,
   compareHistograms as wasmCompareHistograms,
   backProjection as wasmBackProjection,
