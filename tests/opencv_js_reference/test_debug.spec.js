@@ -144,7 +144,7 @@ test.describe('Test Harness Debug', () => {
       }
     }
 
-    // Final state check
+    // Final state check with debug log extraction
     const finalState = await page.evaluate(() => {
       return {
         testHarnessReady: window.testHarnessReady || false,
@@ -162,6 +162,7 @@ test.describe('Test Harness Debug', () => {
         statusElement: document.getElementById('status')?.textContent,
         detailsElement: document.getElementById('details')?.textContent,
         initSteps: window.initSteps || [],
+        debugLog: window.debugLog || [],
         webGpuAvailable: !!navigator.gpu,
         userAgent: navigator.userAgent,
       };
@@ -210,6 +211,20 @@ test.describe('Test Harness Debug', () => {
       });
     } else {
       console.log('  No init steps recorded');
+    }
+
+    console.log('\n--- Debug Log (window.debugLog) ---');
+    if (finalState.debugLog && finalState.debugLog.length > 0) {
+      console.log(`Total log entries: ${finalState.debugLog.length}`);
+      console.log('\nDetailed log:');
+      finalState.debugLog.forEach(entry => {
+        const level = entry.level.toUpperCase();
+        const timeStr = `[${entry.time.toFixed(2)}ms]`;
+        const prefix = entry.level === 'error' ? '❌' : entry.level === 'warn' ? '⚠️' : '📝';
+        console.log(`${prefix} ${timeStr} [${entry.category}] ${entry.message}`);
+      });
+    } else {
+      console.log('  No debug log entries found');
     }
 
     console.log('\n--- Files ---');

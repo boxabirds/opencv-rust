@@ -45,6 +45,7 @@
         window.opencv_rust_ready = false;
         window.testImages = {};
         window.initSteps = []; // Track initialization steps
+        window.debugLog = []; // Store all logs for extraction
 
         const statusEl = document.getElementById('status');
         const detailsEl = document.getElementById('details');
@@ -54,11 +55,27 @@
             return `[${(performance.now() - startTime).toFixed(2)}ms]`;
         }
 
+        // Enhanced logging that stores in window.debugLog for extraction
+        function log(category, message, level = 'log') {
+            const timestamped = `${getTimestamp()} [${category}] ${message}`;
+            const entry = { time: performance.now() - startTime, category, message, level, timestamp: new Date().toISOString() };
+            window.debugLog.push(entry);
+
+            if (level === 'error') {
+                console.error(timestamped);
+            } else if (level === 'warn') {
+                console.warn(timestamped);
+            } else {
+                console.log(timestamped);
+            }
+
+            return timestamped;
+        }
+
         function updateStatus(message, className = 'loading') {
             statusEl.textContent = message;
             statusEl.className = className;
-            const timestamped = `${getTimestamp()} [Test Harness] ${message}`;
-            console.log(timestamped);
+            log('Test Harness', message);
             window.initSteps.push({ time: performance.now() - startTime, message, className });
         }
 
@@ -66,7 +83,7 @@
             const p = document.createElement('p');
             p.textContent = message;
             detailsEl.appendChild(p);
-            console.log(`${getTimestamp()} [Details] ${message}`);
+            log('Details', message);
         }
 
         // Log memory usage if available
@@ -74,110 +91,158 @@
             if (performance.memory) {
                 const used = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
                 const total = (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
-                console.log(`${getTimestamp()} [Memory] ${label}: ${used}MB used / ${total}MB total`);
+                log('Memory', `${label}: ${used}MB used / ${total}MB total`);
             }
         }
 
-        // Wait for OpenCV.js to load by polling for cv object
+        // Function to extract all logs
+        window.extractDebugLog = function() {
+            console.log('\n=== DEBUG LOG DUMP ===');
+            window.debugLog.forEach(entry => {
+                console.log(`[${entry.time.toFixed(2)}ms] [${entry.category}] ${entry.message}`);
+            });
+            console.log('=== END DEBUG LOG ===\n');
+            return window.debugLog;
+        };
+
+        // Wait for OpenCV.js to load with extensive polling and logging
         async function waitForOpenCVJs() {
-            console.log(`${getTimestamp()} [OpenCV.js] Starting wait for OpenCV.js...`);
+            log('OpenCV.js', '=== Starting OpenCV.js load process ===');
 
             // Check if already loaded
             if (typeof cv !== 'undefined' && cv.Mat) {
-                console.log(`${getTimestamp()} [OpenCV.js] Already loaded!`);
+                log('OpenCV.js', 'Already loaded! cv.Mat is available');
                 logMemoryUsage('After OpenCV.js load');
                 return;
             }
 
-            console.log(`${getTimestamp()} [OpenCV.js] Not yet loaded, polling for cv object...`);
+            log('OpenCV.js', 'Not loaded yet, checking script tag...');
 
-            // Poll for cv object to be available
-            const maxAttempts = 300; // 30 seconds (100ms * 300)
-            const pollInterval = 100;
+            // Check script tag
+            const scriptTag = document.querySelector('script[src="/cache/opencv.js"]');
+            if (scriptTag) {
+                log('OpenCV.js', `Script tag found: ${scriptTag.src}`);
+                log('OpenCV.js', `Script readyState: ${scriptTag.readyState || 'undefined'}`);
+                log('OpenCV.js', `Script loaded: ${scriptTag.hasAttribute('data-loaded')}`);
+            } else {
+                log('OpenCV.js', 'ERROR: Script tag not found!', 'error');
+            }
 
-            for (let i = 0; i < maxAttempts; i++) {
-                if (typeof cv !== 'undefined' && cv.Mat) {
-                    console.log(`${getTimestamp()} [OpenCV.js] cv object detected! (took ${i * pollInterval}ms)`);
-                    logMemoryUsage('After OpenCV.js load');
-                    return;
+            // Check window.cv status
+            log('OpenCV.js', `window.cv type: ${typeof cv}`);
+            log('OpenCV.js', `window.cv exists: ${typeof cv !== 'undefined'}`);
+            if (typeof cv !== 'undefined') {
+                log('OpenCV.js', `cv.Mat exists: ${typeof cv.Mat !== 'undefined'}`);
+                log('OpenCV.js', `cv keys: ${Object.keys(cv).slice(0, 10).join(', ')}...`);
+            }
+
+            // Set up callback as backup
+            log('OpenCV.js', 'Setting up onOpenCVReady callback...');
+            let callbackFired = false;
+            window.onOpenCVReady = () => {
+                callbackFired = true;
+                log('OpenCV.js', '✓ onOpenCVReady callback fired!');
+            };
+
+            // Poll for cv object
+            log('OpenCV.js', 'Starting polling for cv object (check every 100ms for 30s)...');
+            const maxAttempts = 300; // 30 seconds
+            const pollInterval = 100; // 100ms
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                // Log every 2 seconds
+                if (attempt % 20 === 0 && attempt > 0) {
+                    log('OpenCV.js', `Still polling... ${attempt * pollInterval}ms elapsed`);
+                    log('OpenCV.js', `  cv exists: ${typeof cv !== 'undefined'}`);
+                    log('OpenCV.js', `  callback fired: ${callbackFired}`);
                 }
 
-                // Log progress every 2 seconds
-                if (i > 0 && i % 20 === 0) {
-                    console.log(`${getTimestamp()} [OpenCV.js] Still waiting... (${i * pollInterval}ms elapsed)`);
+                // Check if cv.Mat is available
+                if (typeof cv !== 'undefined' && cv.Mat) {
+                    log('OpenCV.js', `✓ SUCCESS! cv.Mat detected after ${attempt * pollInterval}ms`);
+                    log('OpenCV.js', `  Callback fired: ${callbackFired}`);
+                    logMemoryUsage('After OpenCV.js load');
+                    return;
                 }
 
                 await new Promise(resolve => setTimeout(resolve, pollInterval));
             }
 
             // Timeout
-            throw new Error('OpenCV.js load timeout - cv object not available after 30s');
+            log('OpenCV.js', '✗ TIMEOUT after 30 seconds', 'error');
+            log('OpenCV.js', `Final state - cv exists: ${typeof cv !== 'undefined'}`, 'error');
+            log('OpenCV.js', `Final state - callback fired: ${callbackFired}`, 'error');
+            if (typeof cv !== 'undefined') {
+                log('OpenCV.js', `cv properties: ${Object.keys(cv).join(', ')}`, 'error');
+            }
+
+            throw new Error('OpenCV.js load timeout - cv.Mat not available after 30s');
         }
 
-        // Load our WASM module
+        // Load our WASM module with extensive logging
         async function loadOpenCVRust() {
             try {
-                console.log(`${getTimestamp()} [WASM] === Starting WASM module load ===`);
+                log('WASM', '=== Starting WASM module load ===');
                 logMemoryUsage('Before WASM load');
 
-                console.log(`${getTimestamp()} [WASM] Step 1: Attempting to import /pkg/opencv_rust.js...`);
+                log('WASM', 'Step 1: Attempting to import /pkg/opencv_rust.js...');
 
                 // Import our WASM module (absolute path from web root)
                 const importStart = performance.now();
                 const module = await import('/pkg/opencv_rust.js');
                 const importDuration = performance.now() - importStart;
 
-                console.log(`${getTimestamp()} [WASM] Step 1 COMPLETE: Module imported in ${importDuration.toFixed(2)}ms`);
-                console.log(`${getTimestamp()} [WASM] Module exports:`, Object.keys(module));
+                log('WASM', `Step 1 COMPLETE: Module imported in ${importDuration.toFixed(2)}ms`);
+                log('WASM', `Module exports: ${Object.keys(module).join(', ')}`);
                 logMemoryUsage('After module import');
 
-                console.log(`${getTimestamp()} [WASM] Step 2: Initializing WASM (calling module.default())...`);
+                log('WASM', 'Step 2: Initializing WASM (calling module.default())...');
                 const initStart = performance.now();
 
                 await module.default();
 
                 const initDuration = performance.now() - initStart;
-                console.log(`${getTimestamp()} [WASM] Step 2 COMPLETE: WASM initialized in ${initDuration.toFixed(2)}ms`);
+                log('WASM', `Step 2 COMPLETE: WASM initialized in ${initDuration.toFixed(2)}ms`);
                 logMemoryUsage('After WASM init');
 
                 // Try to initialize GPU (may fail in headless mode, that's OK)
-                console.log(`${getTimestamp()} [WASM] Step 3: Checking for GPU support...`);
+                log('WASM', 'Step 3: Checking for GPU support...');
                 try {
                     if (module.init_gpu) {
-                        console.log(`${getTimestamp()} [WASM] Step 3a: init_gpu found, attempting GPU initialization...`);
+                        log('WASM', 'Step 3a: init_gpu found, attempting GPU initialization...');
                         const gpuStart = performance.now();
 
                         await module.init_gpu();
 
                         const gpuDuration = performance.now() - gpuStart;
-                        console.log(`${getTimestamp()} [WASM] Step 3a COMPLETE: GPU initialized in ${gpuDuration.toFixed(2)}ms`);
+                        log('WASM', `Step 3a COMPLETE: GPU initialized in ${gpuDuration.toFixed(2)}ms`);
                         addDetails('✓ GPU initialized');
                         logMemoryUsage('After GPU init');
                     } else {
-                        console.log(`${getTimestamp()} [WASM] Step 3b: No init_gpu function found (CPU mode)`);
+                        log('WASM', 'Step 3b: No init_gpu function found (CPU mode)');
                         addDetails('ℹ CPU mode (no GPU function)');
                     }
                 } catch (e) {
-                    console.warn(`${getTimestamp()} [WASM] Step 3 FAILED: GPU init failed (will use CPU):`, e);
-                    console.warn(`${getTimestamp()} [WASM] GPU error stack:`, e.stack);
+                    log('WASM', `Step 3 FAILED: GPU init failed (will use CPU): ${e.message}`, 'warn');
+                    log('WASM', `GPU error stack: ${e.stack}`, 'warn');
                     addDetails('⚠ GPU init failed (will use CPU): ' + e.message);
                 }
 
                 // Store module globally
-                console.log(`${getTimestamp()} [WASM] Step 4: Storing module globally...`);
+                log('WASM', 'Step 4: Storing module globally...');
                 window.opencvRust = module;
                 window.opencv_rust_ready = true;
-                console.log(`${getTimestamp()} [WASM] Step 4 COMPLETE: Module stored as window.opencvRust`);
+                log('WASM', 'Step 4 COMPLETE: Module stored as window.opencvRust');
                 logMemoryUsage('After storing module');
 
-                console.log(`${getTimestamp()} [WASM] === WASM module load COMPLETE ===`);
+                log('WASM', '=== WASM module load COMPLETE ===');
                 return module;
 
             } catch (error) {
-                console.error(`${getTimestamp()} [WASM] === WASM LOAD FAILED ===`);
-                console.error(`${getTimestamp()} [WASM] Error message:`, error.message);
-                console.error(`${getTimestamp()} [WASM] Error stack:`, error.stack);
-                console.error(`${getTimestamp()} [WASM] Full error:`, error);
+                log('WASM', '=== WASM LOAD FAILED ===', 'error');
+                log('WASM', `Error message: ${error.message}`, 'error');
+                log('WASM', `Error stack: ${error.stack}`, 'error');
+                log('WASM', `Full error: ${JSON.stringify(error, null, 2)}`, 'error');
                 logMemoryUsage('After WASM error');
 
                 throw new Error(`Failed to load opencv-rust: ${error.message}`);
@@ -239,43 +304,45 @@
             return cv.imread(canvas);
         };
 
-        // Main initialization
+        // Main initialization with extensive logging
         async function initialize() {
             try {
-                console.log(`${getTimestamp()} === INITIALIZATION START ===`);
-                console.log(`${getTimestamp()} Browser: ${navigator.userAgent}`);
-                console.log(`${getTimestamp()} WebGPU available: ${!!navigator.gpu}`);
+                log('Init', '=== INITIALIZATION START ===');
+                log('Init', `Browser: ${navigator.userAgent}`);
+                log('Init', `WebGPU available: ${!!navigator.gpu}`);
+                log('Init', `Platform: ${navigator.platform}`);
+                log('Init', `Language: ${navigator.language}`);
                 logMemoryUsage('Initialization start');
 
                 updateStatus('Loading OpenCV.js...', 'loading');
-                console.log(`${getTimestamp()} === PHASE 1: Loading OpenCV.js ===`);
+                log('Init', '=== PHASE 1: Loading OpenCV.js ===');
 
                 const opencvStart = performance.now();
                 await waitForOpenCVJs();
                 const opencvDuration = performance.now() - opencvStart;
 
                 window.opencv_js_ready = true;
-                console.log(`${getTimestamp()} === PHASE 1 COMPLETE: OpenCV.js loaded in ${opencvDuration.toFixed(2)}ms ===`);
+                log('Init', `=== PHASE 1 COMPLETE: OpenCV.js loaded in ${opencvDuration.toFixed(2)}ms ===`);
 
                 // Get OpenCV.js version info
                 try {
                     const buildInfo = cv.getBuildInformation();
                     const version = buildInfo.split('\n')[0];
-                    console.log(`${getTimestamp()} OpenCV.js version: ${version}`);
+                    log('Init', `OpenCV.js version: ${version}`);
                     addDetails('✓ OpenCV.js loaded: ' + version);
                 } catch (e) {
-                    console.warn(`${getTimestamp()} Could not get OpenCV.js build info:`, e);
+                    log('Init', `Could not get OpenCV.js build info: ${e.message}`, 'warn');
                     addDetails('✓ OpenCV.js loaded');
                 }
 
                 updateStatus('Loading opencv-rust WASM...', 'loading');
-                console.log(`${getTimestamp()} === PHASE 2: Loading opencv-rust WASM ===`);
+                log('Init', '=== PHASE 2: Loading opencv-rust WASM ===');
 
                 const wasmStart = performance.now();
                 await loadOpenCVRust();
                 const wasmDuration = performance.now() - wasmStart;
 
-                console.log(`${getTimestamp()} === PHASE 2 COMPLETE: WASM loaded in ${wasmDuration.toFixed(2)}ms ===`);
+                log('Init', `=== PHASE 2 COMPLETE: WASM loaded in ${wasmDuration.toFixed(2)}ms ===`);
                 addDetails('✓ opencv-rust WASM loaded');
 
                 // All ready
@@ -284,24 +351,30 @@
                 updateStatus('✓ Test harness ready', 'ready');
                 addDetails(`Ready for tests! Total init time: ${totalDuration.toFixed(2)}ms`);
 
-                console.log(`${getTimestamp()} === INITIALIZATION COMPLETE ===`);
-                console.log(`${getTimestamp()} Total time: ${totalDuration.toFixed(2)}ms`);
-                console.log(`${getTimestamp()} OpenCV.js: ${opencvDuration.toFixed(2)}ms`);
-                console.log(`${getTimestamp()} WASM: ${wasmDuration.toFixed(2)}ms`);
+                log('Init', '=== INITIALIZATION COMPLETE ===');
+                log('Init', `Total time: ${totalDuration.toFixed(2)}ms`);
+                log('Init', `OpenCV.js: ${opencvDuration.toFixed(2)}ms`);
+                log('Init', `WASM: ${wasmDuration.toFixed(2)}ms`);
                 logMemoryUsage('Initialization complete');
+
+                // Auto-extract logs on success
+                window.extractDebugLog();
 
             } catch (error) {
                 const failTime = performance.now() - startTime;
-                console.error(`${getTimestamp()} === INITIALIZATION FAILED at ${failTime.toFixed(2)}ms ===`);
-                console.error(`${getTimestamp()} Error type: ${error.constructor.name}`);
-                console.error(`${getTimestamp()} Error message: ${error.message}`);
-                console.error(`${getTimestamp()} Error stack:`, error.stack);
+                log('Init', `=== INITIALIZATION FAILED at ${failTime.toFixed(2)}ms ===`, 'error');
+                log('Init', `Error type: ${error.constructor.name}`, 'error');
+                log('Init', `Error message: ${error.message}`, 'error');
+                log('Init', `Error stack: ${error.stack}`, 'error');
 
                 updateStatus('✗ Initialization failed: ' + error.message, 'error');
                 window.testHarnessError = error;
 
                 // Log all init steps taken before failure
-                console.error(`${getTimestamp()} Init steps before failure:`, window.initSteps);
+                log('Init', `Init steps before failure: ${JSON.stringify(window.initSteps)}`, 'error');
+
+                // Extract logs on failure
+                window.extractDebugLog();
 
                 throw error;
             }
@@ -309,26 +382,25 @@
 
         // Global error handlers
         window.addEventListener('error', (event) => {
-            console.error(`${getTimestamp()} [GLOBAL ERROR]`, {
-                message: event.message,
-                filename: event.filename,
-                lineno: event.lineno,
-                colno: event.colno,
-                error: event.error
-            });
+            log('Global Error', `${event.message} at ${event.filename}:${event.lineno}:${event.colno}`, 'error');
+            if (event.error) {
+                log('Global Error', `Stack: ${event.error.stack}`, 'error');
+            }
         });
 
         window.addEventListener('unhandledrejection', (event) => {
-            console.error(`${getTimestamp()} [UNHANDLED REJECTION]`, {
-                reason: event.reason,
-                promise: event.promise
-            });
+            log('Unhandled Rejection', `${event.reason}`, 'error');
+            if (event.reason && event.reason.stack) {
+                log('Unhandled Rejection', `Stack: ${event.reason.stack}`, 'error');
+            }
         });
 
         // Start initialization
-        console.log(`${getTimestamp()} Calling initialize()...`);
+        log('Startup', 'Calling initialize()...');
         initialize().catch(err => {
-            console.error(`${getTimestamp()} [FATAL] Initialization failed:`, err);
+            log('Fatal', `Initialization failed: ${err.message}`, 'error');
+            log('Fatal', `Stack: ${err.stack}`, 'error');
+            window.extractDebugLog();
         });
 
         // Export test utilities globally for Playwright tests
