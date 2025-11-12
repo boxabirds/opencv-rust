@@ -35,7 +35,7 @@
     <canvas id="canvas" style="display: none;"></canvas>
 
     <!-- Load OpenCV.js from local cache (avoids CDN/network issues) -->
-    <script async src="/cache/opencv.js"></script>
+    <script async src="/cache/opencv.js" onerror="console.error('[OpenCV.js] Script load error')"></script>
 
     <!-- Main test harness script -->
     <script type="module">
@@ -78,50 +78,40 @@
             }
         }
 
-        // Wait for OpenCV.js to load
-        function waitForOpenCVJs() {
+        // Wait for OpenCV.js to load by polling for cv object
+        async function waitForOpenCVJs() {
             console.log(`${getTimestamp()} [OpenCV.js] Starting wait for OpenCV.js...`);
 
-            return new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                    console.error(`${getTimestamp()} [OpenCV.js] TIMEOUT after 30s`);
-                    reject(new Error('OpenCV.js load timeout'));
-                }, 30000);
+            // Check if already loaded
+            if (typeof cv !== 'undefined' && cv.Mat) {
+                console.log(`${getTimestamp()} [OpenCV.js] Already loaded!`);
+                logMemoryUsage('After OpenCV.js load');
+                return;
+            }
 
-                // Check if already loaded
+            console.log(`${getTimestamp()} [OpenCV.js] Not yet loaded, polling for cv object...`);
+
+            // Poll for cv object to be available
+            const maxAttempts = 300; // 30 seconds (100ms * 300)
+            const pollInterval = 100;
+
+            for (let i = 0; i < maxAttempts; i++) {
                 if (typeof cv !== 'undefined' && cv.Mat) {
-                    console.log(`${getTimestamp()} [OpenCV.js] Already loaded!`);
-                    clearTimeout(timeout);
-                    resolve();
+                    console.log(`${getTimestamp()} [OpenCV.js] cv object detected! (took ${i * pollInterval}ms)`);
+                    logMemoryUsage('After OpenCV.js load');
                     return;
                 }
 
-                console.log(`${getTimestamp()} [OpenCV.js] Not yet loaded, setting up callback...`);
-
-                // OpenCV.js sets this callback when ready
-                window.onOpenCVReady = () => {
-                    console.log(`${getTimestamp()} [OpenCV.js] onOpenCVReady callback fired!`);
-                    logMemoryUsage('After OpenCV.js load');
-                    clearTimeout(timeout);
-                    resolve();
-                };
-
-                // Also monitor the script tag
-                const scriptTag = document.querySelector('script[src="/cache/opencv.js"]');
-                if (scriptTag) {
-                    console.log(`${getTimestamp()} [OpenCV.js] Script tag found, readyState: ${scriptTag.readyState}`);
-
-                    scriptTag.addEventListener('load', () => {
-                        console.log(`${getTimestamp()} [OpenCV.js] Script tag 'load' event fired`);
-                    });
-
-                    scriptTag.addEventListener('error', (e) => {
-                        console.error(`${getTimestamp()} [OpenCV.js] Script tag 'error' event:`, e);
-                        clearTimeout(timeout);
-                        reject(new Error('OpenCV.js script load error'));
-                    });
+                // Log progress every 2 seconds
+                if (i > 0 && i % 20 === 0) {
+                    console.log(`${getTimestamp()} [OpenCV.js] Still waiting... (${i * pollInterval}ms elapsed)`);
                 }
-            });
+
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
+            }
+
+            // Timeout
+            throw new Error('OpenCV.js load timeout - cv object not available after 30s');
         }
 
         // Load our WASM module
