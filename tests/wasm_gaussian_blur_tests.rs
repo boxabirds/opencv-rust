@@ -202,17 +202,31 @@ async fn test_gaussian_blur_cpu_backend() {
 
 #[wasm_bindgen_test]
 async fn test_gaussian_blur_gpu_backend() {
-    // Test with explicit WebGPU backend (may fail if GPU not available)
+    // Test with explicit WebGPU backend
     set_backend_wasm("webgpu");
 
     let src = create_test_image_rgb();
     let result = gaussian_blur_wasm(&src, 5, 1.5).await;
 
-    // Result can be Ok or Err depending on GPU availability
-    if let Ok(output) = result {
-        assert_eq!(output.width(), src.width());
-        assert_eq!(output.height(), src.height());
-        assert_eq!(output.channels(), src.channels());
+    // If GPU backend is set, operation MUST succeed or provide clear error
+    match result {
+        Ok(output) => {
+            // GPU is available and working - verify output
+            assert_eq!(output.width(), src.width(), "GPU: Width should be preserved");
+            assert_eq!(output.height(), src.height(), "GPU: Height should be preserved");
+            assert_eq!(output.channels(), src.channels(), "GPU: Channels should be preserved");
+            web_sys::console::log_1(&"✓ GPU backend test passed".into());
+        }
+        Err(e) => {
+            // GPU failed - this is acceptable ONLY if GPU is not available
+            let error_msg = format!("{:?}", e);
+            if error_msg.contains("GPU not available") || error_msg.contains("WebGPU not supported") {
+                web_sys::console::log_1(&"⚠ GPU not available, skipping GPU test".into());
+            } else {
+                // GPU is available but broken - FAIL THE TEST
+                panic!("GPU backend failed with error (this should not happen if GPU initialized): {:?}", e);
+            }
+        }
     }
 
     // Reset to auto
@@ -226,17 +240,23 @@ async fn test_gaussian_blur_cpu_gpu_similarity() {
 
     // Test with CPU
     set_backend_wasm("cpu");
-    let cpu_result = gaussian_blur_wasm(&src, 5, 1.5).await.unwrap();
+    let cpu_result = gaussian_blur_wasm(&src, 5, 1.5).await
+        .expect("CPU backend must work");
 
-    // Test with auto (may use GPU)
-    set_backend_wasm("auto");
-    let auto_result = gaussian_blur_wasm(&src, 5, 1.5).await.unwrap();
+    // Test with GPU - only compare if GPU is available
+    set_backend_wasm("webgpu");
+    let gpu_result = gaussian_blur_wasm(&src, 5, 1.5).await;
 
-    // Results should be very similar (allowing for small numerical differences)
-    assert!(
-        images_are_similar(&cpu_result, &auto_result, 5.0),
-        "CPU and GPU blur results should be similar (tolerance=5.0)"
-    );
+    if let Ok(gpu_output) = gpu_result {
+        // GPU is available - verify CPU and GPU produce similar results
+        assert!(
+            images_are_similar(&cpu_result, &gpu_output, 5.0),
+            "CPU and GPU blur results should be similar (tolerance=5.0)"
+        );
+        web_sys::console::log_1(&"✓ CPU/GPU similarity test passed".into());
+    } else {
+        web_sys::console::log_1(&"⚠ GPU not available, skipping CPU/GPU comparison".into());
+    }
 
     // Reset to auto
     set_backend_wasm("auto");

@@ -220,8 +220,8 @@ async fn execute_equalize_hist_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) 
         });
         compute_pass.set_pipeline(&histogram_pipeline);
         compute_pass.set_bind_group(0, &bind_group_0, &[]);
-        let workgroup_count_x = (width + 15) / 16;
-        let workgroup_count_y = (height + 15) / 16;
+        let workgroup_count_x = width.div_ceil(16);
+        let workgroup_count_y = height.div_ceil(16);
         compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
     }
 
@@ -354,8 +354,8 @@ async fn execute_equalize_hist_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) 
         });
         compute_pass.set_pipeline(&equalize_pipeline);
         compute_pass.set_bind_group(0, &bind_group_2, &[]);
-        let workgroup_count_x = (width + 15) / 16;
-        let workgroup_count_y = (height + 15) / 16;
+        let workgroup_count_x = width.div_ceil(16);
+        let workgroup_count_y = height.div_ceil(16);
         compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
     }
 

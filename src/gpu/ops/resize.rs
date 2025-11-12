@@ -157,8 +157,8 @@ async fn execute_resize_impl(
             compute_pass.set_pipeline(&compute_pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
             compute_pass.dispatch_workgroups(
-                (dst_width + 15) / 16,
-                (dst_height + 15) / 16,
+                dst_width.div_ceil(16),
+                dst_height.div_ceil(16),
                 1,
             );
         }
@@ -224,8 +224,8 @@ async fn execute_resize_impl(
                 compute_pass.set_pipeline(&cached.compute_pipeline);
                 compute_pass.set_bind_group(0, &bind_group, &[]);
                 compute_pass.dispatch_workgroups(
-                    (dst_width + 15) / 16,
-                    (dst_height + 15) / 16,
+                    dst_width.div_ceil(16),
+                    dst_height.div_ceil(16),
                     1,
                 );
             }

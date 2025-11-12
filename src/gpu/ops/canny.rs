@@ -221,8 +221,8 @@ async fn execute_canny_impl(
         compute_pass.set_pipeline(&compute_pipeline);
         compute_pass.set_bind_group(0, &bind_group, &[]);
         compute_pass.dispatch_workgroups(
-            (width + 15) / 16,
-            (height + 15) / 16,
+            width.div_ceil(16),
+            height.div_ceil(16),
             1,
         );
     }

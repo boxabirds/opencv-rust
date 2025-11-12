@@ -50,7 +50,7 @@ async fn execute_calc_histogram_impl(ctx: &GpuContext, src: &Mat, num_bins: usiz
     let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
     let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
-    let shader_source = r#"
+    let shader_source = r"
 @group(0) @binding(0) var<storage, read> input: array<u32>;
 @group(0) @binding(1) var<storage, read_write> histogram: array<atomic<u32>>;
 @group(0) @binding(2) var<uniform> params: Params;
@@ -80,7 +80,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     atomicAdd(&histogram[bin_idx], 1u);
 }
-"#;
+";
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Histogram Shader"),
@@ -200,8 +200,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         compute_pass.set_pipeline(&compute_pipeline);
         compute_pass.set_bind_group(0, &bind_group, &[]);
         let workgroup_size = 16;
-        let workgroup_count_x = (width + workgroup_size - 1) / workgroup_size;
-        let workgroup_count_y = (height + workgroup_size - 1) / workgroup_size;
+        let workgroup_count_x = width.div_ceil(workgroup_size);
+        let workgroup_count_y = height.div_ceil(workgroup_size);
         compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
     }
 

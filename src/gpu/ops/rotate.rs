@@ -144,8 +144,8 @@ async fn execute_rotate_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, rotate_
         let workgroup_size = 16;
         let out_width = u32::try_from(dst.cols()).unwrap_or(u32::MAX);
         let out_height = u32::try_from(dst.rows()).unwrap_or(u32::MAX);
-        let workgroup_count_x = (out_width + workgroup_size - 1) / workgroup_size;
-        let workgroup_count_y = (out_height + workgroup_size - 1) / workgroup_size;
+        let workgroup_count_x = out_width.div_ceil(workgroup_size);
+        let workgroup_count_y = out_height.div_ceil(workgroup_size);
         compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
     }
 

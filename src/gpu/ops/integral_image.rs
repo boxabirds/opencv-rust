@@ -228,7 +228,7 @@ async fn execute_integral_image_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat)
         });
         compute_pass.set_pipeline(&vertical_pipeline);
         compute_pass.set_bind_group(0, &bind_group_v, &[]);
-        let workgroup_count_x = (width + 15) / 16;
+        let workgroup_count_x = width.div_ceil(16);
         compute_pass.dispatch_workgroups(workgroup_count_x, 1, 1);
     }
 

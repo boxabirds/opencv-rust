@@ -74,7 +74,9 @@ fn create_gaussian_kernel(size: usize, sigma: f64) -> Vec<f32> {
 
     for i in -half..=half {
         let x = f64::from(i);
-        let value = (-x * x / (2.0 * sigma * sigma)).exp();
+        let exponent = -x * x / (2.0 * sigma * sigma);
+        // Use libm::exp which works correctly in WASM
+        let value = libm::exp(exponent);
         #[allow(clippy::cast_possible_truncation)]
         let value_f32 = value as f32;
         kernel.push(value_f32);
@@ -297,8 +299,8 @@ async fn execute_blur_pass_impl(
         compute_pass.set_pipeline(&compute_pipeline);
         compute_pass.set_bind_group(0, &bind_group, &[]);
         compute_pass.dispatch_workgroups(
-            (width + 15) / 16,
-            (height + 15) / 16,
+            width.div_ceil(16),
+            height.div_ceil(16),
             1,
         );
     }
@@ -328,7 +330,7 @@ async fn execute_blur_pass_impl(
         });
         pollster::block_on(receiver)
             .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
-            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+            .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {e:?}")))?;
     }
 
     #[cfg(target_arch = "wasm32")]
