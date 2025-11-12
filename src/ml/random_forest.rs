@@ -233,8 +233,8 @@ impl RandomForest {
 
 // Simple pseudo-random number generator
 fn simple_rand(seed: usize) -> usize {
-    let mut x = seed.wrapping_mul(1664525).wrapping_add(1013904223);
-    x = x.wrapping_mul(1664525).wrapping_add(1013904223);
+    let mut x = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+    x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     x
 }
 

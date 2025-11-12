@@ -164,7 +164,7 @@ impl SimpleRng {
 
     fn next(&mut self) -> f64 {
         // Linear congruential generator
-        self.state = self.state.wrapping_mul(1103515245).wrapping_add(12345);
+        self.state = self.state.wrapping_mul(1_103_515_245).wrapping_add(12345);
         ((self.state / 65536) % 32768) as f64 / 32768.0
     }
 

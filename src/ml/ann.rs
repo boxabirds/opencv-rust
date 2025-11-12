@@ -279,7 +279,7 @@ static mut RAND_SEED: u64 = 12345;
 
 fn rand_f64() -> f64 {
     unsafe {
-        RAND_SEED = RAND_SEED.wrapping_mul(1103515245).wrapping_add(12345);
+        RAND_SEED = RAND_SEED.wrapping_mul(1_103_515_245).wrapping_add(12345);
         ((RAND_SEED / 65536) % 32768) as f64 / 32768.0
     }
 }

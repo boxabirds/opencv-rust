@@ -249,6 +249,7 @@ fn swap_rb_channels(src: &Mat, dst: &mut Mat) -> Result<()> {
 }
 
 /// Convert RGB/BGR to HSV
+#[allow(clippy::many_single_char_names)] // r,g,b,h,s,v are standard in color space math
 fn rgb_to_hsv(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -301,6 +302,7 @@ fn rgb_to_hsv(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 }
 
 /// Convert HSV to RGB/BGR
+#[allow(clippy::many_single_char_names)] // r,g,b,h,s,v,x,c,m are standard in color space math
 fn hsv_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -356,6 +358,7 @@ fn hsv_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 }
 
 /// Convert RGB/BGR to Lab color space
+#[allow(clippy::many_single_char_names)] // r,g,b,x,y,z,l,a,f are standard in color space math
 fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -384,12 +387,12 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let z = r_linear * 0.0193 + g_linear * 0.1192 + b_linear * 0.9505;
 
             // Normalize for D65
-            let xn = x / 0.950489;
+            let xn = x / 0.950_489;
             let yn = y / 1.0;
             let zn = z / 1.08884;
 
             // Convert to Lab
-            let f = |t: f32| if t > 0.008856 { t.powf(1.0 / 3.0) } else { 7.787 * t + 16.0 / 116.0 };
+            let f = |t: f32| if t > 0.008_856 { t.powf(1.0 / 3.0) } else { 7.787 * t + 16.0 / 116.0 };
             let fx = f(xn);
             let fy = f(yn);
             let fz = f(zn);
@@ -409,6 +412,7 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 }
 
 /// Convert Lab to RGB/BGR
+#[allow(clippy::many_single_char_names)] // l,a,b,x,y,z,r,g are standard in color space math
 fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -430,8 +434,8 @@ fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let fx = a / 500.0 + fy;
             let fz = fy - b / 200.0;
 
-            let f_inv = |t: f32| if t > 0.206897 { t.powi(3) } else { (t - 16.0 / 116.0) / 7.787 };
-            let xn = f_inv(fx) * 0.950489;
+            let f_inv = |t: f32| if t > 0.206_897 { t.powi(3) } else { (t - 16.0 / 116.0) / 7.787 };
+            let xn = f_inv(fx) * 0.950_489;
             let yn = f_inv(fy) * 1.0;
             let zn = f_inv(fz) * 1.08884;
 
@@ -440,7 +444,7 @@ fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let g_linear = xn * -0.9689 + yn * 1.8758 + zn * 0.0415;
             let b_linear = xn * 0.0557 + yn * -0.2040 + zn * 1.0570;
 
-            let gamma = |t: f32| if t > 0.0031308 { 1.055 * t.powf(1.0 / 2.4) - 0.055 } else { 12.92 * t };
+            let gamma = |t: f32| if t > 0.003_130_8 { 1.055 * t.powf(1.0 / 2.4) - 0.055 } else { 12.92 * t };
             let r = (gamma(r_linear) * 255.0).clamp(0.0, 255.0) as u8;
             let g = (gamma(g_linear) * 255.0).clamp(0.0, 255.0) as u8;
             let b_rgb = (gamma(b_linear) * 255.0).clamp(0.0, 255.0) as u8;

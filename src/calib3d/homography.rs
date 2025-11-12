@@ -358,7 +358,7 @@ static mut RAND_STATE: u64 = 12345;
 
 fn rand_f64() -> f64 {
     unsafe {
-        RAND_STATE = RAND_STATE.wrapping_mul(1664525).wrapping_add(1013904223);
+        RAND_STATE = RAND_STATE.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
         (RAND_STATE >> 16) as f64 / 65536.0
     }
 }
