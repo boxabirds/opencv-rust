@@ -122,71 +122,58 @@ async fn execute_resize_impl(
         (&cached.bind_group_layout, &cached.compute_pipeline)
     };
 
-    #[cfg(target_arch = "wasm32")]
-    let (bind_group_layout, compute_pipeline) = {
-        PipelineCache::with_resize_pipeline(|cached| {
-            (&cached.bind_group_layout, &cached.compute_pipeline)
-        }).ok_or_else(|| Error::GpuNotAvailable("Pipeline cache not initialized".to_string()))?
-    };
-
-    // Create bind group with cached layout
-    let bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Resize Bind Group"),
-        layout: bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: input_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: output_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: params_buffer.as_entire_binding(),
-            },
-        ],
-    });
-
-    // Create command encoder and execute
-    let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Resize Encoder"),
-    });
-
-    {
-        let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some("Resize Compute Pass"),
-            timestamp_writes: None,
-        });
-
-        compute_pass.set_pipeline(&compute_pipeline);
-        compute_pass.set_bind_group(0, &bind_group, &[]);
-        compute_pass.dispatch_workgroups(
-            (dst_width + 15) / 16,
-            (dst_height + 15) / 16,
-            1,
-        );
-    }
-
-    // Create staging buffer for readback
-    let staging_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Resize Staging Buffer"),
-        size: output_size,
-        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-
-    encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, output_size);
-
-    // Submit commands
-    ctx.queue.submit(Some(encoder.finish()));
-
-    // Read back results
-    let buffer_slice = staging_buffer.slice(..);
-
+    // Native: Execute with direct pipeline references
     #[cfg(not(target_arch = "wasm32"))]
     {
+        let bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Resize Bind Group"),
+            layout: bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: output_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: params_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
+        let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Resize Encoder"),
+        });
+
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Resize Compute Pass"),
+                timestamp_writes: None,
+            });
+
+            compute_pass.set_pipeline(&compute_pipeline);
+            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.dispatch_workgroups(
+                (dst_width + 15) / 16,
+                (dst_height + 15) / 16,
+                1,
+            );
+        }
+
+        let staging_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Resize Staging Buffer"),
+            size: output_size,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, output_size);
+        ctx.queue.submit(Some(encoder.finish()));
+
+        let buffer_slice = staging_buffer.slice(..);
         let (sender, receiver) = futures::channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             sender.send(result).ok();
@@ -194,11 +181,71 @@ async fn execute_resize_impl(
         pollster::block_on(receiver)
             .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
             .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+
+        let data = buffer_slice.get_mapped_range();
+        dst.data_mut().copy_from_slice(&data);
+        drop(data);
+        staging_buffer.unmap();
     }
 
+    // WASM: Execute inside pipeline closure to avoid lifetime issues
     #[cfg(target_arch = "wasm32")]
     {
-        // In WASM, properly await the buffer mapping
+        PipelineCache::with_resize_pipeline(|cached| {
+            let bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Resize Bind Group"),
+                layout: &cached.bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: output_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: params_buffer.as_entire_binding(),
+                    },
+                ],
+            });
+
+            let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Resize Encoder"),
+            });
+
+            {
+                let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("Resize Compute Pass"),
+                    timestamp_writes: None,
+                });
+
+                compute_pass.set_pipeline(&cached.compute_pipeline);
+                compute_pass.set_bind_group(0, &bind_group, &[]);
+                compute_pass.dispatch_workgroups(
+                    (dst_width + 15) / 16,
+                    (dst_height + 15) / 16,
+                    1,
+                );
+            }
+
+            ctx.queue.submit(Some(encoder.finish()));
+            Ok::<(), Error>(())
+        }).ok_or_else(|| Error::GpuNotAvailable("Pipeline cache not initialized".to_string()))??;
+
+        let staging_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Resize Staging Buffer"),
+            size: output_size,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Copy Encoder") });
+        encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, output_size);
+        ctx.queue.submit(Some(encoder.finish()));
+
+        let buffer_slice = staging_buffer.slice(..);
         let (sender, receiver) = futures::channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             sender.send(result).ok();
@@ -206,14 +253,12 @@ async fn execute_resize_impl(
         receiver.await
             .map_err(|_| Error::GpuError("Failed to receive buffer mapping result".to_string()))?
             .map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
+
+        let data = buffer_slice.get_mapped_range();
+        dst.data_mut().copy_from_slice(&data);
+        drop(data);
+        staging_buffer.unmap();
     }
-
-    // Copy data to output Mat
-    let data = buffer_slice.get_mapped_range();
-    dst.data_mut().copy_from_slice(&data);
-
-    drop(data);
-    staging_buffer.unmap();
 
     Ok(())
 }

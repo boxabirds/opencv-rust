@@ -9,6 +9,8 @@ pub mod contours;
 pub mod histogram;
 pub mod hough;
 pub mod advanced_filter;
+pub mod gradient;
+pub mod integral;
 
 pub use color::*;
 pub use filter::*;
