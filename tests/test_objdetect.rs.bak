@@ -1,0 +1,265 @@
+#[allow(unused_comparisons)]
+// Object detection tests ported from OpenCV test suite
+// opencv/modules/objdetect/test/test_qrcode.cpp
+// opencv/modules/objdetect/test/test_aruco.cpp
+
+use opencv_rust::core::{Mat, MatDepth};
+use opencv_rust::core::types::Scalar;
+use opencv_rust::objdetect::qr_detector::QRCodeDetector;
+use opencv_rust::objdetect::aruco::{ArucoDetector, ArucoDictionary, ArucoDetectorParameters};
+
+/// Test from opencv test_qrcode.cpp - QR detector creation
+#[test]
+fn test_qr_detector_initialization() {
+    let detector = QRCodeDetector::new();
+
+    // Detector should be usable after creation
+    let image = Mat::new_with_default(50, 50, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+    let result = detector.detect(&image);
+    assert!(result.is_ok(), "Detector should be usable after creation");
+}
+
+/// Test QR detector on empty image from opencv test_qrcode.cpp
+#[test]
+fn test_qr_detect_on_empty_image() {
+    let detector = QRCodeDetector::new();
+    let image = Mat::new_with_default(100, 100, 1, MatDepth::U8, Scalar::all(255.0)).unwrap();
+
+    let result = detector.detect(&image).unwrap();
+
+    // Should not find QR code in uniform white image
+    assert!(result.is_none(), "Should not detect QR in uniform image");
+}
+
+/// Test QR detector requires grayscale from opencv test_qrcode.cpp
+#[test]
+fn test_qr_detector_requires_grayscale() {
+    let detector = QRCodeDetector::new();
+    let color_image = Mat::new(100, 100, 3, MatDepth::U8).unwrap();
+
+    let result = detector.detect(&color_image);
+
+    // Should error on color image
+    assert!(result.is_err(), "QR detector should require grayscale");
+}
+
+/// Test QR detector on simple pattern from opencv test_qrcode.cpp
+#[test]
+fn test_qr_detect_on_simple_pattern() {
+    let detector = QRCodeDetector::new();
+
+    // Create simple pattern image
+    let mut image = Mat::new(50, 50, 1, MatDepth::U8).unwrap();
+
+    // Fill with pattern that might trigger detection
+    for row in 0..50 {
+        for col in 0..50 {
+            let val = if (row / 5 + col / 5) % 2 == 0 { 0 } else { 255 };
+            image.at_mut(row, col).unwrap()[0] = val;
+        }
+    }
+
+    let result = detector.detect(&image).unwrap();
+
+    // Should either find corners or return None (both valid)
+    if let Some(corners) = result {
+        assert_eq!(corners.len(), 4, "QR code should have 4 corners");
+    }
+}
+
+/// Test QR multi-detection from opencv test_qrcode.cpp
+#[test]
+fn test_qr_detect_multi() {
+    let detector = QRCodeDetector::new();
+    let image = Mat::new_with_default(200, 200, 1, MatDepth::U8, Scalar::all(255.0)).unwrap();
+
+    let results = detector.detect_multi(&image).unwrap();
+
+    // Should return valid vec (empty or with detections)
+    // results.len() is always >= 0 (unsigned type)
+}
+
+/// Test QR detect and decode from opencv test_qrcode.cpp
+#[test]
+fn test_qr_detect_and_decode() {
+    let detector = QRCodeDetector::new();
+
+    // Create simple test image
+    let image = Mat::new_with_default(100, 100, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+
+    let result = detector.detect_and_decode(&image).unwrap();
+
+    // On uniform image, should not detect
+    assert!(result.is_none());
+}
+
+/// Test ArUco dictionary properties from opencv test_aruco.cpp
+#[test]
+fn test_aruco_dictionary_properties() {
+    // Test 4x4 dictionaries
+    let dict4x4_50 = ArucoDictionary::Dict4X4_50;
+    assert_eq!(dict4x4_50.marker_size(), 4);
+    assert_eq!(dict4x4_50.dict_size(), 50);
+
+    let dict4x4_1000 = ArucoDictionary::Dict4X4_1000;
+    assert_eq!(dict4x4_1000.marker_size(), 4);
+    assert_eq!(dict4x4_1000.dict_size(), 1000);
+
+    // Test 5x5 dictionaries
+    let dict5x5_100 = ArucoDictionary::Dict5X5_100;
+    assert_eq!(dict5x5_100.marker_size(), 5);
+    assert_eq!(dict5x5_100.dict_size(), 100);
+
+    // Test 6x6 dictionaries
+    let dict6x6_250 = ArucoDictionary::Dict6X6_250;
+    assert_eq!(dict6x6_250.marker_size(), 6);
+    assert_eq!(dict6x6_250.dict_size(), 250);
+}
+
+/// Test ArUco detector creation from opencv test_aruco.cpp
+#[test]
+fn test_aruco_detector_creation() {
+    let detector = ArucoDetector::new(ArucoDictionary::Dict4X4_50);
+
+    // Should create successfully
+    let image = Mat::new_with_default(100, 100, 1, MatDepth::U8, Scalar::all(255.0)).unwrap();
+    let markers = detector.detect_markers(&image).unwrap();
+
+    // Should not crash and return valid results
+    // markers.len() is always >= 0 (unsigned type)
+}
+
+/// Test ArUco detector with custom parameters from opencv test_aruco.cpp
+#[test]
+fn test_aruco_detector_custom_params() {
+    let mut params = ArucoDetectorParameters::default();
+    params.adaptive_thresh_win_size_min = 5;
+    params.adaptive_thresh_win_size_max = 21;
+    params.min_marker_perimeter_rate = 0.05;
+
+    let detector = ArucoDetector::with_params(ArucoDictionary::Dict5X5_50, params);
+
+    let image = Mat::new_with_default(150, 150, 1, MatDepth::U8, Scalar::all(200.0)).unwrap();
+    let markers = detector.detect_markers(&image).unwrap();
+
+    // markers.len() is always >= 0 (unsigned type)
+}
+
+/// Test ArUco detector requires grayscale from opencv test_aruco.cpp
+#[test]
+fn test_aruco_detector_requires_grayscale() {
+    let detector = ArucoDetector::new(ArucoDictionary::Dict4X4_50);
+    let color_image = Mat::new(100, 100, 3, MatDepth::U8).unwrap();
+
+    let result = detector.detect_markers(&color_image);
+
+    assert!(result.is_err(), "ArUco detector should require grayscale");
+}
+
+/// Test ArUco marker generation from opencv test_aruco.cpp
+#[test]
+fn test_aruco_generate_marker() {
+    let detector = ArucoDetector::new(ArucoDictionary::Dict4X4_50);
+
+    // Generate marker with ID 0
+    let marker = detector.generate_marker(0, 100).unwrap();
+
+    // Check dimensions
+    assert_eq!(marker.rows(), 100);
+    assert_eq!(marker.cols(), 100);
+    assert_eq!(marker.channels(), 1);
+
+    // Marker should have black border
+    assert_eq!(marker.at(0, 0).unwrap()[0], 0, "Top-left corner should be black border");
+    assert_eq!(marker.at(0, 99).unwrap()[0], 0, "Top-right corner should be black border");
+    assert_eq!(marker.at(99, 0).unwrap()[0], 0, "Bottom-left corner should be black border");
+    assert_eq!(marker.at(99, 99).unwrap()[0], 0, "Bottom-right corner should be black border");
+}
+
+/// Test ArUco marker generation with different sizes from opencv test_aruco.cpp
+#[test]
+fn test_aruco_marker_different_sizes() {
+    let detector = ArucoDetector::new(ArucoDictionary::Dict5X5_100);
+
+    for &size in &[50, 100, 200] {
+        let marker = detector.generate_marker(5, size).unwrap();
+        assert_eq!(marker.rows(), size);
+        assert_eq!(marker.cols(), size);
+    }
+}
+
+/// Test ArUco marker ID validation from opencv test_aruco.cpp
+#[test]
+fn test_aruco_marker_id_validation() {
+    let detector = ArucoDetector::new(ArucoDictionary::Dict4X4_50);
+
+    // Valid ID
+    let result1 = detector.generate_marker(0, 100);
+    assert!(result1.is_ok());
+
+    let result2 = detector.generate_marker(49, 100);
+    assert!(result2.is_ok());
+
+    // Invalid ID (negative)
+    let result3 = detector.generate_marker(-1, 100);
+    assert!(result3.is_err(), "Should reject negative marker ID");
+
+    // Invalid ID (too large)
+    let result4 = detector.generate_marker(50, 100);
+    assert!(result4.is_err(), "Should reject marker ID >= dict_size");
+}
+
+/// Test ArUco default detector parameters from opencv test_aruco.cpp
+#[test]
+fn test_aruco_default_parameters() {
+    let params = ArucoDetectorParameters::default();
+
+    // Check default values match OpenCV
+    assert_eq!(params.adaptive_thresh_win_size_min, 3);
+    assert_eq!(params.adaptive_thresh_win_size_max, 23);
+    assert_eq!(params.adaptive_thresh_win_size_step, 10);
+    assert_eq!(params.adaptive_thresh_constant, 7.0);
+    assert_eq!(params.min_marker_perimeter_rate, 0.03);
+    assert_eq!(params.max_marker_perimeter_rate, 4.0);
+    assert_eq!(params.polygonal_approx_accuracy_rate, 0.03);
+    assert_eq!(params.min_corner_distance_rate, 0.05);
+    assert_eq!(params.min_distance_to_border, 3);
+    assert_eq!(params.corner_refinement_win_size, 5);
+    assert_eq!(params.corner_refinement_max_iterations, 30);
+}
+
+/// Test ArUco detection on patterned image from opencv test_aruco.cpp
+#[test]
+fn test_aruco_detection_on_pattern() {
+    let detector = ArucoDetector::new(ArucoDictionary::Dict4X4_50);
+
+    // Create checkerboard pattern
+    let mut image = Mat::new(100, 100, 1, MatDepth::U8).unwrap();
+    for row in 0..100 {
+        for col in 0..100 {
+            let val = if (row / 10 + col / 10) % 2 == 0 { 0 } else { 255 };
+            image.at_mut(row, col).unwrap()[0] = val;
+        }
+    }
+
+    let markers = detector.detect_markers(&image).unwrap();
+
+    // Should return valid result (may or may not detect markers)
+    // markers.len() is always >= 0 (unsigned type)
+}
+
+/// Test ArUco marker corner count from opencv test_aruco.cpp
+#[test]
+fn test_aruco_marker_corners() {
+    let detector = ArucoDetector::new(ArucoDictionary::Dict5X5_100);
+
+    // Create test image with generated marker
+    let marker_img = detector.generate_marker(10, 100).unwrap();
+
+    let detected = detector.detect_markers(&marker_img).unwrap();
+
+    // If marker is detected, should have 4 corners
+    for marker in detected {
+        assert_eq!(marker.corners.len(), 4, "ArUco marker should have 4 corners");
+    }
+}

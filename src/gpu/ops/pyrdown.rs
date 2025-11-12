@@ -24,8 +24,8 @@ pub async fn pyrdown_gpu_async(src: &Mat, dst: &mut Mat) -> Result<()> {
         return Err(Error::UnsupportedOperation("GPU pyrdown only supports U8 depth".to_string()));
     }
 
-    let dst_width = (src.cols() + 1) / 2;
-    let dst_height = (src.rows() + 1) / 2;
+    let dst_width = src.cols().div_ceil(2);
+    let dst_height = src.rows().div_ceil(2);
     *dst = Mat::new(dst_height, dst_width, src.channels(), src.depth())?;
 
     #[cfg(target_arch = "wasm32")]
@@ -167,8 +167,8 @@ async fn execute_pyrdown_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) -> Res
         compute_pass.set_pipeline(&compute_pipeline);
         compute_pass.set_bind_group(0, &bind_group, &[]);
         let workgroup_size = 16;
-        let workgroup_count_x = (dst_width + workgroup_size - 1) / workgroup_size;
-        let workgroup_count_y = (dst_height + workgroup_size - 1) / workgroup_size;
+        let workgroup_count_x = dst_width.div_ceil(workgroup_size);
+        let workgroup_count_y = dst_height.div_ceil(workgroup_size);
         compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
     }
 

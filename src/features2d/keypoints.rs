@@ -333,7 +333,7 @@ mod tests {
     fn test_fast() {
         let img = Mat::new_with_default(100, 100, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
         let keypoints = fast(&img, 20, true).unwrap();
-        // May detect some based on noise
-        assert!(keypoints.len() >= 0);
+        // May detect some based on noise (len is always >= 0 for Vec)
+        let _ = keypoints.len();
     }
 }

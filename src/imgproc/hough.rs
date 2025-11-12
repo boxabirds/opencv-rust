@@ -309,6 +309,7 @@ mod tests {
 
         let lines = hough_lines_p(&img, 1.0, PI / 180.0, 20, 10.0, 5.0).unwrap();
         // May or may not detect depending on parameters
-        assert!(lines.len() >= 0);
+        // Just verify it returns successfully (len is always >= 0 for Vec)
+        let _ = lines.len();
     }
 }

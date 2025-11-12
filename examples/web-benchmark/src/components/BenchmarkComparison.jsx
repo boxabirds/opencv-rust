@@ -9,7 +9,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useOpenCVJs, runOpenCVJsOperation, benchmarkOpenCVJs } from './OpenCVJsLoader';
 
 const BenchmarkComparison = ({ operationName, imageData, params, onComplete }) => {
-  const { loaded: cvLoaded, loading: cvLoading, error: cvError } = useOpenCVJs();
+  const [showComparison, setShowComparison] = useState(false);
+  const [shouldLoadOpenCV, setShouldLoadOpenCV] = useState(false);
+
+  const { loaded: cvLoaded, loading: cvLoading, error: cvError } = useOpenCVJs(shouldLoadOpenCV);
 
   const [state, setState] = useState({
     running: false,
@@ -20,8 +23,6 @@ const BenchmarkComparison = ({ operationName, imageData, params, onComplete }) =
     speedup: null,
     error: null,
   });
-
-  const [showComparison, setShowComparison] = useState(false);
   const canvasOurRef = useRef(null);
   const canvasCvRef = useRef(null);
 
@@ -122,29 +123,19 @@ const BenchmarkComparison = ({ operationName, imageData, params, onComplete }) =
     return 'Slower (optimization needed)';
   };
 
-  if (cvError) {
-    return (
-      <div className="benchmark-comparison-error">
-        <p>Failed to load OpenCV.js: {cvError.message}</p>
-        <p>Comparison not available</p>
-      </div>
-    );
-  }
-
-  if (cvLoading) {
-    return (
-      <div className="benchmark-comparison-loading">
-        <p>Loading OpenCV.js for comparison...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="benchmark-comparison">
       {/* Toggle Button */}
       <div className="comparison-toggle">
         <button
-          onClick={() => setShowComparison(!showComparison)}
+          onClick={() => {
+            const newState = !showComparison;
+            setShowComparison(newState);
+            // Trigger OpenCV.js load when user opens comparison
+            if (newState && !shouldLoadOpenCV) {
+              setShouldLoadOpenCV(true);
+            }
+          }}
           className="toggle-button"
         >
           {showComparison ? '▼' : '►'} Compare with OpenCV.js
@@ -154,22 +145,52 @@ const BenchmarkComparison = ({ operationName, imageData, params, onComplete }) =
       {/* Comparison Panel */}
       {showComparison && (
         <div className="comparison-panel">
-          {/* Run Comparison Button */}
-          <div className="comparison-controls">
-            <button
-              onClick={runComparison}
-              disabled={state.running || !cvLoaded}
-              className="run-comparison-button"
-            >
-              {state.running ? 'Running...' : 'Run Comparison'}
-            </button>
-          </div>
-
-          {/* Error Display */}
-          {state.error && (
-            <div className="comparison-error">
-              <p>Error: {state.error}</p>
+          {/* Loading State */}
+          {cvLoading && (
+            <div className="comparison-loading">
+              <p>📦 Loading OpenCV.js from CDN...</p>
+              <p className="loading-note">This may take a few seconds on first load</p>
             </div>
+          )}
+
+          {/* Error State */}
+          {cvError && (
+            <div className="comparison-error">
+              <p>⚠️ Failed to load OpenCV.js: {cvError.message}</p>
+              <p>Comparison requires internet connection to load OpenCV.js from CDN.</p>
+              <button
+                onClick={() => {
+                  setShouldLoadOpenCV(false);
+                  setTimeout(() => setShouldLoadOpenCV(true), 100);
+                }}
+                className="retry-button"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Ready State */}
+          {!cvLoading && !cvError && cvLoaded && (
+            <>
+              {/* Run Comparison Button */}
+              <div className="comparison-controls">
+                <button
+                  onClick={runComparison}
+                  disabled={state.running}
+                  className="run-comparison-button"
+                >
+                  {state.running ? 'Running...' : 'Run Comparison'}
+                </button>
+              </div>
+
+              {/* Operation Error Display */}
+              {state.error && (
+                <div className="comparison-error">
+                  <p>Error: {state.error}</p>
+                </div>
+              )}
+            </>
           )}
 
           {/* Results Display */}
@@ -239,16 +260,23 @@ const BenchmarkComparison = ({ operationName, imageData, params, onComplete }) =
           )}
 
           {/* Initial State */}
-          {state.ourTime === null && !state.running && !state.error && (
+          {!cvLoading && !cvError && cvLoaded && state.ourTime === null && !state.running && !state.error && (
             <div className="comparison-initial">
               <p>Click "Run Comparison" to benchmark against OpenCV.js</p>
+            </div>
+          )}
+
+          {/* Not Loaded Yet State */}
+          {!shouldLoadOpenCV && !cvLoaded && !cvLoading && !cvError && (
+            <div className="comparison-initial">
+              <p>OpenCV.js will load when you expand this panel</p>
             </div>
           )}
         </div>
       )}
 
       {/* Inline Styles */}
-      <style jsx>{`
+      <style>{`
         .benchmark-comparison {
           margin-top: 20px;
           border: 1px solid #333;
@@ -405,15 +433,38 @@ const BenchmarkComparison = ({ operationName, imageData, params, onComplete }) =
           margin-bottom: 8px;
         }
 
-        .benchmark-comparison-loading,
-        .benchmark-comparison-error {
-          padding: 20px;
+        .comparison-loading {
+          padding: 30px;
           text-align: center;
+          background: #2a2a2a;
+          border-radius: 8px;
+          margin-bottom: 16px;
+        }
+
+        .comparison-loading p {
+          margin: 8px 0;
+          color: #fff;
+        }
+
+        .loading-note {
+          font-size: 12px;
           color: #999;
         }
 
-        .benchmark-comparison-error {
-          color: #fca5a5;
+        .retry-button {
+          background: #3b82f6;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          margin-top: 12px;
+          transition: background 0.2s;
+        }
+
+        .retry-button:hover {
+          background: #2563eb;
         }
       `}</style>
     </div>

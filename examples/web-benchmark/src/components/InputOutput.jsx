@@ -15,6 +15,11 @@ export default function InputOutput({ onProcess }) {
     demoParams
   } = useAppStore();
 
+  // Debug: Log when outputImage changes
+  useEffect(() => {
+    console.log('[InputOutput] outputImage changed:', outputImage ? `data URL (${outputImage.length} chars)` : 'NULL');
+  }, [outputImage]);
+
   const [inputImageData, setInputImageData] = useState(null);
 
   // Convert input image to ImageData for comparison
@@ -118,7 +123,14 @@ export default function InputOutput({ onProcess }) {
           </div>
           <div className="image-container">
             {outputImage ? (
-              <img src={outputImage} alt="Output" />
+              <>
+                <img
+                  src={outputImage}
+                  alt="Output"
+                  onLoad={() => console.log('[InputOutput] Output image loaded successfully')}
+                  onError={(e) => console.error('[InputOutput] Output image failed to load:', e)}
+                />
+              </>
             ) : (
               <div className="placeholder">
                 <Play size={48} />

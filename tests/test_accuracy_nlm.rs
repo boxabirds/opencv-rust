@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Non-Local Means Denoising
 mod test_utils;
 
@@ -138,7 +139,8 @@ fn test_nlm_output_range() {
     for row in 0..30 {
         for col in 0..30 {
             let val = dst.at(row, col).unwrap()[0];
-            assert!(val <= 255,
+            // val is u8, always <= 255
+assert!(val == val,
                 "NLM output at ({}, {}) out of range: {}", row, col, val);
         }
     }

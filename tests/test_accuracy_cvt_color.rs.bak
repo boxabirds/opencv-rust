@@ -1,0 +1,197 @@
+#[allow(unused_comparisons)]
+/// Bit-level accuracy tests for Color Conversion
+mod test_utils;
+
+use opencv_rust::core::{Mat, MatDepth};
+use opencv_rust::core::types::{Scalar, ColorConversionCode};
+use opencv_rust::imgproc::cvt_color;
+use test_utils::*;
+
+#[test]
+fn test_cvt_color_gray_deterministic() {
+    let mut src = Mat::new(30, 30, 3, MatDepth::U8).unwrap();
+    for i in 0..2700 { src.data_mut()[i] = (i % 256) as u8; }
+
+    let mut dst1 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst2 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    cvt_color(&src, &mut dst1, ColorConversionCode::RgbToGray).unwrap();
+    cvt_color(&src, &mut dst2, ColorConversionCode::RgbToGray).unwrap();
+
+    assert_images_equal(&dst1, &dst2, "RGB to Gray should be deterministic");
+}
+
+#[test]
+fn test_cvt_color_gray_pure_colors() {
+    // Pure red
+    let red = Mat::new_with_default(10, 10, 3, MatDepth::U8, Scalar::new(255.0, 0.0, 0.0, 0.0)).unwrap();
+    let mut gray_red = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&red, &mut gray_red, ColorConversionCode::RgbToGray).unwrap();
+
+    // OpenCV uses: Gray = 0.299*R + 0.587*G + 0.114*B
+    // Red: 0.299 * 255 = 76.245 ≈ 76
+    let expected_red = (0.299 * 255.0) as u8;
+    assert_eq!(gray_red.at(5, 5).unwrap()[0], expected_red, "Pure red conversion");
+
+    // Pure green
+    let green = Mat::new_with_default(10, 10, 3, MatDepth::U8, Scalar::new(0.0, 255.0, 0.0, 0.0)).unwrap();
+    let mut gray_green = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&green, &mut gray_green, ColorConversionCode::RgbToGray).unwrap();
+
+    // Green: 0.587 * 255 = 149.685 ≈ 150
+    let expected_green = (0.587 * 255.0) as u8;
+    assert_eq!(gray_green.at(5, 5).unwrap()[0], expected_green, "Pure green conversion");
+
+    // Pure blue
+    let blue = Mat::new_with_default(10, 10, 3, MatDepth::U8, Scalar::new(0.0, 0.0, 255.0, 0.0)).unwrap();
+    let mut gray_blue = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&blue, &mut gray_blue, ColorConversionCode::RgbToGray).unwrap();
+
+    // Blue: 0.114 * 255 = 29.07 ≈ 29
+    let expected_blue = (0.114 * 255.0) as u8;
+    assert_eq!(gray_blue.at(5, 5).unwrap()[0], expected_blue, "Pure blue conversion");
+}
+
+#[test]
+fn test_cvt_color_gray_white_black() {
+    // Pure white
+    let white = Mat::new_with_default(10, 10, 3, MatDepth::U8, Scalar::all(255.0)).unwrap();
+    let mut gray_white = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&white, &mut gray_white, ColorConversionCode::RgbToGray).unwrap();
+
+    assert_eq!(gray_white.at(5, 5).unwrap()[0], 255, "White should be 255");
+
+    // Pure black
+    let black = Mat::new_with_default(10, 10, 3, MatDepth::U8, Scalar::all(0.0)).unwrap();
+    let mut gray_black = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&black, &mut gray_black, ColorConversionCode::RgbToGray).unwrap();
+
+    assert_eq!(gray_black.at(5, 5).unwrap()[0], 0, "Black should be 0");
+}
+
+#[test]
+fn test_cvt_color_gray_dimensions() {
+    let src = Mat::new(40, 60, 3, MatDepth::U8).unwrap();
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    cvt_color(&src, &mut dst, ColorConversionCode::RgbToGray).unwrap();
+
+    assert_eq!(dst.rows(), 40, "Height preserved");
+    assert_eq!(dst.cols(), 60, "Width preserved");
+    assert_eq!(dst.channels(), 1, "Should be single channel");
+}
+
+#[test]
+fn test_cvt_color_gray_output_range() {
+    let mut src = Mat::new(30, 30, 3, MatDepth::U8).unwrap();
+    for i in 0..2700 { src.data_mut()[i] = (i % 256) as u8; }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&src, &mut dst, ColorConversionCode::RgbToGray).unwrap();
+
+    for row in 0..30 {
+        for col in 0..30 {
+            let val = dst.at(row, col).unwrap()[0];
+            assert!(val <= 255, "Gray value at ({}, {}) out of range: {}", row, col, val);
+        }
+    }
+}
+
+#[test]
+fn test_cvt_color_gray_gradient() {
+    // Create horizontal gradient
+    let mut src = Mat::new(20, 20, 3, MatDepth::U8).unwrap();
+    for row in 0..20 {
+        for col in 0..20 {
+            let val = (col * 255 / 19) as u8;
+            src.at_mut(row, col).unwrap()[0] = val; // R
+            src.at_mut(row, col).unwrap()[1] = val; // G
+            src.at_mut(row, col).unwrap()[2] = val; // B
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&src, &mut dst, ColorConversionCode::RgbToGray).unwrap();
+
+    // Gray gradient should be monotonically increasing
+    for row in 0..20 {
+        for col in 1..20 {
+            let prev = dst.at(row, col - 1).unwrap()[0];
+            let curr = dst.at(row, col).unwrap()[0];
+            assert!(curr >= prev, "Gradient should be monotonic");
+        }
+    }
+}
+
+#[test]
+fn test_cvt_color_rgba_to_gray() {
+    // Test RGBA (4 channels) to Gray
+    let mut src = Mat::new(10, 10, 4, MatDepth::U8).unwrap();
+    for i in 0..400 { src.data_mut()[i] = (i % 256) as u8; }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&src, &mut dst, ColorConversionCode::RgbaToGray).unwrap();
+
+    assert_eq!(dst.channels(), 1);
+    assert_eq!(dst.rows(), 10);
+    assert_eq!(dst.cols(), 10);
+}
+
+#[test]
+fn test_cvt_color_bgr_to_gray() {
+    // Test BGR ordering (OpenCV default)
+    let mut src_rgb = Mat::new(10, 10, 3, MatDepth::U8).unwrap();
+    let mut src_bgr = Mat::new(10, 10, 3, MatDepth::U8).unwrap();
+
+    // Set same values but in different channel order
+    for row in 0..10 {
+        for col in 0..10 {
+            // RGB order
+            src_rgb.at_mut(row, col).unwrap()[0] = 100; // R
+            src_rgb.at_mut(row, col).unwrap()[1] = 150; // G
+            src_rgb.at_mut(row, col).unwrap()[2] = 200; // B
+
+            // BGR order (swap R and B)
+            src_bgr.at_mut(row, col).unwrap()[0] = 200; // B
+            src_bgr.at_mut(row, col).unwrap()[1] = 150; // G
+            src_bgr.at_mut(row, col).unwrap()[2] = 100; // R
+        }
+    }
+
+    let mut dst_rgb = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_bgr = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    cvt_color(&src_rgb, &mut dst_rgb, ColorConversionCode::RgbToGray).unwrap();
+    cvt_color(&src_bgr, &mut dst_bgr, ColorConversionCode::BgrToGray).unwrap();
+
+    // Results should be identical when accounting for channel ordering
+    assert_eq!(dst_rgb.at(5, 5).unwrap()[0], dst_bgr.at(5, 5).unwrap()[0],
+               "RGB and BGR should produce same gray value");
+}
+
+#[test]
+#[ignore]
+fn test_cvt_color_visual_inspection() {
+    let mut src = Mat::new(15, 15, 3, MatDepth::U8).unwrap();
+
+    // Create colorful pattern
+    for row in 0..15 {
+        for col in 0..15 {
+            let r = ((row * 17) % 256) as u8;
+            let g = ((col * 17) % 256) as u8;
+            let b = (((row + col) * 17) % 256) as u8;
+            src.at_mut(row, col).unwrap()[0] = r;
+            src.at_mut(row, col).unwrap()[1] = g;
+            src.at_mut(row, col).unwrap()[2] = b;
+        }
+    }
+
+    println!("\nInput RGB pattern:");
+    print_image_data(&src, "RGB Source", 15, 15);
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    cvt_color(&src, &mut dst, ColorConversionCode::RgbToGray).unwrap();
+
+    println!("\nGrayscale output:");
+    print_image_data(&dst, "Grayscale", 15, 15);
+}

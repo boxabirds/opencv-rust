@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Pre-push hook to validate WASM builds
+#
+# To install this hook, run:
+#   ln -s ../../.github/hooks/pre-push .git/hooks/pre-push
+#   chmod +x .git/hooks/pre-push
+#
+# To bypass this hook in emergencies:
+#   git push --no-verify
+
+set -e
+
+echo "🔍 Running pre-push validation..."
+
+# Check if wasm-pack is installed
+if ! command -v wasm-pack &> /dev/null; then
+    echo "⚠️  wasm-pack not found. Install with:"
+    echo "   curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh"
+    echo ""
+    echo "Skipping WASM build check. Install wasm-pack to enable this check."
+    exit 0
+fi
+
+# Check if we're pushing changes that affect WASM
+CHANGED_FILES=$(git diff --name-only HEAD origin/main 2>/dev/null || git diff --name-only HEAD)
+
+if echo "$CHANGED_FILES" | grep -qE '^(src/|Cargo\.toml|Cargo\.lock)'; then
+    echo "📦 Building WASM module..."
+
+    if wasm-pack build --target web --features wasm; then
+        echo "✅ WASM build successful"
+
+        # Verify outputs exist
+        if [ -f pkg/opencv_rust_bg.wasm ] && [ -f pkg/opencv_rust.js ]; then
+            echo "✅ WASM artifacts verified"
+        else
+            echo "❌ WASM artifacts missing"
+            exit 1
+        fi
+    else
+        echo "❌ WASM build failed"
+        echo ""
+        echo "Fix the build errors before pushing, or use --no-verify to bypass this check."
+        exit 1
+    fi
+else
+    echo "⏭️  No WASM-related changes detected, skipping build"
+fi
+
+echo "✅ Pre-push validation passed"

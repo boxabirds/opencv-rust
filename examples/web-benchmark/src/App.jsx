@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import init, {
   WasmMat,
   initGpu,
@@ -50,7 +50,7 @@ import init, {
   morphologyTophat as wasmMorphologyTophat,
   morphologyBlackhat as wasmMorphologyBlackhat,
   warpPerspective as wasmWarpPerspective,
-  getRotationMatrix2d as wasmGetRotationMatrix2d,
+  getRotationMatrix2D as wasmGetRotationMatrix2d,
   normalizeHistogram as wasmNormalizeHistogram,
   compareHistograms as wasmCompareHistograms,
   backProjection as wasmBackProjection,
@@ -136,12 +136,12 @@ function App() {
   } = useAppStore();
 
   // Initialize WASM and WebGPU once
-  useEffect(() => {
-    let initialized = false;
+  const initializedRef = useRef(false);
 
+  useEffect(() => {
     const initWasm = async () => {
-      if (initialized) return;
-      initialized = true;
+      if (initializedRef.current) return;
+      initializedRef.current = true;
 
       try {
         console.log('Initializing WASM module...');
@@ -189,6 +189,10 @@ function App() {
     try {
       // Load image to ImageData
       const imageData = await imageToImageData(inputImage.dataURL);
+      console.log(`[${demo.id}] Input ImageData pixels:`, {
+        firstPixels: Array.from(imageData.data.slice(0, 16)),
+        someMiddle: Array.from(imageData.data.slice(1000, 1016))
+      });
 
       // Create WASM Mat
       const srcMat = WasmMat.fromImageData(
@@ -200,14 +204,31 @@ function App() {
 
       // Process with GPU (if available)
       if (gpuAvailable) {
+        console.log(`[${demo.id}] Starting GPU processing...`);
         const startGpu = performance.now();
         const gpuResult = await runDemo(demo.id, srcMat, demoParams);
         const endGpu = performance.now();
         gpuTime = endGpu - startGpu;
+        console.log(`[${demo.id}] GPU time: ${gpuTime}ms, result:`, gpuResult);
 
         if (gpuResult) {
+          const resultData = gpuResult.getData();
+          console.log(`[${demo.id}] Converting to image URL...`, {
+            width: gpuResult.width,
+            height: gpuResult.height,
+            channels: gpuResult.channels,
+            dataLength: resultData.length,
+            firstPixels: Array.from(resultData.slice(0, 16)),
+            someMiddlePixels: Array.from(resultData.slice(1000, 1016))
+          });
           resultImage = matToImageDataURL(gpuResult);
+          console.log(`[${demo.id}] Result image URL:`, resultImage ? `data:image/... (${resultImage.length} chars)` : 'NULL');
+          if (resultImage) {
+            console.log(`[${demo.id}] Data URL preview:`, resultImage.substring(0, 100));
+          }
           gpuResult.free();
+        } else {
+          console.warn(`[${demo.id}] GPU result is null/undefined`);
         }
       }
 
@@ -228,9 +249,12 @@ function App() {
       srcMat.free();
 
       // Update UI
+      console.log(`[${demo.id}] About to update UI, resultImage:`, resultImage ? 'exists' : 'NULL');
       if (resultImage) {
+        console.log(`[${demo.id}] Calling setOutputImage...`);
         setOutputImage(resultImage);
         setPerformance(cpuTime, gpuTime);
+        console.log(`[${demo.id}] UI updated`);
 
         // Add to history
         const thumbnail = await createThumbnail(resultImage);
@@ -243,6 +267,8 @@ function App() {
           outputThumbnail: thumbnail,
           processingTime: gpuTime || cpuTime
         });
+      } else {
+        console.error(`[${demo.id}] No result image to display!`);
       }
     } catch (error) {
       console.error('Processing failed:', error);

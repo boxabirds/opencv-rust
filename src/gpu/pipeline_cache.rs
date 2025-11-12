@@ -653,7 +653,7 @@ impl PipelineCache {
             label: Some("Sobel Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: Some("sobel_filter"),
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -720,7 +720,7 @@ impl PipelineCache {
             label: Some("RGB to Gray Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: Some("rgb_to_gray"),
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -787,7 +787,7 @@ impl PipelineCache {
             label: Some("Erode Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: Some("erode"),
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -854,7 +854,7 @@ impl PipelineCache {
             label: Some("Dilate Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: Some("dilate"),
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -921,7 +921,7 @@ impl PipelineCache {
             label: Some("Flip Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: Some("flip"),
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -988,7 +988,7 @@ impl PipelineCache {
             label: Some("Laplacian Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: Some("laplacian"),
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });

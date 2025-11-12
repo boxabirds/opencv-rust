@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Color Conversion
 mod test_utils;
 

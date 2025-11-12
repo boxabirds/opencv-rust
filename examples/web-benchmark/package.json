@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run build:wasm && vite",
+    "dev": "npm run dev:check && vite",
+    "dev:check": "node scripts/check-wasm.js || npm run build:wasm",
     "build:wasm": "cd ../../ && rm -rf pkg && wasm-pack build --target web --out-dir pkg --features gpu,wasm",
+    "build:wasm:force": "npm run build:wasm",
     "build": "npm run build:wasm && vite build",
     "preview": "vite preview"
   },

@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Harris corner detection
 /// These tests verify that optimizations don't change results
 mod test_utils;
@@ -114,8 +115,8 @@ fn test_harris_k_parameter() {
 
     // Different k values may detect different numbers of corners
     // Just verify both work without errors
-    assert!(keypoints_k1.len() >= 0);
-    assert!(keypoints_k2.len() >= 0);
+    // keypoints_k1.len() is always >= 0 (unsigned type)
+    // keypoints_k2.len() is always >= 0 (unsigned type)
 }
 
 /// Test Harris block size effect
@@ -140,8 +141,8 @@ fn test_harris_block_size() {
     let keypoints_large = harris_corners(&src, 5, 3, 0.04, 100.0).unwrap();
 
     // Both should detect corners (though possibly different counts)
-    assert!(keypoints_small.len() >= 0);
-    assert!(keypoints_large.len() >= 0);
+    // keypoints_small.len() is always >= 0 (unsigned type)
+    // keypoints_large.len() is always >= 0 (unsigned type)
 }
 
 /// Test Harris corners are within image bounds
@@ -239,7 +240,7 @@ fn test_harris_response_non_negative() {
 
     // All response values should be non-negative (if stored)
     // This is implicit in the threshold test
-    assert!(keypoints.len() >= 0);
+    // keypoints.len() is always >= 0 (unsigned type)
 }
 
 /// Test Harris handles edge pixels
@@ -262,7 +263,7 @@ fn test_harris_boundary_handling() {
     let keypoints = harris_corners(&src, 3, 3, 0.04, 100.0).unwrap();
 
     // Should not crash and produce valid output
-    assert!(keypoints.len() >= 0);
+    // keypoints.len() is always >= 0 (unsigned type)
 
     // Verify all keypoints are valid
     for kp in &keypoints {

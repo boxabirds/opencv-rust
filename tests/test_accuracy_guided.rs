@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Guided Filter
 /// These tests verify that optimizations don't change results
 mod test_utils;
@@ -180,7 +181,8 @@ fn test_guided_output_range() {
     for row in 0..30 {
         for col in 0..30 {
             let val = dst.at(row, col).unwrap()[0];
-            assert!(val <= 255,
+            // val is u8, always <= 255
+assert!(val == val,
                 "Guided filter output at ({}, {}) out of range: {}", row, col, val);
         }
     }

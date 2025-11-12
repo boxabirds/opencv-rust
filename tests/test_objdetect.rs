@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 // Object detection tests ported from OpenCV test suite
 // opencv/modules/objdetect/test/test_qrcode.cpp
 // opencv/modules/objdetect/test/test_aruco.cpp
@@ -75,7 +76,7 @@ fn test_qr_detect_multi() {
     let results = detector.detect_multi(&image).unwrap();
 
     // Should return valid vec (empty or with detections)
-    assert!(results.len() >= 0);
+    // results.len() is always >= 0 (unsigned type)
 }
 
 /// Test QR detect and decode from opencv test_qrcode.cpp
@@ -125,7 +126,7 @@ fn test_aruco_detector_creation() {
     let markers = detector.detect_markers(&image).unwrap();
 
     // Should not crash and return valid results
-    assert!(markers.len() >= 0);
+    // markers.len() is always >= 0 (unsigned type)
 }
 
 /// Test ArUco detector with custom parameters from opencv test_aruco.cpp
@@ -141,7 +142,7 @@ fn test_aruco_detector_custom_params() {
     let image = Mat::new_with_default(150, 150, 1, MatDepth::U8, Scalar::all(200.0)).unwrap();
     let markers = detector.detect_markers(&image).unwrap();
 
-    assert!(markers.len() >= 0);
+    // markers.len() is always >= 0 (unsigned type)
 }
 
 /// Test ArUco detector requires grayscale from opencv test_aruco.cpp
@@ -244,7 +245,7 @@ fn test_aruco_detection_on_pattern() {
     let markers = detector.detect_markers(&image).unwrap();
 
     // Should return valid result (may or may not detect markers)
-    assert!(markers.len() >= 0);
+    // markers.len() is always >= 0 (unsigned type)
 }
 
 /// Test ArUco marker corner count from opencv test_aruco.cpp

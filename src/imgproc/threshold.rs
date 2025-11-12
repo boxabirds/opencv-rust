@@ -94,7 +94,7 @@ pub async fn adaptive_threshold_async(
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let maxval_u8 = maxval_u8 as u8;
 
-            let c_i32 = c.clamp(i32::MIN as f64, i32::MAX as f64);
+            let c_i32 = c.clamp(f64::from(i32::MIN), f64::from(i32::MAX));
             #[allow(clippy::cast_possible_truncation)]
             let c_i32 = c_i32 as i32;
 

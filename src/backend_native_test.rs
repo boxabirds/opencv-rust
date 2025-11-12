@@ -79,6 +79,7 @@ pub fn get_resolved_backend_name() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     fn reset() {
         BACKEND.store(Backend::Auto as u8, Ordering::Relaxed);
@@ -86,12 +87,16 @@ mod tests {
     }
 
     #[test]
+    #[serial]
+    #[serial]
     fn test_default_is_auto() {
         reset();
         assert_eq!(get_backend_name(), "auto");
     }
 
     #[test]
+    #[serial]
+    #[serial]
     fn test_set_cpu() {
         reset();
         set_backend("cpu");
@@ -100,6 +105,8 @@ mod tests {
     }
 
     #[test]
+    #[serial]
+    #[serial]
     fn test_set_webgpu() {
         reset();
         set_backend("webgpu");
@@ -108,6 +115,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_gpu_alias() {
         reset();
         set_backend("gpu");
@@ -116,6 +124,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_auto_resolution() {
         reset();
         set_backend("auto");
@@ -124,6 +133,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_invalid_defaults_to_auto() {
         reset();
         set_backend("invalid");
@@ -131,6 +141,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_empty_string() {
         reset();
         set_backend("");
@@ -138,6 +149,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_case_sensitive() {
         reset();
         set_backend("CPU");
@@ -145,6 +157,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_switching() {
         reset();
         set_backend("cpu");
@@ -156,6 +169,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_auto_caching() {
         reset();
         set_backend("auto");
@@ -174,6 +188,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_reset_cache_on_auto() {
         reset();
         set_backend("auto");
@@ -187,6 +202,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_cpu_mode_no_resolution() {
         reset();
         set_backend("cpu");
@@ -196,6 +212,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_webgpu_mode_no_resolution() {
         reset();
         set_backend("webgpu");
@@ -205,6 +222,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_resolution_before_get() {
         reset();
         set_backend("auto");
@@ -215,6 +233,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_rapid_switching() {
         reset();
         for _ in 0..10 {
@@ -229,6 +248,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_concurrent_calls() {
         reset();
         set_backend("auto");
@@ -240,6 +260,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_enum_values() {
         assert_eq!(Backend::Auto as u8, 0);
         assert_eq!(Backend::WebGPU as u8, 1);
@@ -250,6 +271,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     #[cfg(not(feature = "gpu"))]
     fn test_no_gpu_feature() {
         reset();

@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Scharr derivative filter
 /// These tests verify that optimizations don't change results
 mod test_utils;
@@ -217,7 +218,8 @@ fn test_scharr_output_range() {
     for row in 0..50 {
         for col in 0..50 {
             let val = dst.at(row, col).unwrap()[0];
-            assert!(val <= 255,
+            // val is u8, always <= 255
+assert!(val == val,
                 "Scharr output at ({}, {}) out of range: {}", row, col, val);
         }
     }

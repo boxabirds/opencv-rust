@@ -1,0 +1,353 @@
+/// Bit-level accuracy tests for Guided Filter
+/// These tests verify that optimizations don't change results
+mod test_utils;
+
+use opencv_rust::core::{Mat, MatDepth};
+use opencv_rust::core::types::Scalar;
+use opencv_rust::imgproc::guided_filter;
+use test_utils::*;
+
+/// Test guided filter is deterministic
+#[test]
+fn test_guided_deterministic() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+
+    // Create pattern
+    for row in 0..30 {
+        for col in 0..30 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 8) as u8;
+            guide.at_mut(row, col).unwrap()[0] = ((row * 2 + col) * 6) as u8;
+        }
+    }
+
+    let mut dst1 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst2 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    guided_filter(&src, &guide, &mut dst1, 3, 100.0).unwrap();
+    guided_filter(&src, &guide, &mut dst2, 3, 100.0).unwrap();
+
+    // Results should be bit-exact identical
+    assert_images_equal(&dst1, &dst2, "Guided filter should be deterministic");
+}
+
+/// Test guided filter on uniform image
+#[test]
+fn test_guided_uniform_image() {
+    let src = Mat::new_with_default(30, 30, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+    let guide = Mat::new_with_default(30, 30, 1, MatDepth::U8, Scalar::all(100.0)).unwrap();
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    guided_filter(&src, &guide, &mut dst, 3, 100.0).unwrap();
+
+    // Uniform image with uniform guide should remain relatively uniform
+    for row in 3..27 {
+        for col in 3..27 {
+            let val = dst.at(row, col).unwrap()[0];
+            assert!(val >= 100 && val <= 150,
+                "Uniform image should remain in reasonable range at ({}, {}), got {}", row, col, val);
+        }
+    }
+}
+
+/// Test guided filter preserves edges in guide image
+#[test]
+fn test_guided_edge_preservation() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    // Source: noisy uniform
+    for row in 0..40 {
+        for col in 0..40 {
+            let noise = if (row + col) % 5 == 0 { 20 } else { 0 };
+            src.at_mut(row, col).unwrap()[0] = 100u8.saturating_add(noise);
+        }
+    }
+
+    // Guide: sharp vertical edge
+    for row in 0..40 {
+        for col in 0..20 {
+            guide.at_mut(row, col).unwrap()[0] = 50;
+        }
+        for col in 20..40 {
+            guide.at_mut(row, col).unwrap()[0] = 200;
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 3, 100.0).unwrap();
+
+    // Edge in guide should influence smoothing - different behavior on each side
+    assert_eq!(dst.rows(), 40);
+    assert_eq!(dst.cols(), 40);
+}
+
+/// Test guided filter epsilon (regularization) effect
+#[test]
+fn test_guided_epsilon_effect() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+
+    // Create pattern
+    for row in 0..30 {
+        for col in 0..30 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 5) as u8;
+            guide.at_mut(row, col).unwrap()[0] = ((row * 3 + col) * 4) as u8;
+        }
+    }
+
+    let mut dst_low = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_high = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    guided_filter(&src, &guide, &mut dst_low, 3, 10.0).unwrap();   // Low epsilon
+    guided_filter(&src, &guide, &mut dst_high, 3, 1000.0).unwrap(); // High epsilon
+
+    // Both should process without errors
+    assert_eq!(dst_low.rows(), 30);
+    assert_eq!(dst_high.rows(), 30);
+}
+
+/// Test guided filter radius effect
+#[test]
+fn test_guided_radius_effect() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    // Create noisy pattern
+    for row in 0..40 {
+        for col in 0..40 {
+            let base = ((row + col) * 3) as u8;
+            let noise = if (row * 7 + col * 11) % 7 == 0 { 20 } else { 0 };
+            src.at_mut(row, col).unwrap()[0] = base.saturating_add(noise);
+            guide.at_mut(row, col).unwrap()[0] = ((row * 2 + col) * 4) as u8;
+        }
+    }
+
+    let mut dst_small = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_large = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    guided_filter(&src, &guide, &mut dst_small, 1, 100.0).unwrap();  // r=1
+    guided_filter(&src, &guide, &mut dst_large, 5, 100.0).unwrap();  // r=5
+
+    // Both should process without errors
+    assert_eq!(dst_small.rows(), 40);
+    assert_eq!(dst_large.rows(), 40);
+}
+
+/// Test guided filter with same source and guide (self-guided)
+#[test]
+fn test_guided_self_guided() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+
+    for row in 0..30 {
+        for col in 0..30 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 8) as u8;
+        }
+    }
+
+    // Create guide as copy of source
+    let mut guide = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+    for i in 0..900 {
+        guide.data_mut()[i] = src.data()[i];
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    guided_filter(&src, &guide, &mut dst, 3, 100.0).unwrap();
+
+    assert_eq!(dst.rows(), 30);
+    assert_eq!(dst.cols(), 30);
+}
+
+/// Test guided filter output range
+#[test]
+fn test_guided_output_range() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+
+    // Create extreme pattern
+    for row in 0..30 {
+        for col in 0..30 {
+            src.at_mut(row, col).unwrap()[0] = if (row + col) % 2 == 0 { 0 } else { 255 };
+            guide.at_mut(row, col).unwrap()[0] = if row < 15 { 50 } else { 200 };
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 3, 100.0).unwrap();
+
+    // All values should be in valid range
+    for row in 0..30 {
+        for col in 0..30 {
+            let val = dst.at(row, col).unwrap()[0];
+            assert!(val <= 255,
+                "Guided filter output at ({}, {}) out of range: {}", row, col, val);
+        }
+    }
+}
+
+/// Test guided filter boundary handling
+#[test]
+fn test_guided_boundary() {
+    let mut src = Mat::new(10, 10, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(10, 10, 1, MatDepth::U8).unwrap();
+
+    for row in 0..10 {
+        for col in 0..10 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 20) as u8;
+            guide.at_mut(row, col).unwrap()[0] = ((row * 2 + col) * 15) as u8;
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 2, 100.0).unwrap();
+
+    // Border pixels should be valid
+    for i in 0..10 {
+        assert!(dst.at(0, i).unwrap()[0] <= 255, "Top border valid");
+        assert!(dst.at(9, i).unwrap()[0] <= 255, "Bottom border valid");
+        assert!(dst.at(i, 0).unwrap()[0] <= 255, "Left border valid");
+        assert!(dst.at(i, 9).unwrap()[0] <= 255, "Right border valid");
+    }
+}
+
+/// Test guided filter on small image
+#[test]
+fn test_guided_small_image() {
+    let mut src = Mat::new(5, 5, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(5, 5, 1, MatDepth::U8).unwrap();
+
+    for i in 0..25 {
+        src.data_mut()[i] = ((i * 10) % 256) as u8;
+        guide.data_mut()[i] = ((i * 15) % 256) as u8;
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 1, 100.0).unwrap();
+
+    assert_eq!(dst.rows(), 5);
+    assert_eq!(dst.cols(), 5);
+}
+
+/// Test guided filter smooths texture while preserving structure
+#[test]
+fn test_guided_texture_smoothing() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+
+    // Source: high-frequency texture
+    for row in 0..30 {
+        for col in 0..30 {
+            let texture = if (row + col) % 2 == 0 { 20 } else { 0 };
+            src.at_mut(row, col).unwrap()[0] = 100u8.saturating_add(texture);
+        }
+    }
+
+    // Guide: smooth gradient
+    for row in 0..30 {
+        for col in 0..30 {
+            guide.at_mut(row, col).unwrap()[0] = ((row + col) * 4) as u8;
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 3, 100.0).unwrap();
+
+    // Texture should be smoothed
+    let mut variance: u32 = 0;
+    for row in 5..25 {
+        for col in 5..25 {
+            let diff = (dst.at(row, col).unwrap()[0] as i32 - 100).abs() as u32;
+            variance += diff * diff;
+        }
+    }
+
+    // Variance should be lower than original (which had ±20 variation)
+    assert!(variance < 80000, "Texture should be smoothed, variance={}", variance);
+}
+
+/// Test guided filter with multi-channel source
+#[test]
+fn test_guided_multichannel() {
+    let mut src = Mat::new(20, 20, 3, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(20, 20, 1, MatDepth::U8).unwrap();
+
+    // Fill each channel with different pattern
+    for row in 0..20 {
+        for col in 0..20 {
+            let pixel = src.at_mut(row, col).unwrap();
+            pixel[0] = ((row + col) * 12) as u8;
+            pixel[1] = ((row * 2 + col) * 6) as u8;
+            pixel[2] = 150;  // Constant
+            guide.at_mut(row, col).unwrap()[0] = ((row + col) * 10) as u8;
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 3, 100.0).unwrap();
+
+    // Verify dimensions
+    assert_eq!(dst.rows(), 20);
+    assert_eq!(dst.cols(), 20);
+    assert_eq!(dst.channels(), 3);
+}
+
+/// Test guided filter with very small epsilon (strong filtering)
+#[test]
+fn test_guided_small_epsilon() {
+    let mut src = Mat::new(20, 20, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(20, 20, 1, MatDepth::U8).unwrap();
+
+    for row in 0..20 {
+        for col in 0..20 {
+            src.at_mut(row, col).unwrap()[0] = ((row * col) % 256) as u8;
+            guide.at_mut(row, col).unwrap()[0] = ((row + col) * 10) as u8;
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 3, 1.0).unwrap(); // Very small epsilon
+
+    assert_eq!(dst.rows(), 20);
+    assert_eq!(dst.cols(), 20);
+}
+
+/// Visual inspection test (ignored by default)
+#[test]
+#[ignore]
+fn test_guided_visual_inspection() {
+    let mut src = Mat::new(20, 20, 1, MatDepth::U8).unwrap();
+    let mut guide = Mat::new(20, 20, 1, MatDepth::U8).unwrap();
+
+    // Source: noisy image
+    for row in 0..20 {
+        for col in 0..20 {
+            let base: u8 = 100;
+            let noise: u8 = if (row * 7 + col * 11) % 11 == 0 { 30 } else { 0 };
+            src.at_mut(row, col).unwrap()[0] = base.saturating_add(noise);
+        }
+    }
+
+    // Guide: edge structure
+    for row in 0..20 {
+        for col in 0..20 {
+            guide.at_mut(row, col).unwrap()[0] = if col < 10 { 50 } else { 200 };
+        }
+    }
+
+    println!("\nSource (noisy):");
+    print_image_data(&src, "Source", 20, 20);
+
+    println!("\nGuide (edge):");
+    print_image_data(&guide, "Guide", 20, 20);
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    guided_filter(&src, &guide, &mut dst, 3, 100.0).unwrap();
+
+    println!("\nAfter guided filter:");
+    print_image_data(&dst, "Filtered", 20, 20);
+
+    let stats = compute_diff_stats(&src, &dst);
+    println!("\nDifference from original:");
+    println!("{}", stats);
+}

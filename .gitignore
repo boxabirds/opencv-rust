@@ -7,3 +7,4 @@ Cargo.lock
 /pkg
 node_modules/
 dist/
+bun.lock

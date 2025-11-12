@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Canny edge detection
 /// These tests verify that optimizations don't change results
 mod test_utils;

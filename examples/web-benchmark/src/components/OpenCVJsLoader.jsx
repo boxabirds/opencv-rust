@@ -87,14 +87,20 @@ export const isOpenCVJsLoaded = () => {
 };
 
 /**
- * React hook to load OpenCV.js
+ * React hook to load OpenCV.js (lazy loading - only when needed)
+ * @param {boolean} shouldLoad - Set to true to trigger loading
  */
-export const useOpenCVJs = () => {
+export const useOpenCVJs = (shouldLoad = false) => {
   const [loaded, setLoaded] = useState(opencvLoaded);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Don't auto-load unless explicitly requested
+    if (!shouldLoad) {
+      return;
+    }
+
     if (opencvLoaded) {
       setLoaded(true);
       return;
@@ -110,7 +116,7 @@ export const useOpenCVJs = () => {
         setError(err);
         setLoading(false);
       });
-  }, []);
+  }, [shouldLoad]);
 
   return { loaded, loading, error, cv };
 };

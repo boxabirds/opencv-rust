@@ -236,8 +236,8 @@ async fn execute_remap_impl(
         compute_pass.set_pipeline(&compute_pipeline);
         compute_pass.set_bind_group(0, &bind_group, &[]);
         let workgroup_size = 16;
-        let workgroup_count_x = (width + workgroup_size - 1) / workgroup_size;
-        let workgroup_count_y = (height + workgroup_size - 1) / workgroup_size;
+        let workgroup_count_x = width.div_ceil(workgroup_size);
+        let workgroup_count_y = height.div_ceil(workgroup_size);
         compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
     }
 
