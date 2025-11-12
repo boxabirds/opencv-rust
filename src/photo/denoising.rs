@@ -28,17 +28,29 @@ pub fn fast_nl_means_denoising_colored(
             // Search in neighborhood
             for dy in -half_search..=half_search {
                 for dx in -half_search..=half_search {
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let y = row as i32 + dy;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let x = col as i32 + dx;
 
-                    if y >= half_template && y < src.rows() as i32 - half_template
-                        && x >= half_template && x < src.cols() as i32 - half_template
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let rows_i32 = src.rows() as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let cols_i32 = src.cols() as i32;
+
+                    if y >= half_template && y < rows_i32 - half_template
+                        && x >= half_template && x < cols_i32 - half_template
                     {
                         // Calculate patch distance
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let row_i32 = row as i32;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let col_i32 = col as i32;
+
                         let distance = calculate_color_patch_distance(
                             src,
-                            row as i32,
-                            col as i32,
+                            row_i32,
+                            col_i32,
                             y,
                             x,
                             half_template,
@@ -46,7 +58,11 @@ pub fn fast_nl_means_denoising_colored(
 
                         let weight = (-distance / (h * h + h_color * h_color)).exp();
 
-                        let neighbor = src.at(y as usize, x as usize)?;
+                        #[allow(clippy::cast_sign_loss)]
+                        let y_usize = y as usize;
+                        #[allow(clippy::cast_sign_loss)]
+                        let x_usize = x as usize;
+                        let neighbor = src.at(y_usize, x_usize)?;
                         for ch in 0..3 {
                             pixel_sum[ch] += weight * f32::from(neighbor[ch]);
                         }
@@ -91,11 +107,25 @@ fn calculate_color_patch_distance(
             let y2 = row2 + dy;
             let x2 = col2 + dx;
 
-            if y1 >= 0 && y1 < img.rows() as i32 && x1 >= 0 && x1 < img.cols() as i32
-                && y2 >= 0 && y2 < img.rows() as i32 && x2 >= 0 && x2 < img.cols() as i32
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let rows_i32 = img.rows() as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let cols_i32 = img.cols() as i32;
+
+            if y1 >= 0 && y1 < rows_i32 && x1 >= 0 && x1 < cols_i32
+                && y2 >= 0 && y2 < rows_i32 && x2 >= 0 && x2 < cols_i32
             {
-                let p1 = img.at(y1 as usize, x1 as usize)?;
-                let p2 = img.at(y2 as usize, x2 as usize)?;
+                #[allow(clippy::cast_sign_loss)]
+                let y1_usize = y1 as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let x1_usize = x1 as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let y2_usize = y2 as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let x2_usize = x2 as usize;
+
+                let p1 = img.at(y1_usize, x1_usize)?;
+                let p2 = img.at(y2_usize, x2_usize)?;
 
                 #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..3 {
@@ -124,9 +154,11 @@ pub fn bilateral_filter(
     let radius = d / 2;
 
     // Precompute spatial Gaussian weights
-    let mut space_weights = vec![vec![0.0f32; d as usize]; d as usize];
-    for i in 0..d as usize {
-        for j in 0..d as usize {
+    #[allow(clippy::cast_sign_loss)]
+    let d_usize = d as usize;
+    let mut space_weights = vec![vec![0.0f32; d_usize]; d_usize];
+    for i in 0..d_usize {
+        for j in 0..d_usize {
             #[allow(clippy::cast_precision_loss)]
             let i_f32 = i as f32;
             #[allow(clippy::cast_precision_loss)]
@@ -149,14 +181,29 @@ pub fn bilateral_filter(
 
                 for dy in -radius..=radius {
                     for dx in -radius..=radius {
-                        let y = (row as i32 + dy).clamp(0, src.rows() as i32 - 1) as usize;
-                        let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let row_i32 = row as i32;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let col_i32 = col as i32;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let rows_max = src.rows() as i32 - 1;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let cols_max = src.cols() as i32 - 1;
+
+                        #[allow(clippy::cast_sign_loss)]
+                        let y = (row_i32 + dy).clamp(0, rows_max) as usize;
+                        #[allow(clippy::cast_sign_loss)]
+                        let x = (col_i32 + dx).clamp(0, cols_max) as usize;
 
                         let neighbor_val = f32::from(src.at(y, x)?[ch]);
                         let color_diff = neighbor_val - center_val;
 
                         let color_weight = (-(color_diff * color_diff) / (2.0 * sigma_color * sigma_color)).exp();
-                        let space_weight = space_weights[(dy + radius) as usize][(dx + radius) as usize];
+                        #[allow(clippy::cast_sign_loss)]
+                        let dy_idx = (dy + radius) as usize;
+                        #[allow(clippy::cast_sign_loss)]
+                        let dx_idx = (dx + radius) as usize;
+                        let space_weight = space_weights[dy_idx][dx_idx];
 
                         let weight = color_weight * space_weight;
                         sum += neighbor_val * weight;
@@ -243,10 +290,24 @@ pub fn median_filter(src: &Mat, kernel_size: usize) -> Result<Mat> {
             for ch in 0..src.channels() {
                 let mut values = Vec::with_capacity(window_size);
 
-                for dy in -(radius as i32)..=(radius as i32) {
-                    for dx in -(radius as i32)..=(radius as i32) {
-                        let y = (row as i32 + dy).clamp(0, src.rows() as i32 - 1) as usize;
-                        let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_wrap)]
+                let radius_i32 = radius as i32;
+
+                for dy in -radius_i32..=radius_i32 {
+                    for dx in -radius_i32..=radius_i32 {
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let row_i32 = row as i32;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let col_i32 = col as i32;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let rows_max = src.rows() as i32 - 1;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let cols_max = src.cols() as i32 - 1;
+
+                        #[allow(clippy::cast_sign_loss)]
+                        let y = (row_i32 + dy).clamp(0, rows_max) as usize;
+                        #[allow(clippy::cast_sign_loss)]
+                        let x = (col_i32 + dx).clamp(0, cols_max) as usize;
                         values.push(src.at(y, x)?[ch]);
                     }
                 }
@@ -281,8 +342,19 @@ pub fn wiener_filter(src: &Mat, noise_variance: f32) -> Result<Mat> {
 
             for dy in -radius..=radius {
                 for dx in -radius..=radius {
-                    let y = (row as i32 + dy).clamp(0, src.rows() as i32 - 1) as usize;
-                    let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let row_i32 = row as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let col_i32 = col as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let rows_max = src.rows() as i32 - 1;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let cols_max = src.cols() as i32 - 1;
+
+                    #[allow(clippy::cast_sign_loss)]
+                    let y = (row_i32 + dy).clamp(0, rows_max) as usize;
+                    #[allow(clippy::cast_sign_loss)]
+                    let x = (col_i32 + dx).clamp(0, cols_max) as usize;
                     let val = f32::from(src.at(y, x)?[0]);
                     sum += val;
                     sum_sq += val * val;

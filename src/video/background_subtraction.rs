@@ -67,14 +67,18 @@ impl BackgroundSubtractorMOG2 {
         // Initialize model if needed
         if self.mean.is_empty() {
             self.mean = vec![vec![vec![0.0; self.num_gaussians]; cols]; rows];
-            self.variance = vec![vec![vec![self.var_init as f32; self.num_gaussians]; cols]; rows];
+            #[allow(clippy::cast_possible_truncation)]
+            let var_init_f32 = self.var_init as f32;
+            self.variance = vec![vec![vec![var_init_f32; self.num_gaussians]; cols]; rows];
             self.weight = vec![vec![vec![0.0; self.num_gaussians]; cols]; rows];
         }
 
         *fgmask = Mat::new(rows, cols, 1, MatDepth::U8)?;
 
+        #[allow(clippy::cast_precision_loss)]
+        let history_f64 = self.history as f64;
         let alpha = if learning_rate < 0.0 {
-            1.0 / self.history as f64
+            1.0 / history_f64
         } else {
             learning_rate
         };
@@ -92,6 +96,7 @@ impl BackgroundSubtractorMOG2 {
                 // Check if pixel matches any Gaussian
                 for k in 0..self.num_gaussians {
                     let diff = (intensity - self.mean[row][col][k]).abs();
+                    #[allow(clippy::cast_possible_truncation)]
                     let threshold = (self.var_threshold * f64::from(self.variance[row][col][k].sqrt())) as f32;
 
                     if diff < threshold {
@@ -108,22 +113,30 @@ impl BackgroundSubtractorMOG2 {
                     let k = match_idx;
                     let rho = alpha * f64::from(self.weight[row][col][k]);
 
-                    self.mean[row][col][k] =
-                        ((1.0 - rho) * f64::from(self.mean[row][col][k]) + rho * f64::from(intensity)) as f32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let new_mean = ((1.0 - rho) * f64::from(self.mean[row][col][k]) + rho * f64::from(intensity)) as f32;
+                    self.mean[row][col][k] = new_mean;
 
                     let diff = intensity - self.mean[row][col][k];
-                    self.variance[row][col][k] =
-                        ((1.0 - rho) * f64::from(self.variance[row][col][k]) + rho * f64::from(diff) * f64::from(diff)) as f32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let new_variance = ((1.0 - rho) * f64::from(self.variance[row][col][k]) + rho * f64::from(diff) * f64::from(diff)) as f32;
+                    self.variance[row][col][k] = new_variance;
 
+                    #[allow(clippy::cast_possible_truncation)]
+                    let var_min_f32 = self.var_min as f32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let var_max_f32 = self.var_max as f32;
                     self.variance[row][col][k] = self.variance[row][col][k]
-                        .max(self.var_min as f32)
-                        .min(self.var_max as f32);
+                        .max(var_min_f32)
+                        .min(var_max_f32);
 
                     // Check if it's background
                     let mut weight_sum = 0.0f32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let bg_ratio_f32 = self.background_ratio as f32;
                     for k in 0..self.num_gaussians {
                         weight_sum += self.weight[row][col][k];
-                        if weight_sum > self.background_ratio as f32 {
+                        if weight_sum > bg_ratio_f32 {
                             if k >= match_idx {
                                 is_background = true;
                             }
@@ -134,18 +147,22 @@ impl BackgroundSubtractorMOG2 {
                     // Replace least probable Gaussian
                     let k = self.num_gaussians - 1;
                     self.mean[row][col][k] = intensity;
-                    self.variance[row][col][k] = self.var_init as f32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let var_init_f32 = self.var_init as f32;
+                    self.variance[row][col][k] = var_init_f32;
                     self.weight[row][col][k] = 0.05;
                 }
 
                 // Update weights
                 for k in 0..self.num_gaussians {
                     if k == match_idx && matched {
-                        self.weight[row][col][k] =
-                            ((1.0 - alpha) * f64::from(self.weight[row][col][k]) + alpha) as f32;
+                        #[allow(clippy::cast_possible_truncation)]
+                        let new_weight = ((1.0 - alpha) * f64::from(self.weight[row][col][k]) + alpha) as f32;
+                        self.weight[row][col][k] = new_weight;
                     } else {
-                        self.weight[row][col][k] =
-                            ((1.0 - alpha) * f64::from(self.weight[row][col][k])) as f32;
+                        #[allow(clippy::cast_possible_truncation)]
+                        let new_weight = ((1.0 - alpha) * f64::from(self.weight[row][col][k])) as f32;
+                        self.weight[row][col][k] = new_weight;
                     }
                 }
 
@@ -204,9 +221,12 @@ impl BackgroundSubtractorMOG2 {
                 let intensity = self.mean[row][col][0];
 
                 let bg_pixel = background.at_mut(row, col)?;
-                bg_pixel[0] = intensity as u8;
-                bg_pixel[1] = intensity as u8;
-                bg_pixel[2] = intensity as u8;
+                let clamped = intensity.clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = clamped as u8;
+                bg_pixel[0] = pixel_val;
+                bg_pixel[1] = pixel_val;
+                bg_pixel[2] = pixel_val;
             }
         }
 
@@ -302,9 +322,13 @@ impl BackgroundSubtractorKNN {
 
                 // Use k-nearest to determine foreground
                 let k = self.k_nn_samples.min(distances.len());
-                let avg_dist: f32 = distances.iter().take(k).sum::<f32>() / k as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let k_f32 = k as f32;
+                let avg_dist: f32 = distances.iter().take(k).sum::<f32>() / k_f32;
 
-                let is_background = avg_dist < self.dist2_threshold as f32;
+                #[allow(clippy::cast_possible_truncation)]
+                let dist_threshold_f32 = self.dist2_threshold as f32;
+                let is_background = avg_dist < dist_threshold_f32;
 
                 // Update samples
                 // learning_rate: -1 = automatic, 0 = no learning, >0 = manual rate
@@ -350,9 +374,12 @@ impl BackgroundSubtractorKNN {
                 let median = samples[samples.len() / 2];
 
                 let bg_pixel = background.at_mut(row, col)?;
-                bg_pixel[0] = median as u8;
-                bg_pixel[1] = median as u8;
-                bg_pixel[2] = median as u8;
+                let clamped = median.clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = clamped as u8;
+                bg_pixel[0] = pixel_val;
+                bg_pixel[1] = pixel_val;
+                bg_pixel[2] = pixel_val;
             }
         }
 

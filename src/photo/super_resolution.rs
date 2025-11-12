@@ -87,8 +87,15 @@ impl SuperResolutionBicubic {
         // 4x4 neighborhood for bicubic
         for j in -1..=2 {
             for i in -1..=2 {
-                let row = (y0 + j).clamp(0, src.rows() as i32 - 1) as usize;
-                let col = (x0 + i).clamp(0, src.cols() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let rows_max = src.rows() as i32 - 1;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let cols_max = src.cols() as i32 - 1;
+
+                #[allow(clippy::cast_sign_loss)]
+                let row = (y0 + j).clamp(0, rows_max) as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let col = (x0 + i).clamp(0, cols_max) as usize;
 
                 let pixel = f32::from(src.at(row, col)?[ch]);
                 #[allow(clippy::cast_precision_loss)]
@@ -196,10 +203,24 @@ impl SuperResolutionExample {
         let mut sum = 0.0f32;
         let mut count = 0;
 
-        for dy in -(half_patch as i32)..=(half_patch as i32) {
-            for dx in -(half_patch as i32)..=(half_patch as i32) {
-                let y = (row as i32 + dy).clamp(0, src.rows() as i32 - 1) as usize;
-                let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
+        #[allow(clippy::cast_possible_wrap)]
+        let half_patch_i32 = half_patch as i32;
+
+        for dy in -half_patch_i32..=half_patch_i32 {
+            for dx in -half_patch_i32..=half_patch_i32 {
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let row_i32 = row as i32;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let col_i32 = col as i32;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let rows_max = src.rows() as i32 - 1;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let cols_max = src.cols() as i32 - 1;
+
+                #[allow(clippy::cast_sign_loss)]
+                let y = (row_i32 + dy).clamp(0, rows_max) as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let x = (col_i32 + dx).clamp(0, cols_max) as usize;
 
                 #[allow(clippy::cast_precision_loss)]
                 let weight_val = (dx * dx + dy * dy) as f32;

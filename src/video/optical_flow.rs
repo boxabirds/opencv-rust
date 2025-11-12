@@ -200,9 +200,9 @@ pub fn calc_optical_flow_farneback(
             }
 
             let flow_pixel = flow.at_mut(row, col)?;
-            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let dx_u8 = (best_dx + 128).clamp(0, 255) as u8;
-            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let dy_u8 = (best_dy + 128).clamp(0, 255) as u8;
             flow_pixel[0] = dx_u8;
             flow_pixel[1] = dy_u8;

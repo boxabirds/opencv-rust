@@ -32,6 +32,7 @@ pub fn inpaint(
 
     *dst = src.clone_mat();
 
+    #[allow(clippy::cast_possible_truncation)]
     let radius = inpaint_radius as i32;
 
     // Simple inpainting: replace masked pixels with average of neighbors
@@ -46,15 +47,27 @@ pub fn inpaint(
 
                 for dy in -radius..=radius {
                     for dx in -radius..=radius {
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                         let y = row as i32 + dy;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                         let x = col as i32 + dx;
 
-                        if y >= 0 && y < src.rows() as i32 && x >= 0 && x < src.cols() as i32 {
-                            let neighbor_mask = inpaint_mask.at(y as usize, x as usize)?;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let rows_i32 = src.rows() as i32;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let cols_i32 = src.cols() as i32;
+
+                        if y >= 0 && y < rows_i32 && x >= 0 && x < cols_i32 {
+                            #[allow(clippy::cast_sign_loss)]
+                            let y_usize = y as usize;
+                            #[allow(clippy::cast_sign_loss)]
+                            let x_usize = x as usize;
+
+                            let neighbor_mask = inpaint_mask.at(y_usize, x_usize)?;
 
                             if neighbor_mask[0] == 0 {
                                 // Not masked, use for inpainting
-                                let neighbor_pixel = src.at(y as usize, x as usize)?;
+                                let neighbor_pixel = src.at(y_usize, x_usize)?;
 
                                 #[allow(clippy::cast_possible_truncation)]
                                 for ch in 0..src.channels() {
@@ -112,17 +125,29 @@ pub fn fast_nl_means_denoising(
             // Search in neighborhood
             for dy in -half_search..=half_search {
                 for dx in -half_search..=half_search {
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let y = row as i32 + dy;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let x = col as i32 + dx;
 
-                    if y >= half_template && y < src.rows() as i32 - half_template
-                        && x >= half_template && x < src.cols() as i32 - half_template
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let rows_max = src.rows() as i32 - half_template;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let cols_max = src.cols() as i32 - half_template;
+
+                    if y >= half_template && y < rows_max
+                        && x >= half_template && x < cols_max
                     {
                         // Calculate similarity between patches
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let row_i32 = row as i32;
+                        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                        let col_i32 = col as i32;
+
                         let similarity = calculate_patch_distance(
                             src,
-                            row as i32,
-                            col as i32,
+                            row_i32,
+                            col_i32,
                             y,
                             x,
                             half_template,
@@ -130,7 +155,11 @@ pub fn fast_nl_means_denoising(
 
                         let weight = (-similarity / (h * h)).exp();
 
-                        let neighbor_pixel = src.at(y as usize, x as usize)?;
+                        #[allow(clippy::cast_sign_loss)]
+                        let y_usize = y as usize;
+                        #[allow(clippy::cast_sign_loss)]
+                        let x_usize = x as usize;
+                        let neighbor_pixel = src.at(y_usize, x_usize)?;
                         pixel_sum += weight * f32::from(neighbor_pixel[0]);
                         weight_sum += weight;
                     }
@@ -170,11 +199,25 @@ fn calculate_patch_distance(
             let y2 = row2 + dy;
             let x2 = col2 + dx;
 
-            if y1 >= 0 && y1 < img.rows() as i32 && x1 >= 0 && x1 < img.cols() as i32
-                && y2 >= 0 && y2 < img.rows() as i32 && x2 >= 0 && x2 < img.cols() as i32
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let rows_i32 = img.rows() as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let cols_i32 = img.cols() as i32;
+
+            if y1 >= 0 && y1 < rows_i32 && x1 >= 0 && x1 < cols_i32
+                && y2 >= 0 && y2 < rows_i32 && x2 >= 0 && x2 < cols_i32
             {
-                let p1 = img.at(y1 as usize, x1 as usize)?;
-                let p2 = img.at(y2 as usize, x2 as usize)?;
+                #[allow(clippy::cast_sign_loss)]
+                let y1_usize = y1 as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let x1_usize = x1 as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let y2_usize = y2 as usize;
+                #[allow(clippy::cast_sign_loss)]
+                let x2_usize = x2 as usize;
+
+                let p1 = img.at(y1_usize, x1_usize)?;
+                let p2 = img.at(y2_usize, x2_usize)?;
 
                 let diff = f32::from(p1[0]) - f32::from(p2[0]);
                 dist += diff * diff;
