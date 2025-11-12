@@ -71,10 +71,17 @@ impl ORB {
                     let x2 = kp.pt.x + p2.0;
                     let y2 = kp.pt.y + p2.1;
 
-                    if x1 >= 0 && x1 < image.cols() as i32 && y1 >= 0 && y1 < image.rows() as i32
-                        && x2 >= 0 && x2 < image.cols() as i32 && y2 >= 0 && y2 < image.rows() as i32
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let cols_i32 = image.cols() as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let rows_i32 = image.rows() as i32;
+
+                    if x1 >= 0 && x1 < cols_i32 && y1 >= 0 && y1 < rows_i32
+                        && x2 >= 0 && x2 < cols_i32 && y2 >= 0 && y2 < rows_i32
                     {
+                        #[allow(clippy::cast_sign_loss)]
                         let val1 = image.at(y1 as usize, x1 as usize)?[0];
+                        #[allow(clippy::cast_sign_loss)]
                         let val2 = image.at(y2 as usize, x2 as usize)?[0];
 
                         if val1 < val2 {
@@ -100,10 +107,21 @@ impl ORB {
 
         // Use a simple pseudo-random pattern
         for i in 0..num_tests {
-            let x1 = ((i * 7) % patch_size) as i32 - half_patch as i32;
-            let y1 = ((i * 11) % patch_size) as i32 - half_patch as i32;
-            let x2 = ((i * 13) % patch_size) as i32 - half_patch as i32;
-            let y2 = ((i * 17) % patch_size) as i32 - half_patch as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let x1_offset = ((i * 7) % patch_size) as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let y1_offset = ((i * 11) % patch_size) as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let x2_offset = ((i * 13) % patch_size) as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let y2_offset = ((i * 17) % patch_size) as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let half_patch_i32 = half_patch as i32;
+
+            let x1 = x1_offset - half_patch_i32;
+            let y1 = y1_offset - half_patch_i32;
+            let x2 = x2_offset - half_patch_i32;
+            let y2 = y2_offset - half_patch_i32;
 
             pairs.push(((x1, y1), (x2, y2)));
         }

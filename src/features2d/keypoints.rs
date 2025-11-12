@@ -76,8 +76,15 @@ pub fn harris_corners(
     let half_block = block_size / 2;
     let mut keypoints = Vec::new();
 
-    for row in half_block as usize..(src.rows() - half_block as usize) {
-        for col in half_block as usize..(src.cols() - half_block as usize) {
+    #[allow(clippy::cast_sign_loss)]
+    let half_block_usize = half_block as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let end_row = src.rows() - half_block as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let end_col = src.cols() - half_block as usize;
+
+    for row in half_block_usize..end_row {
+        for col in half_block_usize..end_col {
             // Sum over block
             let mut sxx = 0.0;
             let mut syy = 0.0;
@@ -85,8 +92,14 @@ pub fn harris_corners(
 
             for by in -half_block..=half_block {
                 for bx in -half_block..=half_block {
-                    let y = (row as i32 + by) as usize;
-                    let x = (col as i32 + bx) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let row_i32 = row as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let y = (row_i32 + by) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let col_i32 = col as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let x = (col_i32 + bx) as usize;
 
                     sxx += ixx[y][x];
                     syy += iyy[y][x];
@@ -100,11 +113,20 @@ pub fn harris_corners(
             let response = det - k * trace * trace;
 
             if response > threshold {
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let pt_x = col as i32;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let pt_y = row as i32;
+                #[allow(clippy::cast_precision_loss)]
+                let size = block_size as f32;
+                #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+                let response_f32 = response as f32;
+
                 keypoints.push(KeyPoint {
-                    pt: Point::new(col as i32, row as i32),
-                    size: block_size as f32,
+                    pt: Point::new(pt_x, pt_y),
+                    size,
                     angle: -1.0,
-                    response: response as f32,
+                    response: response_f32,
                     octave: 0,
                 });
             }
@@ -195,8 +217,14 @@ pub fn fast(
                 // Sample circle pixels into fixed-size array (no heap allocation)
                 let mut circle_values = [0i32; 16];
                 for (i, &(dx, dy)) in circle_offsets.iter().enumerate() {
-                    let y = (row as i32 + dy) as usize;
-                    let x = (col as i32 + dx) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let row_i32 = row as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let y = (row_i32 + dy) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let col_i32 = col as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let x = (col_i32 + dx) as usize;
                     let idx = y * cols + x;
                     circle_values[i] = i32::from(src_data[idx]);
                 }
@@ -227,10 +255,16 @@ pub fn fast(
 
                 // Need at least 12 consecutive pixels
                 if max_consecutive_brighter >= 12 || max_consecutive_darker >= 12 {
+                    #[allow(clippy::cast_precision_loss)]
                     let response = (max_consecutive_brighter.max(max_consecutive_darker)) as f32;
 
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let pt_x = col as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let pt_y = row as i32;
+
                     row_keypoints.push(KeyPoint {
-                        pt: Point::new(col as i32, row as i32),
+                        pt: Point::new(pt_x, pt_y),
                         size: 7.0,
                         angle: -1.0,
                         response,

@@ -464,9 +464,9 @@ impl KAZE {
                     for sub_y in 0..subregion_size {
                         for sub_x in 0..subregion_size {
                             // Compute offsets for descriptor grid
-                            #[allow(clippy::cast_possible_wrap)]
+                            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                             let y_offset = (grid_y * subregion_size + sub_y) - pattern_size as i32;
-                            #[allow(clippy::cast_possible_wrap)]
+                            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                             let x_offset = (grid_x * subregion_size + sub_x) - pattern_size as i32;
 
                             // Rotate for rotation invariance

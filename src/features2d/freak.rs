@@ -61,7 +61,9 @@ impl FREAK {
         let num_points_per_layer = [1, 6, 6, 6, 6, 6];
 
         for layer in 0..num_layers {
-            let radius_scale = 2.0f32.powi(layer as i32);
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let layer_i32 = layer as i32;
+            let radius_scale = 2.0f32.powi(layer_i32);
             let base_radius = self.pattern_scale / 20.0 * radius_scale;
 
             if layer == 0 {
@@ -77,7 +79,11 @@ impl FREAK {
                 let circle_radius = self.pattern_scale / 5.0 * radius_scale;
 
                 for i in 0..num_points {
-                    let angle = 2.0 * std::f32::consts::PI * i as f32 / num_points as f32;
+                    #[allow(clippy::cast_precision_loss)]
+                    let i_f32 = i as f32;
+                    #[allow(clippy::cast_precision_loss)]
+                    let num_points_f32 = num_points as f32;
+                    let angle = 2.0 * std::f32::consts::PI * i_f32 / num_points_f32;
                     let x = circle_radius * angle.cos();
                     let y = circle_radius * angle.sin();
 
@@ -191,21 +197,38 @@ impl FREAK {
 
         for rf in &self.receptive_fields {
             // Transform receptive field center based on keypoint
-            let x = keypoint.pt.x as f32 + rf.center.x * scale;
-            let y = keypoint.pt.y as f32 + rf.center.y * scale;
+            #[allow(clippy::cast_precision_loss)]
+            let kp_x = keypoint.pt.x as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let kp_y = keypoint.pt.y as f32;
+            let x = kp_x + rf.center.x * scale;
+            let y = kp_y + rf.center.y * scale;
 
             // Sample in a small region around the receptive field
             let mut sum = 0.0f32;
             let mut count = 0;
 
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let sample_radius = (rf.radius * scale).max(1.0) as i32;
+
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let cols_i32 = image.cols() as i32;
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+            let rows_i32 = image.rows() as i32;
 
             for dy in -sample_radius..=sample_radius {
                 for dx in -sample_radius..=sample_radius {
-                    let px = (x + dx as f32) as i32;
-                    let py = (y + dy as f32) as i32;
+                    #[allow(clippy::cast_precision_loss)]
+                    let dx_f32 = dx as f32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let px = (x + dx_f32) as i32;
+                    #[allow(clippy::cast_precision_loss)]
+                    let dy_f32 = dy as f32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let py = (y + dy_f32) as i32;
 
-                    if px >= 0 && px < image.cols() as i32 && py >= 0 && py < image.rows() as i32 {
+                    if px >= 0 && px < cols_i32 && py >= 0 && py < rows_i32 {
+                        #[allow(clippy::cast_sign_loss)]
                         let pixel = image.at(py as usize, px as usize)?;
                         sum += f32::from(pixel[0]);
                         count += 1;
@@ -213,6 +236,7 @@ impl FREAK {
                 }
             }
 
+            #[allow(clippy::cast_precision_loss)]
             let intensity = if count > 0 {
                 sum / count as f32
             } else {
