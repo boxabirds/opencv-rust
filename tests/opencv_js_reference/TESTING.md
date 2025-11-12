@@ -124,29 +124,23 @@ python3 -m http.server 8080
 npm test test_debug.spec.js -- --headed
 ```
 
-## Workaround: Use Local OpenCV.js
+## Local OpenCV.js (Already Cached)
 
-If CDN access is blocked, download opencv.js locally:
+**Good news:** OpenCV.js v4.8.0 is already cached in the repository at `/cache/opencv.js` (9.6 MB).
 
-```bash
-cd tests/opencv_js_reference
-
-# Download opencv.js
-wget https://docs.opencv.org/4.8.0/opencv.js -O opencv.js
-
-# Or use a specific version
-wget https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.8.0-release.2/dist/opencv.js -O opencv.js
-```
-
-Then update `test-harness.html`:
+The test harness automatically loads from this cached copy instead of CDN:
 
 ```html
-<!-- Replace CDN line: -->
-<!-- <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script> -->
-
-<!-- With local file: -->
-<script async src="/tests/opencv_js_reference/opencv.js"></script>
+<script async src="/cache/opencv.js"></script>
 ```
+
+**Why cached?**
+- Container environments block external CDN access
+- CI reliability (CDN outages won't break tests)
+- Offline development support
+- Consistent version ensures reproducible results
+
+See `cache/README.md` for details.
 
 ## Container Testing (Limited)
 

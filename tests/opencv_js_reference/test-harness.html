@@ -34,8 +34,8 @@
     <!-- Canvas for image operations -->
     <canvas id="canvas" style="display: none;"></canvas>
 
-    <!-- Load OpenCV.js from CDN -->
-    <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
+    <!-- Load OpenCV.js from local cache (avoids CDN/network issues) -->
+    <script async src="/cache/opencv.js"></script>
 
     <!-- Main test harness script -->
     <script type="module">
