@@ -67,13 +67,20 @@ impl CAMShift {
             let lambda1 = 0.5 * (mu20 + mu02 + ((mu20 - mu02).powi(2) + 4.0 * mu11.powi(2)).sqrt());
             let lambda2 = 0.5 * (mu20 + mu02 - ((mu20 - mu02).powi(2) + 4.0 * mu11.powi(2)).sqrt());
 
+            #[allow(clippy::cast_possible_truncation)]
             let width = (4.0 * lambda1.sqrt()) as i32;
+            #[allow(clippy::cast_possible_truncation)]
             let height = (4.0 * lambda2.sqrt()) as i32;
 
             // Update window
+            #[allow(clippy::cast_possible_truncation)]
+            let new_x = (cx - f64::from(width) / 2.0) as i32;
+            #[allow(clippy::cast_possible_truncation)]
+            let new_y = (cy - f64::from(height) / 2.0) as i32;
+
             let new_window = Rect::new(
-                (cx - f64::from(width) / 2.0) as i32,
-                (cy - f64::from(height) / 2.0) as i32,
+                new_x,
+                new_y,
                 width.max(1),
                 height.max(1),
             );
@@ -86,7 +93,9 @@ impl CAMShift {
 
             current_window = new_window;
 
-            if dx + dy + dw + dh < self.term_criteria_epsilon as i32 {
+            #[allow(clippy::cast_possible_truncation)]
+            let epsilon_i32 = self.term_criteria_epsilon as i32;
+            if dx + dy + dw + dh < epsilon_i32 {
                 break;
             }
         }
@@ -110,17 +119,36 @@ impl CAMShift {
     fn compute_moments(&self, image: &Mat, window: &Rect) -> Result<Moments> {
         let mut moments = Moments::zero();
 
+        #[allow(clippy::cast_sign_loss)]
         let x_start = window.x.max(0) as usize;
+        #[allow(clippy::cast_sign_loss)]
         let y_start = window.y.max(0) as usize;
-        let x_end = (window.x + window.width).min(image.cols() as i32) as usize;
-        let y_end = (window.y + window.height).min(image.rows() as i32) as usize;
+
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+        let cols_i32 = image.cols() as i32;
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+        let rows_i32 = image.rows() as i32;
+
+        #[allow(clippy::cast_sign_loss)]
+        let x_end = (window.x + window.width).min(cols_i32) as usize;
+        #[allow(clippy::cast_sign_loss)]
+        let y_end = (window.y + window.height).min(rows_i32) as usize;
 
         for y in y_start..y_end {
             for x in x_start..x_end {
                 let val = f64::from(image.at(y, x)?[0]) / 255.0;
 
-                let x_offset = x as f64 - x_start as f64;
-                let y_offset = y as f64 - y_start as f64;
+                #[allow(clippy::cast_precision_loss)]
+                let x_f64 = x as f64;
+                #[allow(clippy::cast_precision_loss)]
+                let y_f64 = y as f64;
+                #[allow(clippy::cast_precision_loss)]
+                let x_start_f64 = x_start as f64;
+                #[allow(clippy::cast_precision_loss)]
+                let y_start_f64 = y_start as f64;
+
+                let x_offset = x_f64 - x_start_f64;
+                let y_offset = y_f64 - y_start_f64;
 
                 moments.m00 += val;
                 moments.m10 += x_offset * val;
@@ -132,8 +160,13 @@ impl CAMShift {
         }
 
         // Convert back to absolute coordinates
-        moments.m10 += x_start as f64 * moments.m00;
-        moments.m01 += y_start as f64 * moments.m00;
+        #[allow(clippy::cast_precision_loss)]
+        let x_start_f64 = x_start as f64;
+        #[allow(clippy::cast_precision_loss)]
+        let y_start_f64 = y_start as f64;
+
+        moments.m10 += x_start_f64 * moments.m00;
+        moments.m01 += y_start_f64 * moments.m00;
 
         Ok(moments)
     }
@@ -236,8 +269,15 @@ impl FarnebackOpticalFlow {
 
         for _ in 1..self.num_levels {
             let prev = pyramid.last().unwrap();
-            let new_rows = ((prev.rows() as f64) * self.pyr_scale) as usize;
-            let new_cols = ((prev.cols() as f64) * self.pyr_scale) as usize;
+            #[allow(clippy::cast_precision_loss)]
+            let rows_f64 = prev.rows() as f64;
+            #[allow(clippy::cast_precision_loss)]
+            let cols_f64 = prev.cols() as f64;
+
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let new_rows = (rows_f64 * self.pyr_scale) as usize;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let new_cols = (cols_f64 * self.pyr_scale) as usize;
 
             if new_rows < 8 || new_cols < 8 {
                 break;
@@ -274,8 +314,15 @@ impl FarnebackOpticalFlow {
         // Simplified flow computation (full Farneback is complex)
         let half_win = self.win_size / 2;
 
-        for row in half_win as usize..(prev.rows() - half_win as usize) {
-            for col in half_win as usize..(prev.cols() - half_win as usize) {
+        #[allow(clippy::cast_sign_loss)]
+        let half_win_usize = half_win as usize;
+        #[allow(clippy::cast_sign_loss)]
+        let row_end = prev.rows() - half_win as usize;
+        #[allow(clippy::cast_sign_loss)]
+        let col_end = prev.cols() - half_win as usize;
+
+        for row in half_win_usize..row_end {
+            for col in half_win_usize..col_end {
                 // Compute gradients
                 let ix = self.compute_gradient_x(prev, row, col)?;
                 let iy = self.compute_gradient_y(prev, row, col)?;

@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba, Luma};

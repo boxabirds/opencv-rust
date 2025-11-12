@@ -70,11 +70,20 @@ impl MOSSETracker {
         let (max_row, max_col, _) = find_max(&response)?;
 
         // Update filter with new location
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+        let max_col_i32 = max_col as i32;
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+        let max_row_i32 = max_row as i32;
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+        let template_cols_i32 = self.template.cols() as i32;
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+        let template_rows_i32 = self.template.rows() as i32;
+
         let new_bbox = Rect::new(
-            max_col as i32 - self.template.cols() as i32 / 2,
-            max_row as i32 - self.template.rows() as i32 / 2,
-            self.template.cols() as i32,
-            self.template.rows() as i32,
+            max_col_i32 - template_cols_i32 / 2,
+            max_row_i32 - template_rows_i32 / 2,
+            template_cols_i32,
+            template_rows_i32,
         );
 
         let new_template = extract_patch(frame, new_bbox)?;
@@ -105,7 +114,10 @@ impl MOSSETracker {
                 }
 
                 let resp_pixel = response.at_mut(row, col)?;
-                resp_pixel[0] = sum.abs().min(255.0) as u8;
+                let clamped = sum.abs().min(255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = clamped as u8;
+                resp_pixel[0] = pixel_val;
             }
         }
 
@@ -247,12 +259,25 @@ impl CSRTTracker {
         self.bbox = bbox;
 
         // Extract padded template
-        let padded_bbox = Rect::new(
-            (bbox.x as f32 - bbox.width as f32 * (self.padding - 1.0) / 2.0) as i32,
-            (bbox.y as f32 - bbox.height as f32 * (self.padding - 1.0) / 2.0) as i32,
-            (bbox.width as f32 * self.padding) as i32,
-            (bbox.height as f32 * self.padding) as i32,
-        );
+        #[allow(clippy::cast_precision_loss)]
+        let bbox_x_f32 = bbox.x as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let bbox_y_f32 = bbox.y as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let bbox_width_f32 = bbox.width as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let bbox_height_f32 = bbox.height as f32;
+
+        #[allow(clippy::cast_possible_truncation)]
+        let padded_x = (bbox_x_f32 - bbox_width_f32 * (self.padding - 1.0) / 2.0) as i32;
+        #[allow(clippy::cast_possible_truncation)]
+        let padded_y = (bbox_y_f32 - bbox_height_f32 * (self.padding - 1.0) / 2.0) as i32;
+        #[allow(clippy::cast_possible_truncation)]
+        let padded_width = (bbox_width_f32 * self.padding) as i32;
+        #[allow(clippy::cast_possible_truncation)]
+        let padded_height = (bbox_height_f32 * self.padding) as i32;
+
+        let padded_bbox = Rect::new(padded_x, padded_y, padded_width, padded_height);
 
         self.template = extract_patch(frame, padded_bbox)?;
         self.initialized = true;
@@ -291,10 +316,25 @@ impl CSRTTracker {
 // Helper functions
 
 fn extract_patch(frame: &Mat, bbox: Rect) -> Result<Mat> {
-    let x = bbox.x.max(0).min(frame.cols() as i32 - 1) as usize;
-    let y = bbox.y.max(0).min(frame.rows() as i32 - 1) as usize;
-    let w = bbox.width.max(1).min(frame.cols() as i32 - x as i32) as usize;
-    let h = bbox.height.max(1).min(frame.rows() as i32 - y as i32) as usize;
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    let frame_cols_i32 = frame.cols() as i32;
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    let frame_rows_i32 = frame.rows() as i32;
+
+    #[allow(clippy::cast_sign_loss)]
+    let x = bbox.x.max(0).min(frame_cols_i32 - 1) as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let y = bbox.y.max(0).min(frame_rows_i32 - 1) as usize;
+
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    let x_i32 = x as i32;
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    let y_i32 = y as i32;
+
+    #[allow(clippy::cast_sign_loss)]
+    let w = bbox.width.max(1).min(frame_cols_i32 - x_i32) as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let h = bbox.height.max(1).min(frame_rows_i32 - y_i32) as usize;
 
     let mut patch = Mat::new(h, w, frame.channels(), frame.depth())?;
 
@@ -314,12 +354,16 @@ fn extract_patch(frame: &Mat, bbox: Rect) -> Result<Mat> {
 fn create_gaussian_response(height: usize, width: usize, sigma: f32) -> Vec<Vec<f32>> {
     let mut gaussian = vec![vec![0.0; width]; height];
 
+    #[allow(clippy::cast_precision_loss)]
     let center_y = height as f32 / 2.0;
+    #[allow(clippy::cast_precision_loss)]
     let center_x = width as f32 / 2.0;
 
     for y in 0..height {
         for x in 0..width {
+            #[allow(clippy::cast_precision_loss)]
             let dy = y as f32 - center_y;
+            #[allow(clippy::cast_precision_loss)]
             let dx = x as f32 - center_x;
             let dist2 = dx * dx + dy * dy;
 
@@ -350,10 +394,20 @@ fn find_max(mat: &Mat) -> Result<(usize, usize, u8)> {
 }
 
 fn template_match(frame: &Mat, template: &Mat, search_region: Rect) -> Result<(i32, i32, f32)> {
+    #[allow(clippy::cast_sign_loss)]
     let x_start = search_region.x.max(0) as usize;
+    #[allow(clippy::cast_sign_loss)]
     let y_start = search_region.y.max(0) as usize;
-    let x_end = (search_region.x + search_region.width).min(frame.cols() as i32) as usize;
-    let y_end = (search_region.y + search_region.height).min(frame.rows() as i32) as usize;
+
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    let frame_cols_i32 = frame.cols() as i32;
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    let frame_rows_i32 = frame.rows() as i32;
+
+    #[allow(clippy::cast_sign_loss)]
+    let x_end = (search_region.x + search_region.width).min(frame_cols_i32) as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let y_end = (search_region.y + search_region.height).min(frame_rows_i32) as usize;
 
     let mut best_score = f32::MAX;
     let mut best_x = search_region.x;
@@ -378,8 +432,12 @@ fn template_match(frame: &Mat, template: &Mat, search_region: Rect) -> Result<(i
 
             if ssd < best_score {
                 best_score = ssd;
-                best_x = x as i32;
-                best_y = y as i32;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let x_i32 = x as i32;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let y_i32 = y as i32;
+                best_x = x_i32;
+                best_y = y_i32;
             }
         }
     }
@@ -407,7 +465,10 @@ fn blend_templates(old_template: &Mat, new_template: &Mat, alpha: f32) -> Result
 
             for ch in 0..old_template.channels() {
                 let value = (1.0 - alpha) * f32::from(old_pixel[ch]) + alpha * f32::from(new_pixel[ch]);
-                blended_pixel[ch] = value as u8;
+                let clamped = value.clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = clamped as u8;
+                blended_pixel[ch] = pixel_val;
             }
         }
     }

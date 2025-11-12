@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use crate::core::{Mat, MatDepth, Scalar};
 use crate::error::{Error, Result};
 use crate::gpu::device::GpuContext;
@@ -71,9 +72,9 @@ async fn execute_in_range_impl(
     lower_bound: Scalar,
     upper_bound: Scalar,
 ) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("InRange Shader"),
@@ -87,7 +88,7 @@ async fn execute_in_range_impl(
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    let output_buffer_size = (width * height) as u64;  // Single channel output
+    let output_buffer_size = u64::from(width) * u64::from(height);  // Single channel output
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,
@@ -95,19 +96,20 @@ async fn execute_in_range_impl(
         mapped_at_creation: false,
     });
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let params = InRangeParams {
         width,
         height,
         channels,
         _pad: 0,
-        lower_b: lower_bound.val[0] as u32,
-        lower_g: if channels > 1 { lower_bound.val[1] as u32 } else { 0 },
-        lower_r: if channels > 2 { lower_bound.val[2] as u32 } else { 0 },
-        lower_a: if channels > 3 { lower_bound.val[3] as u32 } else { 0 },
-        upper_b: upper_bound.val[0] as u32,
-        upper_g: if channels > 1 { upper_bound.val[1] as u32 } else { 255 },
-        upper_r: if channels > 2 { upper_bound.val[2] as u32 } else { 255 },
-        upper_a: if channels > 3 { upper_bound.val[3] as u32 } else { 255 },
+        lower_b: lower_bound.val[0].clamp(0.0, 255.0) as u32,
+        lower_g: if channels > 1 { lower_bound.val[1].clamp(0.0, 255.0) as u32 } else { 0 },
+        lower_r: if channels > 2 { lower_bound.val[2].clamp(0.0, 255.0) as u32 } else { 0 },
+        lower_a: if channels > 3 { lower_bound.val[3].clamp(0.0, 255.0) as u32 } else { 0 },
+        upper_b: upper_bound.val[0].clamp(0.0, 255.0) as u32,
+        upper_g: if channels > 1 { upper_bound.val[1].clamp(0.0, 255.0) as u32 } else { 255 },
+        upper_r: if channels > 2 { upper_bound.val[2].clamp(0.0, 255.0) as u32 } else { 255 },
+        upper_a: if channels > 3 { upper_bound.val[3].clamp(0.0, 255.0) as u32 } else { 255 },
     };
     let params_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Params Buffer"),

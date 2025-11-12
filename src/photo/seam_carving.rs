@@ -75,6 +75,7 @@ impl SeamCarver {
 
             for src_col in 0..src.cols() {
                 if src_col != seam_col {
+                    #[allow(clippy::cast_possible_truncation)]
                     for ch in 0..src.channels() {
                         result.at_mut(row, dst_col)?[ch] = src.at(row, src_col)?[ch];
                     }
@@ -98,6 +99,7 @@ impl SeamCarver {
 
         for row in 0..src.rows() {
             for col in 0..src.cols() {
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     result.at_mut(col, row)?[ch] = src.at(row, col)?[ch];
                 }
@@ -127,6 +129,7 @@ impl SeamCarver {
 
                 // Horizontal gradient
                 if col > 0 && col < src.cols() - 1 {
+                    #[allow(clippy::cast_possible_truncation)]
                     for ch in 0..src.channels() {
                         let left = f32::from(src.at(row, col - 1)?[ch]);
                         let right = f32::from(src.at(row, col + 1)?[ch]);
@@ -136,6 +139,7 @@ impl SeamCarver {
 
                 // Vertical gradient
                 if row > 0 && row < src.rows() - 1 {
+                    #[allow(clippy::cast_possible_truncation)]
                     for ch in 0..src.channels() {
                         let up = f32::from(src.at(row - 1, col)?[ch]);
                         let down = f32::from(src.at(row + 1, col)?[ch]);
@@ -155,6 +159,7 @@ impl SeamCarver {
             for col in 1..src.cols() - 1 {
                 let mut laplacian = 0.0f32;
 
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     let center = f32::from(src.at(row, col)?[ch]);
                     let left = f32::from(src.at(row, col - 1)?[ch]);
@@ -268,6 +273,7 @@ fn duplicate_vertical_seam(src: &Mat, seam: &[usize]) -> Result<Mat> {
 
         for src_col in 0..src.cols() {
             // Copy original pixel
+            #[allow(clippy::cast_possible_truncation)]
             for ch in 0..src.channels() {
                 result.at_mut(row, dst_col)?[ch] = src.at(row, src_col)?[ch];
             }
@@ -275,6 +281,7 @@ fn duplicate_vertical_seam(src: &Mat, seam: &[usize]) -> Result<Mat> {
 
             // Duplicate seam pixel
             if src_col == seam_col {
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     result.at_mut(row, dst_col)?[ch] = src.at(row, src_col)?[ch];
                 }

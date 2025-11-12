@@ -82,6 +82,7 @@ impl SIFTF32 {
             let mut octave_images = Vec::new();
 
             for scale in 0..n_scales {
+                #[allow(clippy::cast_precision_loss)]
                 let sigma = self.sigma * (2.0_f32).powf(scale as f32 / self.n_octave_layers as f32);
 
                 // Simple Gaussian blur (simplified for now)
@@ -100,6 +101,7 @@ impl SIFTF32 {
 
     fn gaussian_blur_f32(&self, image: &Mat, sigma: f32) -> Result<Mat> {
         // Simplified Gaussian blur for f32
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let kernel_size = ((sigma * 6.0) as usize / 2 * 2 + 1).max(3);
         let radius = kernel_size / 2;
 
@@ -109,6 +111,7 @@ impl SIFTF32 {
         let mut kernel = vec![0.0f32; kernel_size];
         let mut sum = 0.0;
         for i in 0..kernel_size {
+            #[allow(clippy::cast_precision_loss)]
             let x = i as f32 - radius as f32;
             kernel[i] = (-x * x / (2.0 * sigma * sigma)).exp();
             sum += kernel[i];
@@ -123,9 +126,18 @@ impl SIFTF32 {
             for col in 0..image.cols() {
                 let mut value = 0.0;
                 for k in 0..kernel_size {
-                    let c = (col as i32 + k as i32 - radius as i32)
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let col_i32 = col as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let k_i32 = k as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let radius_i32 = radius as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let cols_i32 = image.cols() as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let c = (col_i32 + k_i32 - radius_i32)
                         .max(0)
-                        .min(image.cols() as i32 - 1) as usize;
+                        .min(cols_i32 - 1) as usize;
                     value += image.at_f32(row, c, 0)? * kernel[k];
                 }
                 temp.set_f32(row, col, 0, value)?;
@@ -137,9 +149,18 @@ impl SIFTF32 {
             for col in 0..temp.cols() {
                 let mut value = 0.0;
                 for k in 0..kernel_size {
-                    let r = (row as i32 + k as i32 - radius as i32)
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let row_i32 = row as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let k_i32 = k as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let radius_i32 = radius as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let rows_i32 = temp.rows() as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let r = (row_i32 + k_i32 - radius_i32)
                         .max(0)
-                        .min(temp.rows() as i32 - 1) as usize;
+                        .min(rows_i32 - 1) as usize;
                     value += temp.at_f32(r, col, 0)? * kernel[k];
                 }
                 result.set_f32(row, col, 0, value)?;
@@ -220,14 +241,24 @@ impl SIFTF32 {
 
                         if is_max || is_min {
                             let scale = 1 << octave_idx;
+                            #[allow(clippy::cast_precision_loss)]
                             let sigma = self.sigma * (2.0_f32).powf(scale_idx as f32 / self.n_octave_layers as f32);
 
+                            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                            let pt_x = col as i32 * scale;
+                            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                            let pt_y = row as i32 * scale;
+                            #[allow(clippy::cast_precision_loss)]
+                            let size = sigma * scale as f32;
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                            let octave_i32 = octave_idx as i32;
+
                             keypoints.push(KeyPoint {
-                                pt: Point::new(col as i32 * scale, row as i32 * scale),
-                                size: sigma * scale as f32,
+                                pt: Point::new(pt_x, pt_y),
+                                size,
                                 angle: 0.0, // Simplified - no orientation
                                 response: center.abs(),
-                                octave: octave_idx as i32,
+                                octave: octave_i32,
                             });
                         }
                     }
@@ -247,8 +278,14 @@ impl SIFTF32 {
                     if mat_idx == 1 && dy == 0 && dx == 0 {
                         continue;
                     }
-                    let r = (row as i32 + dy) as usize;
-                    let c = (col as i32 + dx) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let row_i32 = row as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let r = (row_i32 + dy) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let col_i32 = col as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let c = (col_i32 + dx) as usize;
                     if r < mat.rows() && c < mat.cols()
                         && mat.at_f32(r, c, 0)? >= value {
                             return Ok(false);
@@ -268,8 +305,14 @@ impl SIFTF32 {
                     if mat_idx == 1 && dy == 0 && dx == 0 {
                         continue;
                     }
-                    let r = (row as i32 + dy) as usize;
-                    let c = (col as i32 + dx) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let row_i32 = row as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let r = (row_i32 + dy) as usize;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let col_i32 = col as i32;
+                    #[allow(clippy::cast_sign_loss)]
+                    let c = (col_i32 + dx) as usize;
                     if r < mat.rows() && c < mat.cols()
                         && mat.at_f32(r, c, 0)? <= value {
                             return Ok(false);

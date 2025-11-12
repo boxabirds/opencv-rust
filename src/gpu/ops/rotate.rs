@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 use crate::gpu::device::GpuContext;
@@ -54,9 +55,9 @@ pub fn rotate_gpu(src: &Mat, dst: &mut Mat, rotate_code: i32) -> Result<()> {
 }
 
 async fn execute_rotate_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, rotate_code: i32) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Rotate Shader"),
@@ -70,7 +71,7 @@ async fn execute_rotate_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, rotate_
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    let output_buffer_size = (dst.rows() as u32 * dst.cols() as u32 * channels) as u64;
+    let output_buffer_size = (u32::try_from(dst.rows()).unwrap_or(u32::MAX) * u32::try_from(dst.cols()).unwrap_or(u32::MAX) * channels) as u64;
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,
@@ -141,8 +142,8 @@ async fn execute_rotate_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, rotate_
         compute_pass.set_pipeline(&compute_pipeline);
         compute_pass.set_bind_group(0, &bind_group, &[]);
         let workgroup_size = 16;
-        let out_width = dst.cols() as u32;
-        let out_height = dst.rows() as u32;
+        let out_width = u32::try_from(dst.cols()).unwrap_or(u32::MAX);
+        let out_height = u32::try_from(dst.rows()).unwrap_or(u32::MAX);
         let workgroup_count_x = (out_width + workgroup_size - 1) / workgroup_size;
         let workgroup_count_y = (out_height + workgroup_size - 1) / workgroup_size;
         compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);

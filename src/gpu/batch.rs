@@ -118,7 +118,11 @@ impl GpuBatch {
                 }
                 GpuOp::Threshold { thresh, maxval } => {
                     let mut dst = Mat::new(1, 1, 1, MatDepth::U8)?;
-                    crate::gpu::ops::threshold::threshold_gpu_async(&current, &mut dst, thresh.clamp(0.0, 255.0) as u8, maxval.clamp(0.0, 255.0) as u8).await?;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let thresh_u8 = thresh.clamp(0.0, 255.0) as u8;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let maxval_u8 = maxval.clamp(0.0, 255.0) as u8;
+                    crate::gpu::ops::threshold::threshold_gpu_async(&current, &mut dst, thresh_u8, maxval_u8).await?;
                     dst
                 }
                 GpuOp::Canny { threshold1, threshold2 } => {

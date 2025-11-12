@@ -67,6 +67,7 @@ impl ORB {
 
         // Compute orientation for each keypoint
         for kp in &mut all_keypoints {
+            #[allow(clippy::cast_sign_loss)]
             let level = kp.octave as usize;
             if level < pyramid.len() {
                 kp.angle = self.compute_orientation(&pyramid[level], kp)?;
@@ -85,7 +86,10 @@ impl ORB {
         pyramid.push(current.clone_mat());
 
         for _ in 1..self.n_levels {
+            // Pyramid downsampling calculations - precision loss acceptable
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
             let new_rows = ((current.rows() as f32) / self.scale_factor) as usize;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
             let new_cols = ((current.cols() as f32) / self.scale_factor) as usize;
 
             if new_rows < 3 || new_cols < 3 {
@@ -156,16 +160,28 @@ impl ORB {
 
                 // Need 12 contiguous pixels (simplified: just check count)
                 if brighter >= 12 || darker >= 12 {
+                    // Compute scale for this pyramid level
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                     let scale = self.scale_factor.powi(level as i32);
+
+                    // Convert keypoint coordinates to original image scale
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+                    let pt_x = (col as f32 * scale) as i32;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+                    let pt_y = (row as f32 * scale) as i32;
+                    #[allow(clippy::cast_precision_loss)]
+                    let size = self.patch_size as f32 * scale;
+                    #[allow(clippy::cast_precision_loss)]
+                    let response = brighter.max(darker) as f32;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                    let octave = level as i32;
+
                     keypoints.push(KeyPoint {
-                        pt: Point::new(
-                            (col as f32 * scale) as i32,
-                            (row as f32 * scale) as i32,
-                        ),
-                        size: self.patch_size as f32 * scale,
+                        pt: Point::new(pt_x, pt_y),
+                        size,
                         angle: 0.0,
-                        response: brighter.max(darker) as f32,
-                        octave: level as i32,
+                        response,
+                        octave,
                     });
                 }
             }
@@ -176,7 +192,10 @@ impl ORB {
 
     fn compute_orientation(&self, image: &Mat, kp: &KeyPoint) -> Result<f32> {
         let scale = self.scale_factor.powi(kp.octave);
+        // Convert keypoint to current pyramid level coordinates
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
         let row = (kp.pt.y as f32 / scale) as usize;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
         let col = (kp.pt.x as f32 / scale) as usize;
 
         let radius = self.patch_size / 2;
@@ -186,13 +205,20 @@ impl ORB {
 
         for dy in -radius..=radius {
             for dx in -radius..=radius {
+                // Clamp coordinates to valid range for moment calculation
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let y = (row as i32 + dy).max(0).min(image.rows() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let x = (col as i32 + dx).max(0).min(image.cols() as i32 - 1) as usize;
 
                 let val = f32::from(image.at(y, x)?[0]);
 
-                m01 += dy as f32 * val;
-                m10 += dx as f32 * val;
+                #[allow(clippy::cast_precision_loss)]
+                let dy_f32 = dy as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let dx_f32 = dx as f32;
+                m01 += dy_f32 * val;
+                m10 += dx_f32 * val;
             }
         }
 
@@ -210,18 +236,28 @@ impl ORB {
         let pattern = self.generate_test_pattern();
 
         for kp in keypoints {
+            #[allow(clippy::cast_sign_loss)]
             let level = kp.octave as usize;
             if level >= pyramid.len() {
                 continue;
             }
 
             let image = &pyramid[level];
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             let scale = self.scale_factor.powi(level as i32);
+            // Convert to pyramid level coordinates
+            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
             let row = (kp.pt.y as f32 / scale) as i32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
             let col = (kp.pt.x as f32 / scale) as i32;
 
-            if row < self.patch_size || row >= image.rows() as i32 - self.patch_size
-                || col < self.patch_size || col >= image.cols() as i32 - self.patch_size
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            let rows_i32 = image.rows() as i32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            let cols_i32 = image.cols() as i32;
+
+            if row < self.patch_size || row >= rows_i32 - self.patch_size
+                || col < self.patch_size || col >= cols_i32 - self.patch_size
             {
                 continue;
             }
@@ -237,10 +273,14 @@ impl ORB {
                     break;
                 }
 
-                // Rotate test points
+                // Rotate test points for rotation-invariant BRIEF
+                #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
                 let x1_rot = (p1.0 as f32 * cos_angle - p1.1 as f32 * sin_angle) as i32;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
                 let y1_rot = (p1.0 as f32 * sin_angle + p1.1 as f32 * cos_angle) as i32;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
                 let x2_rot = (p2.0 as f32 * cos_angle - p2.1 as f32 * sin_angle) as i32;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
                 let y2_rot = (p2.0 as f32 * sin_angle + p2.1 as f32 * cos_angle) as i32;
 
                 let y1 = row + y1_rot;
@@ -248,10 +288,12 @@ impl ORB {
                 let y2 = row + y2_rot;
                 let x2 = col + x2_rot;
 
-                if y1 >= 0 && y1 < image.rows() as i32 && x1 >= 0 && x1 < image.cols() as i32
-                    && y2 >= 0 && y2 < image.rows() as i32 && x2 >= 0 && x2 < image.cols() as i32
+                if y1 >= 0 && y1 < rows_i32 && x1 >= 0 && x1 < cols_i32
+                    && y2 >= 0 && y2 < rows_i32 && x2 >= 0 && x2 < cols_i32
                 {
+                    #[allow(clippy::cast_sign_loss)]
                     let val1 = image.at(y1 as usize, x1 as usize)?[0];
+                    #[allow(clippy::cast_sign_loss)]
                     let val2 = image.at(y2 as usize, x2 as usize)?[0];
 
                     if val1 < val2 {
@@ -272,10 +314,16 @@ impl ORB {
 
         // Generate 256 test pairs (simplified pattern)
         for i in 0..256 {
+            #[allow(clippy::cast_precision_loss)]
             let seed = i as f32;
+            // Generate pseudo-random test pattern coordinates
+            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
             let x1 = ((seed * 13.0).sin() * half_patch as f32) as i32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
             let y1 = ((seed * 17.0).cos() * half_patch as f32) as i32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
             let x2 = ((seed * 19.0).sin() * half_patch as f32) as i32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
             let y2 = ((seed * 23.0).cos() * half_patch as f32) as i32;
 
             pattern.push(((x1, y1), (x2, y2)));

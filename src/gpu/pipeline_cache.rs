@@ -288,6 +288,110 @@ impl PipelineCache {
         })
     }
 
+    /// Get the cached flip pipeline
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn get_flip_pipeline() -> Option<&'static CachedPipeline> {
+        PIPELINE_CACHE
+            .get()?
+            .as_ref()?
+            .flip
+            .as_ref()
+    }
+
+    /// Get the cached flip pipeline (WASM)
+    #[cfg(target_arch = "wasm32")]
+    pub fn with_flip_pipeline<F, R>(f: F) -> Option<R>
+    where
+        F: FnOnce(&CachedPipeline) -> R,
+    {
+        PIPELINE_CACHE.with(|cache| {
+            cache
+                .borrow()
+                .as_ref()?
+                .flip
+                .as_ref()
+                .map(f)
+        })
+    }
+
+    /// Get the cached erode pipeline
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn get_erode_pipeline() -> Option<&'static CachedPipeline> {
+        PIPELINE_CACHE
+            .get()?
+            .as_ref()?
+            .erode
+            .as_ref()
+    }
+
+    /// Get the cached erode pipeline (WASM)
+    #[cfg(target_arch = "wasm32")]
+    pub fn with_erode_pipeline<F, R>(f: F) -> Option<R>
+    where
+        F: FnOnce(&CachedPipeline) -> R,
+    {
+        PIPELINE_CACHE.with(|cache| {
+            cache
+                .borrow()
+                .as_ref()?
+                .erode
+                .as_ref()
+                .map(f)
+        })
+    }
+
+    /// Get the cached dilate pipeline
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn get_dilate_pipeline() -> Option<&'static CachedPipeline> {
+        PIPELINE_CACHE
+            .get()?
+            .as_ref()?
+            .dilate
+            .as_ref()
+    }
+
+    /// Get the cached dilate pipeline (WASM)
+    #[cfg(target_arch = "wasm32")]
+    pub fn with_dilate_pipeline<F, R>(f: F) -> Option<R>
+    where
+        F: FnOnce(&CachedPipeline) -> R,
+    {
+        PIPELINE_CACHE.with(|cache| {
+            cache
+                .borrow()
+                .as_ref()?
+                .dilate
+                .as_ref()
+                .map(f)
+        })
+    }
+
+    /// Get the cached laplacian pipeline
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn get_laplacian_pipeline() -> Option<&'static CachedPipeline> {
+        PIPELINE_CACHE
+            .get()?
+            .as_ref()?
+            .laplacian
+            .as_ref()
+    }
+
+    /// Get the cached laplacian pipeline (WASM)
+    #[cfg(target_arch = "wasm32")]
+    pub fn with_laplacian_pipeline<F, R>(f: F) -> Option<R>
+    where
+        F: FnOnce(&CachedPipeline) -> R,
+    {
+        PIPELINE_CACHE.with(|cache| {
+            cache
+                .borrow()
+                .as_ref()?
+                .laplacian
+                .as_ref()
+                .map(f)
+        })
+    }
+
     // Pipeline creation functions
     // These create the actual pipeline objects with shaders, layouts, etc.
 

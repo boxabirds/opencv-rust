@@ -26,14 +26,16 @@ pub fn bilateral_filter(
     let radius = if d <= 0 { 5 } else { d / 2 };
 
     // Precompute spatial Gaussian kernel
-    let mut spatial_kernel = vec![vec![0.0f64; (2 * radius + 1) as usize]; (2 * radius + 1) as usize];
+    let kernel_size = usize::try_from(2 * radius + 1).unwrap_or(0);
+    let mut spatial_kernel = vec![vec![0.0f64; kernel_size]; kernel_size];
     let space_coeff = -0.5 / (sigma_space * sigma_space);
 
     for i in -radius..=radius {
         for j in -radius..=radius {
             let dist = f64::from(i * i + j * j);
-            spatial_kernel[(i + radius) as usize][(j + radius) as usize] =
-                (dist * space_coeff).exp();
+            let i_idx = usize::try_from(i + radius).unwrap_or(0);
+            let j_idx = usize::try_from(j + radius).unwrap_or(0);
+            spatial_kernel[i_idx][j_idx] = (dist * space_coeff).exp();
         }
     }
 
@@ -49,6 +51,9 @@ pub fn bilateral_filter(
             // Stack arrays for temporary storage (max 4 channels)
             let mut sum = [0.0f64; 4];
             let mut center = [0u8; 4];
+            let rows_i32 = i32::try_from(rows).unwrap_or(i32::MAX);
+            let cols_i32 = i32::try_from(cols).unwrap_or(i32::MAX);
+            let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
 
             for col in 0..cols {
                 // Get center pixel
@@ -61,10 +66,12 @@ pub fn bilateral_filter(
                 let mut weight_sum = 0.0f64;
 
                 // Process neighborhood
+                let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
+
                 for i in -radius..=radius {
-                    let y = (row as i32 + i).max(0).min(rows as i32 - 1) as usize;
+                    let y = usize::try_from((row_i32 + i).max(0).min(rows_i32 - 1)).unwrap_or(0);
                     for j in -radius..=radius {
-                        let x = (col as i32 + j).max(0).min(cols as i32 - 1) as usize;
+                        let x = usize::try_from((col_i32 + j).max(0).min(cols_i32 - 1)).unwrap_or(0);
 
                         let neighbor_idx = (y * cols + x) * channels;
 
@@ -76,8 +83,9 @@ pub fn bilateral_filter(
                         }
 
                         // Combined weight
-                        let weight = spatial_kernel[(i + radius) as usize][(j + radius) as usize]
-                            * (color_dist * color_coeff).exp();
+                        let i_idx = usize::try_from(i + radius).unwrap_or(0);
+                        let j_idx = usize::try_from(j + radius).unwrap_or(0);
+                        let weight = spatial_kernel[i_idx][j_idx] * (color_dist * color_coeff).exp();
 
                         for ch in 0..channels {
                             sum[ch] += f64::from(src_data[neighbor_idx + ch]) * weight;
@@ -89,7 +97,9 @@ pub fn bilateral_filter(
                 // Write result
                 let dst_idx = col * channels;
                 for ch in 0..channels {
-                    dst_row[dst_idx + ch] = (sum[ch] / weight_sum) as u8;
+                    let clamped = (sum[ch] / weight_sum).clamp(0.0, 255.0);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    { dst_row[dst_idx + ch] = clamped as u8; }
                 }
             }
         });
@@ -134,7 +144,9 @@ pub fn guided_filter(
         for col in 0..guide.cols() {
             let val = f64::from(guide.at(row, col)?[0]);
             let corr_pixel = corr_i.at_mut(row, col)?;
-            corr_pixel[0] = ((val * val) / 255.0) as u8;
+            let clamped = ((val * val) / 255.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            { corr_pixel[0] = clamped as u8; }
         }
     }
     let mut mean_ii = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
@@ -149,7 +161,9 @@ pub fn guided_filter(
             let variance = mean_sq - (mean_val * mean_val) / 255.0;
 
             let var_pixel = var_i.at_mut(row, col)?;
-            var_pixel[0] = variance.max(0.0) as u8;
+            let clamped = variance.max(0.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            { var_pixel[0] = clamped as u8; }
         }
     }
 
@@ -168,8 +182,11 @@ pub fn guided_filter(
             let result = a * guide_val + b;
 
             let dst_pixel = dst.at_mut(row, col)?;
+            let clamped = result.clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let clamped_u8 = clamped as u8;
             for ch in 0..src.channels() {
-                dst_pixel[ch] = result.clamp(0.0, 255.0) as u8;
+                dst_pixel[ch] = clamped_u8;
             }
         }
     }
@@ -248,7 +265,9 @@ pub fn distance_transform(
         for col in 0..src.cols() {
             let dst_pixel = dst.at_mut(row, col)?;
             if max_dist > 0.0 {
-                dst_pixel[0] = ((dist[row][col] / max_dist) * 255.0) as u8;
+                let clamped = ((dist[row][col] / max_dist) * 255.0).clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                { dst_pixel[0] = clamped as u8; }
             } else {
                 dst_pixel[0] = 0;
             }
@@ -300,7 +319,9 @@ pub fn watershed(image: &Mat, markers: &mut Mat) -> Result<()> {
             let mag = (gx * gx + gy * gy).sqrt();
 
             let grad_pixel = gradient.at_mut(row, col)?;
-            grad_pixel[0] = mag.min(255.0) as u8;
+            let clamped = mag.min(255.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            { grad_pixel[0] = clamped as u8; }
         }
     }
 
@@ -315,12 +336,15 @@ pub fn watershed(image: &Mat, markers: &mut Mat) -> Result<()> {
             if label > 0 {
                 // Check if on boundary
                 let mut is_boundary = false;
+                let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+                let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
+
                 for dy in -1..=1 {
                     for dx in -1..=1 {
                         if dy == 0 && dx == 0 { continue; }
 
-                        let ny = (row as i32 + dy) as usize;
-                        let nx = (col as i32 + dx) as usize;
+                        let ny = usize::try_from(row_i32 + dy).unwrap_or(0);
+                        let nx = usize::try_from(col_i32 + dx).unwrap_or(0);
 
                         let neighbor_label = markers.at(ny, nx)?[0];
                         if neighbor_label == 0 {
@@ -345,17 +369,21 @@ pub fn watershed(image: &Mat, markers: &mut Mat) -> Result<()> {
     // Flood fill from markers
     while let Some((_grad, row, col)) = queue.pop() {
         let current_label = markers.at(row, col)?[0];
+        let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+        let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
+        let markers_rows_i32 = i32::try_from(markers.rows()).unwrap_or(i32::MAX);
+        let markers_cols_i32 = i32::try_from(markers.cols()).unwrap_or(i32::MAX);
 
         for dy in -1..=1 {
             for dx in -1..=1 {
                 if dy == 0 && dx == 0 { continue; }
 
-                let ny = row as i32 + dy;
-                let nx = col as i32 + dx;
+                let ny = row_i32 + dy;
+                let nx = col_i32 + dx;
 
-                if ny >= 0 && ny < markers.rows() as i32 && nx >= 0 && nx < markers.cols() as i32 {
-                    let ny = ny as usize;
-                    let nx = nx as usize;
+                if ny >= 0 && ny < markers_rows_i32 && nx >= 0 && nx < markers_cols_i32 {
+                    let ny = usize::try_from(ny).unwrap_or(0);
+                    let nx = usize::try_from(nx).unwrap_or(0);
 
                     let neighbor_label = markers.at(ny, nx)?[0];
 
@@ -402,25 +430,34 @@ pub fn gabor_filter(
 
     // Apply convolution
     let half = ksize / 2;
+    let src_rows_i32 = i32::try_from(src.rows()).unwrap_or(i32::MAX);
+    let src_cols_i32 = i32::try_from(src.cols()).unwrap_or(i32::MAX);
 
     for row in 0..src.rows() {
+        let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+
         for col in 0..src.cols() {
+            let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
             let mut sum = 0.0f64;
 
             for ky in -half..=half {
                 for kx in -half..=half {
-                    let y = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
-                    let x = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
+                    let y = usize::try_from((row_i32 + ky).max(0).min(src_rows_i32 - 1)).unwrap_or(0);
+                    let x = usize::try_from((col_i32 + kx).max(0).min(src_cols_i32 - 1)).unwrap_or(0);
 
                     let pixel = f64::from(src.at(y, x)?[0]);
-                    let k_val = kernel[(ky + half) as usize][(kx + half) as usize];
+                    let ky_idx = usize::try_from(ky + half).unwrap_or(0);
+                    let kx_idx = usize::try_from(kx + half).unwrap_or(0);
+                    let k_val = kernel[ky_idx][kx_idx];
 
                     sum += pixel * k_val;
                 }
             }
 
             let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = sum.abs().min(255.0) as u8;
+            let clamped = sum.abs().min(255.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            { dst_pixel[0] = clamped as u8; }
         }
     }
 
@@ -436,7 +473,8 @@ fn generate_gabor_kernel(
     psi: f64,
 ) -> Vec<Vec<f64>> {
     let half = ksize / 2;
-    let mut kernel = vec![vec![0.0; ksize as usize]; ksize as usize];
+    let ksize_usize = usize::try_from(ksize).unwrap_or(0);
+    let mut kernel = vec![vec![0.0; ksize_usize]; ksize_usize];
 
     let sigma_x = sigma;
     let sigma_y = sigma / gamma;
@@ -452,7 +490,9 @@ fn generate_gabor_kernel(
 
             let sinusoid = (2.0 * std::f64::consts::PI * x_theta / lambda + psi).cos();
 
-            kernel[(y + half) as usize][(x + half) as usize] = gaussian * sinusoid;
+            let y_idx = usize::try_from(y + half).unwrap_or(0);
+            let x_idx = usize::try_from(x + half).unwrap_or(0);
+            kernel[y_idx][x_idx] = gaussian * sinusoid;
         }
     }
 
@@ -479,18 +519,25 @@ pub fn laplacian_of_gaussian(
 
     // Apply convolution
     let half = ksize / 2;
+    let src_rows_i32 = i32::try_from(src.rows()).unwrap_or(i32::MAX);
+    let src_cols_i32 = i32::try_from(src.cols()).unwrap_or(i32::MAX);
 
     for row in 0..src.rows() {
+        let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+
         for col in 0..src.cols() {
+            let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
             let mut sum = 0.0f64;
 
             for ky in -half..=half {
                 for kx in -half..=half {
-                    let y = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
-                    let x = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
+                    let y = usize::try_from((row_i32 + ky).max(0).min(src_rows_i32 - 1)).unwrap_or(0);
+                    let x = usize::try_from((col_i32 + kx).max(0).min(src_cols_i32 - 1)).unwrap_or(0);
 
                     let pixel = f64::from(src.at(y, x)?[0]);
-                    let k_val = kernel[(ky + half) as usize][(kx + half) as usize];
+                    let ky_idx = usize::try_from(ky + half).unwrap_or(0);
+                    let kx_idx = usize::try_from(kx + half).unwrap_or(0);
+                    let k_val = kernel[ky_idx][kx_idx];
 
                     sum += pixel * k_val;
                 }
@@ -498,7 +545,9 @@ pub fn laplacian_of_gaussian(
 
             let dst_pixel = dst.at_mut(row, col)?;
             // Zero-crossing or absolute value
-            dst_pixel[0] = sum.abs().min(255.0) as u8;
+            let clamped = sum.abs().min(255.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            { dst_pixel[0] = clamped as u8; }
         }
     }
 
@@ -507,7 +556,8 @@ pub fn laplacian_of_gaussian(
 
 fn generate_log_kernel(ksize: i32, sigma: f64) -> Vec<Vec<f64>> {
     let half = ksize / 2;
-    let mut kernel = vec![vec![0.0; ksize as usize]; ksize as usize];
+    let ksize_usize = usize::try_from(ksize).unwrap_or(0);
+    let mut kernel = vec![vec![0.0; ksize_usize]; ksize_usize];
 
     let sigma2 = sigma * sigma;
     let sigma4 = sigma2 * sigma2;
@@ -521,8 +571,9 @@ fn generate_log_kernel(ksize: i32, sigma: f64) -> Vec<Vec<f64>> {
             // LoG formula: -1/(π*σ^4) * (1 - r²/(2σ²)) * exp(-r²/(2σ²))
             let gaussian = (-r2 / (2.0 * sigma2)).exp();
             let laplacian = (1.0 - r2 / (2.0 * sigma2)) * gaussian;
-            kernel[(y + half) as usize][(x + half) as usize] =
-                -laplacian / (std::f64::consts::PI * sigma4);
+            let y_idx = usize::try_from(y + half).unwrap_or(0);
+            let x_idx = usize::try_from(x + half).unwrap_or(0);
+            kernel[y_idx][x_idx] = -laplacian / (std::f64::consts::PI * sigma4);
         }
     }
 
@@ -548,29 +599,36 @@ pub fn non_local_means_denoising(
     let t_half = template_window_size / 2;
     let s_half = search_window_size / 2;
     let h2 = h * h;
+    let src_rows_i32 = i32::try_from(src.rows()).unwrap_or(i32::MAX);
+    let src_cols_i32 = i32::try_from(src.cols()).unwrap_or(i32::MAX);
 
     for row in 0..src.rows() {
+        let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+
         for col in 0..src.cols() {
+            let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
             let mut sum = vec![0.0f32; src.channels()];
             let mut weight_sum = 0.0f32;
 
             // Search window
             for sy in -s_half..=s_half {
                 for sx in -s_half..=s_half {
-                    let search_row = (row as i32 + sy).max(0).min(src.rows() as i32 - 1) as usize;
-                    let search_col = (col as i32 + sx).max(0).min(src.cols() as i32 - 1) as usize;
+                    let search_row = usize::try_from((row_i32 + sy).max(0).min(src_rows_i32 - 1)).unwrap_or(0);
+                    let search_col = usize::try_from((col_i32 + sx).max(0).min(src_cols_i32 - 1)).unwrap_or(0);
 
                     // Compute patch distance
                     let mut patch_dist = 0.0f32;
                     let mut patch_count = 0;
+                    let search_row_i32 = i32::try_from(search_row).unwrap_or(i32::MAX);
+                    let search_col_i32 = i32::try_from(search_col).unwrap_or(i32::MAX);
 
                     for ty in -t_half..=t_half {
                         for tx in -t_half..=t_half {
-                            let r1 = (row as i32 + ty).max(0).min(src.rows() as i32 - 1) as usize;
-                            let c1 = (col as i32 + tx).max(0).min(src.cols() as i32 - 1) as usize;
+                            let r1 = usize::try_from((row_i32 + ty).max(0).min(src_rows_i32 - 1)).unwrap_or(0);
+                            let c1 = usize::try_from((col_i32 + tx).max(0).min(src_cols_i32 - 1)).unwrap_or(0);
 
-                            let r2 = (search_row as i32 + ty).max(0).min(src.rows() as i32 - 1) as usize;
-                            let c2 = (search_col as i32 + tx).max(0).min(src.cols() as i32 - 1) as usize;
+                            let r2 = usize::try_from((search_row_i32 + ty).max(0).min(src_rows_i32 - 1)).unwrap_or(0);
+                            let c2 = usize::try_from((search_col_i32 + tx).max(0).min(src_cols_i32 - 1)).unwrap_or(0);
 
                             let p1 = src.at(r1, c1)?;
                             let p2 = src.at(r2, c2)?;
@@ -583,7 +641,9 @@ pub fn non_local_means_denoising(
                         }
                     }
 
-                    patch_dist /= patch_count as f32;
+                    #[allow(clippy::cast_precision_loss)]
+                    let patch_count_f32 = patch_count as f32;
+                    patch_dist /= patch_count_f32;
 
                     // Compute weight
                     let weight = (-patch_dist / h2).exp();
@@ -598,7 +658,9 @@ pub fn non_local_means_denoising(
 
             let dst_pixel = dst.at_mut(row, col)?;
             for ch in 0..src.channels() {
-                dst_pixel[ch] = (sum[ch] / weight_sum) as u8;
+                let clamped = (sum[ch] / weight_sum).clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                { dst_pixel[ch] = clamped as u8; }
             }
         }
     }
@@ -660,7 +722,9 @@ pub fn anisotropic_diffusion(
                 let update = lambda * (c_n * grad_n + c_s * grad_s + c_e * grad_e + c_w * grad_w);
                 let new_val = center + update;
 
-                dst.at_mut(row, col)?[0] = new_val.clamp(0.0, 255.0) as u8;
+                let clamped = new_val.clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                { dst.at_mut(row, col)?[0] = clamped as u8; }
             }
         }
     }

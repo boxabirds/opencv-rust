@@ -116,7 +116,9 @@ fn bgr_to_gray(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
                 };
 
                 // Using standard RGB to grayscale conversion weights
-                let gray = (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) as u8;
+                let gray_f32 = (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)).clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let gray = gray_f32 as u8;
                 *dst_pixel = gray;
             }
         });
@@ -171,7 +173,9 @@ fn rgba_to_gray(src: &Mat, dst: &mut Mat, is_bgra: bool) -> Result<()> {
                     (src_data[src_idx], src_data[src_idx + 1], src_data[src_idx + 2])
                 };
 
-                let gray = (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) as u8;
+                let gray_f32 = (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)).clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let gray = gray_f32 as u8;
                 *dst_pixel = gray;
             }
         });
@@ -292,9 +296,16 @@ fn rgb_to_hsv(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let v = max;
 
             let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = (h / 2.0) as u8; // OpenCV stores H in range [0, 180]
-            dst_pixel[1] = (s * 255.0) as u8;
-            dst_pixel[2] = (v * 255.0) as u8;
+            // OpenCV stores H in range [0, 180], S and V in [0, 255]
+            let h_clamped = (h / 2.0).clamp(0.0, 180.0);
+            let s_clamped = (s * 255.0).clamp(0.0, 255.0);
+            let v_clamped = (v * 255.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            {
+                dst_pixel[0] = h_clamped as u8;
+                dst_pixel[1] = s_clamped as u8;
+                dst_pixel[2] = v_clamped as u8;
+            }
         }
     }
 
@@ -337,9 +348,11 @@ fn hsv_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
                 (c, 0.0, x)
             };
 
-            let r = ((r + m) * 255.0) as u8;
-            let g = ((g + m) * 255.0) as u8;
-            let b = ((b + m) * 255.0) as u8;
+            let r_clamped = ((r + m) * 255.0).clamp(0.0, 255.0);
+            let g_clamped = ((g + m) * 255.0).clamp(0.0, 255.0);
+            let b_clamped = ((b + m) * 255.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let (r, g, b) = (r_clamped as u8, g_clamped as u8, b_clamped as u8);
 
             let dst_pixel = dst.at_mut(row, col)?;
             if is_bgr {
@@ -402,9 +415,16 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let b_lab = 200.0 * (fy - fz);
 
             let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = (l * 2.55).clamp(0.0, 255.0) as u8;  // L in [0, 255]
-            dst_pixel[1] = (a + 128.0).clamp(0.0, 255.0) as u8;  // a in [0, 255]
-            dst_pixel[2] = (b_lab + 128.0).clamp(0.0, 255.0) as u8;  // b in [0, 255]
+            // Lab values clamped to [0, 255]
+            let l_clamped = (l * 2.55).clamp(0.0, 255.0);
+            let a_clamped = (a + 128.0).clamp(0.0, 255.0);
+            let b_clamped = (b_lab + 128.0).clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            {
+                dst_pixel[0] = l_clamped as u8;  // L in [0, 255]
+                dst_pixel[1] = a_clamped as u8;  // a in [0, 255]
+                dst_pixel[2] = b_clamped as u8;  // b in [0, 255]
+            }
         }
     }
 
@@ -445,9 +465,12 @@ fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let b_linear = xn * 0.0557 + yn * -0.2040 + zn * 1.0570;
 
             let gamma = |t: f32| if t > 0.003_130_8 { 1.055 * t.powf(1.0 / 2.4) - 0.055 } else { 12.92 * t };
-            let r = (gamma(r_linear) * 255.0).clamp(0.0, 255.0) as u8;
-            let g = (gamma(g_linear) * 255.0).clamp(0.0, 255.0) as u8;
-            let b_rgb = (gamma(b_linear) * 255.0).clamp(0.0, 255.0) as u8;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let (r, g, b_rgb) = (
+                (gamma(r_linear) * 255.0).clamp(0.0, 255.0) as u8,
+                (gamma(g_linear) * 255.0).clamp(0.0, 255.0) as u8,
+                (gamma(b_linear) * 255.0).clamp(0.0, 255.0) as u8,
+            );
 
             let dst_pixel = dst.at_mut(row, col)?;
             if is_bgr {
@@ -490,9 +513,12 @@ fn rgb_to_ycrcb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let cb = (b - y) * 0.564 + 128.0;
 
             let dst_pixel = dst.at_mut(row, col)?;
-            dst_pixel[0] = y.clamp(0.0, 255.0) as u8;
-            dst_pixel[1] = cr.clamp(0.0, 255.0) as u8;
-            dst_pixel[2] = cb.clamp(0.0, 255.0) as u8;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            {
+                dst_pixel[0] = y.clamp(0.0, 255.0) as u8;
+                dst_pixel[1] = cr.clamp(0.0, 255.0) as u8;
+                dst_pixel[2] = cb.clamp(0.0, 255.0) as u8;
+            }
         }
     }
 
@@ -522,6 +548,7 @@ fn ycrcb_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let b = y + 1.773 * cb;
 
             let dst_pixel = dst.at_mut(row, col)?;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             if is_bgr {
                 dst_pixel[0] = b.clamp(0.0, 255.0) as u8;
                 dst_pixel[1] = g.clamp(0.0, 255.0) as u8;

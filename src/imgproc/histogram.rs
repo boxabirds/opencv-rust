@@ -22,6 +22,8 @@ pub fn calc_hist(
     let mut hist = vec![0.0f32; hist_size];
     let (min_val, max_val) = ranges;
     let range = max_val - min_val;
+    // Convert hist_size to f32 for division - acceptable precision loss for reasonable hist sizes
+    #[allow(clippy::cast_precision_loss)]
     let bin_width = range / hist_size as f32;
 
     for row in 0..image.rows() {
@@ -30,7 +32,10 @@ pub fn calc_hist(
             let val = f32::from(pixel[0]);
 
             if val >= min_val && val < max_val {
-                let bin = ((val - min_val) / bin_width) as usize;
+                // Convert f32 bin index to usize - value is non-negative after conditional check
+                let bin_f32 = (val - min_val) / bin_width;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let bin = bin_f32 as usize;
                 let bin = bin.min(hist_size - 1);
                 hist[bin] += 1.0;
             }
@@ -86,14 +91,20 @@ pub fn equalize_hist(src: &Mat, dst: &mut Mat) -> Result<()> {
 
     // Find minimum non-zero CDF value
     let cdf_min = *cdf.iter().find(|&&x| x > 0).unwrap_or(&0);
-    let total_pixels = (src.rows() * src.cols()) as u32;
+    // Convert total pixels to u32, saturating if it exceeds u32::MAX
+    let total_pixels = u32::try_from(src.rows() * src.cols()).unwrap_or(u32::MAX);
 
     // Calculate lookup table for equalization
     let mut lut = [0u8; 256];
 
     for i in 0..256 {
         if total_pixels > cdf_min {
-            lut[i] = ((f64::from((cdf[i].saturating_sub(cdf_min))) / f64::from(total_pixels - cdf_min)) * 255.0) as u8;
+            #[allow(clippy::cast_precision_loss)]
+            let normalized = (f64::from((cdf[i].saturating_sub(cdf_min))) / f64::from(total_pixels - cdf_min)) * 255.0;
+            // Safe cast: normalized is in [0, 255] range
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let lut_val = normalized as u8;
+            lut[i] = lut_val;
         } else {
             lut[i] = 0;
         }
@@ -132,8 +143,11 @@ pub fn compare_hist(h1: &[f32], h2: &[f32], method: HistCompMethod) -> Result<f6
     let result = match method {
         HistCompMethod::Correlation => {
             // Pearson correlation coefficient
-            let mean1: f32 = h1.iter().sum::<f32>() / h1.len() as f32;
-            let mean2: f32 = h2.iter().sum::<f32>() / h2.len() as f32;
+            // Acceptable precision loss for histogram length conversions
+            #[allow(clippy::cast_precision_loss)]
+            let len_f32 = h1.len() as f32;
+            let mean1: f32 = h1.iter().sum::<f32>() / len_f32;
+            let mean2: f32 = h2.iter().sum::<f32>() / len_f32;
 
             let mut num = 0.0;
             let mut den1 = 0.0;
@@ -211,6 +225,8 @@ pub fn calc_back_project(
 
     let (min_val, max_val) = ranges;
     let range = max_val - min_val;
+    // Acceptable precision loss for histogram length conversion
+    #[allow(clippy::cast_precision_loss)]
     let bin_width = range / hist.len() as f32;
 
     // Find max histogram value for normalization
@@ -222,11 +238,18 @@ pub fn calc_back_project(
             let val = f32::from(pixel[0]);
 
             if val >= min_val && val < max_val {
-                let bin = ((val - min_val) / bin_width) as usize;
+                // Convert f32 bin index to usize - non-negative after check
+                let bin_f32 = (val - min_val) / bin_width;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let bin = bin_f32 as usize;
                 let bin = bin.min(hist.len() - 1);
 
                 let back_proj_val = if max_hist > 0.0 {
-                    ((hist[bin] / max_hist) * 255.0) as u8
+                    let normalized = (hist[bin] / max_hist) * 255.0;
+                    // Safe cast: normalized is in [0, 255] range
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let val = normalized as u8;
+                    val
                 } else {
                     0
                 };

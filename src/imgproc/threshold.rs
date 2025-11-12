@@ -21,8 +21,14 @@ pub fn threshold(
 
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
-    let thresh_u8 = thresh as u8;
-    let maxval_u8 = maxval as u8;
+    // Clamp and convert f64 threshold values to u8 range
+    let thresh_u8 = thresh.clamp(0.0, 255.0);
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let thresh_u8 = thresh_u8 as u8;
+
+    let maxval_u8 = maxval.clamp(0.0, 255.0);
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let maxval_u8 = maxval_u8 as u8;
     let rows = src.rows();
     let cols = src.cols();
     let channels = src.channels();
@@ -83,7 +89,16 @@ pub async fn adaptive_threshold_async(
         #[cfg(feature = "gpu")]
         {
             use crate::gpu::ops::adaptive_threshold_gpu_async;
-            match adaptive_threshold_gpu_async(src, dst, maxval as u8, block_size, c as i32).await {
+            // Clamp and convert parameters for GPU call
+            let maxval_u8 = maxval.clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let maxval_u8 = maxval_u8 as u8;
+
+            let c_i32 = c.clamp(i32::MIN as f64, i32::MAX as f64);
+            #[allow(clippy::cast_possible_truncation)]
+            let c_i32 = c_i32 as i32;
+
+            match adaptive_threshold_gpu_async(src, dst, maxval_u8, block_size, c_i32).await {
                 Ok(()) => return Ok(()),
                 Err(_) => {
                     // Fall through to CPU
@@ -133,7 +148,10 @@ pub fn adaptive_threshold(
     let rows = src.rows();
     let cols = src.cols();
     let half = block_size / 2;
-    let maxval = maxval as u8;
+    // Clamp and convert maxval to u8 range
+    let maxval_clamped = maxval.clamp(0.0, 255.0);
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let maxval = maxval_clamped as u8;
 
     // Use rayon::scope to safely share references
     rayon::scope(|_s| {
@@ -147,9 +165,17 @@ pub fn adaptive_threshold(
 
                 // Calculate local threshold from neighborhood
                 for ky in -half..=half {
-                    let r = (row as i32 + ky).max(0).min(rows as i32 - 1) as usize;
+                    // Convert for neighbor offset arithmetic
+                    let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+                    let rows_i32 = i32::try_from(rows).unwrap_or(i32::MAX);
+                    let r_i32 = (row_i32 + ky).max(0).min(rows_i32 - 1);
+                    let r = usize::try_from(r_i32).unwrap_or(0);
+
                     for kx in -half..=half {
-                        let c_offset = (col as i32 + kx).max(0).min(cols as i32 - 1) as usize;
+                        let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
+                        let cols_i32 = i32::try_from(cols).unwrap_or(i32::MAX);
+                        let c_i32 = (col_i32 + kx).max(0).min(cols_i32 - 1);
+                        let c_offset = usize::try_from(c_i32).unwrap_or(0);
 
                         let src_idx = r * cols + c_offset;
                         sum += u32::from(src_data[src_idx]);

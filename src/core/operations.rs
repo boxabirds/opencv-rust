@@ -88,7 +88,10 @@ pub fn multiply(src1: &Mat, src2: &Mat, dst: &mut Mat, scale: f64) -> Result<()>
 
             for ch in 0..src1.channels() {
                 let val = (f64::from(p1[ch]) * f64::from(p2[ch]) * scale).clamp(0.0, 255.0);
-                pd[ch] = val as u8;
+                // Safe cast: value is clamped to valid u8 range
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let byte_val = val as u8;
+                pd[ch] = byte_val;
             }
         }
     }
@@ -298,7 +301,12 @@ pub fn abs_diff(src1: &Mat, src2: &Mat, dst: &mut Mat) -> Result<()> {
             let pd = dst.at_mut(row, col)?;
 
             for ch in 0..src1.channels() {
-                pd[ch] = (i16::from(p1[ch]) - i16::from(p2[ch])).abs() as u8;
+                // Use unsigned_abs to avoid sign loss warning
+                let diff = i16::from(p1[ch]) - i16::from(p2[ch]);
+                // unsigned_abs() returns u16, need to convert to u8
+                let abs_diff = diff.unsigned_abs();
+                // Clamp to u8 range (should already fit, but be safe)
+                pd[ch] = abs_diff.min(255) as u8;
             }
         }
     }

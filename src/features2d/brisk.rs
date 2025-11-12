@@ -62,15 +62,23 @@ impl BRISK {
 
             // Intra-octave levels
             for intra in 0..4 {
+                // Scale space calculations - precision loss acceptable in mathematical formula
+                #[allow(clippy::cast_precision_loss)]
                 let sigma = 1.0 * (2.0_f64).powf(intra as f64 / 4.0);
 
                 let mut blurred = Mat::new(1, 1, 1, MatDepth::U8)?;
+                #[allow(clippy::cast_possible_truncation)]
                 let ksize = ((sigma * 3.0) as i32 * 2 + 1).max(3);
                 gaussian_blur(&current_image, &mut blurred, Size::new(ksize, ksize), sigma)?;
 
+                #[allow(clippy::cast_precision_loss)]
+                let scale_f32 = scale as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let intra_scale = (2.0_f32).powf(intra as f32 / 4.0);
+
                 pyramid.push(ScaleLevel {
                     image: blurred,
-                    scale: scale as f32 * (2.0_f32).powf(intra as f32 / 4.0),
+                    scale: scale_f32 * intra_scale,
                     octave,
                     layer: intra,
                 });
@@ -78,10 +86,13 @@ impl BRISK {
 
             // Downsample for next octave
             if octave < self.octaves - 1 {
-                let new_size = Size::new(
-                    (current_image.cols() / 2).max(1) as i32,
-                    (current_image.rows() / 2).max(1) as i32,
-                );
+                // Downsample dimensions for next octave
+                #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                let new_width = (current_image.cols() / 2).max(1) as i32;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                let new_height = (current_image.rows() / 2).max(1) as i32;
+
+                let new_size = Size::new(new_width, new_height);
                 let mut downsampled = Mat::new(1, 1, 1, MatDepth::U8)?;
                 resize(&current_image, &mut downsampled, new_size, InterpolationFlag::Linear)?;
                 current_image = downsampled;
@@ -138,14 +149,24 @@ impl BRISK {
                         // Compute corner score
                         let score = self.compute_corner_score(image, row, col, center)?;
 
-                        if score > self.threshold as f32 {
+                        #[allow(clippy::cast_precision_loss)]
+                        let threshold_f32 = self.threshold as f32;
+                        if score > threshold_f32 {
                             let physical_scale = 1 << level.octave;
+                            // Convert keypoint coordinates to original image scale
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                            let pt_x = col as i32 * physical_scale;
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                            let pt_y = row as i32 * physical_scale;
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                            let octave = level.octave as i32;
+
                             let kp = KeyPoint {
-                                pt: Point::new(col as i32 * physical_scale, row as i32 * physical_scale),
+                                pt: Point::new(pt_x, pt_y),
                                 size: level.scale * self.pattern_scale,
                                 angle: 0.0, // Will be computed in descriptor
                                 response: score,
-                                octave: level.octave as i32,
+                                octave,
                             };
                             keypoints.push(kp);
                         }
@@ -181,6 +202,7 @@ impl BRISK {
 
         for &(y, x) in &circle {
             let val = image.at(y, x)?[0];
+            #[allow(clippy::cast_precision_loss)]
             let diff = (i32::from(val) - i32::from(center)).abs() as f32;
             max_score = max_score.max(diff);
         }
@@ -196,7 +218,9 @@ impl BRISK {
         let pattern = self.generate_sampling_pattern();
 
         for kp in keypoints {
+            #[allow(clippy::cast_sign_loss)]
             let row = kp.pt.y as usize;
+            #[allow(clippy::cast_sign_loss)]
             let col = kp.pt.x as usize;
 
             if row < 20 || row >= image.rows() - 20 || col < 20 || col >= image.cols() - 20 {
@@ -214,6 +238,7 @@ impl BRISK {
             let sin_angle = angle.sin();
 
             // Compare short-distance pairs
+            #[allow(clippy::cast_possible_truncation)]
             for i in 0..pattern.short_pairs.len() {
                 if bit_idx >= 512 {
                     break;
@@ -225,9 +250,14 @@ impl BRISK {
                 let (y1, x1) = self.rotate_point(p1.0, p1.1, cos_angle, sin_angle);
                 let (y2, x2) = self.rotate_point(p2.0, p2.1, cos_angle, sin_angle);
 
+                // Clamp coordinates to valid range for descriptor sampling
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let y1_abs = (row as i32 + y1).max(0).min(image.rows() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let x1_abs = (col as i32 + x1).max(0).min(image.cols() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let y2_abs = (row as i32 + y2).max(0).min(image.rows() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let x2_abs = (col as i32 + x2).max(0).min(image.cols() as i32 - 1) as usize;
 
                 let val1 = image.at(y1_abs, x1_abs)?[0];
@@ -252,24 +282,35 @@ impl BRISK {
 
         // Use long-distance pairs for orientation
         for &(p1, p2) in &pattern.long_pairs {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
             let y1 = (row as i32 + p1.0).max(0).min(image.rows() as i32 - 1) as usize;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
             let x1 = (col as i32 + p1.1).max(0).min(image.cols() as i32 - 1) as usize;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
             let y2 = (row as i32 + p2.0).max(0).min(image.rows() as i32 - 1) as usize;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
             let x2 = (col as i32 + p2.1).max(0).min(image.cols() as i32 - 1) as usize;
 
             let val1 = f32::from(image.at(y1, x1)?[0]);
             let val2 = f32::from(image.at(y2, x2)?[0]);
 
             let diff = val1 - val2;
-            gx += diff * (p2.1 - p1.1) as f32;
-            gy += diff * (p2.0 - p1.0) as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let dx_f32 = (p2.1 - p1.1) as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let dy_f32 = (p2.0 - p1.0) as f32;
+            gx += diff * dx_f32;
+            gy += diff * dy_f32;
         }
 
         Ok(gy.atan2(gx))
     }
 
     fn rotate_point(&self, dy: i32, dx: i32, cos_angle: f32, sin_angle: f32) -> (i32, i32) {
+        // Rotate point for rotation-invariant descriptor
+        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
         let y = (dy as f32 * cos_angle - dx as f32 * sin_angle) as i32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
         let x = (dy as f32 * sin_angle + dx as f32 * cos_angle) as i32;
         (y, x)
     }
@@ -287,9 +328,18 @@ impl BRISK {
         for (radius_idx, &radius) in radii.iter().enumerate() {
             let n_points = num_points[radius_idx];
             for i in 0..n_points {
-                let angle = 2.0 * PI as f32 * i as f32 / n_points as f32;
+                // Generate sampling points on concentric circles
+                #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+                let pi_f32 = PI as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let i_f32 = i as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let n_points_f32 = n_points as f32;
+                let angle = 2.0 * pi_f32 * i_f32 / n_points_f32;
                 let scaled_radius = radius * self.pattern_scale;
+                #[allow(clippy::cast_possible_truncation)]
                 let dy = (scaled_radius * angle.sin()) as i32;
+                #[allow(clippy::cast_possible_truncation)]
                 let dx = (scaled_radius * angle.cos()) as i32;
                 points.push((dy, dx));
             }
@@ -304,6 +354,8 @@ impl BRISK {
                 let (dy1, dx1) = points[i];
                 let (dy2, dx2) = points[j];
 
+                // Calculate Euclidean distance between sampling points
+                #[allow(clippy::cast_precision_loss)]
                 let dist = (((dy2 - dy1) * (dy2 - dy1) + (dx2 - dx1) * (dx2 - dx1)) as f32).sqrt();
 
                 if dist < short_threshold {

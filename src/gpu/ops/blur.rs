@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use crate::core::{Mat, MatDepth};
 use crate::core::types::Size;
 use crate::error::{Error, Result};
@@ -41,7 +42,7 @@ pub async fn gaussian_blur_gpu_async(src: &Mat, dst: &mut Mat, ksize: Size, sigm
 
     *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
-    let kernel_size = ksize.width as usize;
+    let kernel_size = usize::try_from(ksize.width).unwrap_or(0);
     let kernel_weights = create_gaussian_kernel(kernel_size, sigma);
     let mut temp = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
@@ -59,26 +60,32 @@ pub fn gaussian_blur_gpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> R
 }
 
 fn create_gaussian_kernel(size: usize, sigma: f64) -> Vec<f32> {
+    #[allow(clippy::cast_precision_loss)]
     let sigma = if sigma <= 0.0 {
         0.3 * ((size as f64 - 1.0) * 0.5 - 1.0) + 0.8
     } else {
         sigma
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     let half = (size / 2) as i32;
     let mut kernel = Vec::with_capacity(size);
     let mut sum = 0.0;
 
     for i in -half..=half {
-        let x = i as f64;
+        let x = f64::from(i);
         let value = (-x * x / (2.0 * sigma * sigma)).exp();
-        kernel.push(value as f32);
+        #[allow(clippy::cast_possible_truncation)]
+        let value_f32 = value as f32;
+        kernel.push(value_f32);
         sum += value;
     }
 
     // Normalize
+    #[allow(clippy::cast_possible_truncation)]
+    let sum_f32 = sum as f32;
     for val in &mut kernel {
-        *val /= sum as f32;
+        *val /= sum_f32;
     }
 
     kernel
@@ -96,10 +103,10 @@ async fn execute_blur_pass(
     let ctx = GpuContext::get()
         .ok_or_else(|| Error::GpuNotAvailable("GPU context not initialized".to_string()))?;
 
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
-    let kernel_size = kernel_weights.len() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
+    let kernel_size = u32::try_from(kernel_weights.len()).unwrap_or(u32::MAX);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -149,7 +156,7 @@ async fn execute_blur_pass_impl(
     });
 
     // Create output buffer
-    let output_size = (width * height * channels) as u64;
+    let output_size = u64::from(width) * u64::from(height) * u64::from(channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_size,
@@ -158,6 +165,7 @@ async fn execute_blur_pass_impl(
     });
 
     // Create params buffer
+    #[allow(clippy::cast_possible_truncation)]
     let params = GaussianParams {
         width,
         height,

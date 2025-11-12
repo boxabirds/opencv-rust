@@ -23,8 +23,11 @@ pub fn hough_lines(
     }
 
     // Calculate accumulator dimensions
+    #[allow(clippy::cast_precision_loss)]
     let max_rho = ((image.rows() * image.rows() + image.cols() * image.cols()) as f64).sqrt();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let num_rho = (2.0 * max_rho / rho) as usize + 1;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let num_theta = (PI / theta) as usize;
 
     // Initialize accumulator
@@ -37,12 +40,16 @@ pub fn hough_lines(
 
             if pixel[0] > 128 {
                 // Edge pixel
+                #[allow(clippy::cast_precision_loss)]
                 let x = col as f64;
+                #[allow(clippy::cast_precision_loss)]
                 let y = row as f64;
 
                 for t_idx in 0..num_theta {
+                    #[allow(clippy::cast_precision_loss)]
                     let angle = t_idx as f64 * theta;
                     let r = x * angle.cos() + y * angle.sin();
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                     let r_idx = ((r + max_rho) / rho) as usize;
 
                     if r_idx < num_rho {
@@ -59,7 +66,9 @@ pub fn hough_lines(
     for r_idx in 0..num_rho {
         for t_idx in 0..num_theta {
             if accumulator[r_idx][t_idx] >= threshold {
+                #[allow(clippy::cast_precision_loss)]
                 let r = r_idx as f64 * rho - max_rho;
+                #[allow(clippy::cast_precision_loss)]
                 let t = t_idx as f64 * theta;
                 lines.push((r, t));
             }
@@ -91,7 +100,11 @@ pub fn hough_lines_p(
         for col in 0..image.cols() {
             let pixel = image.at(row, col)?;
             if pixel[0] > 128 {
-                edge_points.push(Point::new(col as i32, row as i32));
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let col_i32 = col as i32;
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                let row_i32 = row as i32;
+                edge_points.push(Point::new(col_i32, row_i32));
             }
         }
     }
@@ -171,20 +184,35 @@ pub fn hough_circles(
     let mut circles = Vec::new();
 
     // Simple circle detection using edge gradients
-    for row in (min_radius as usize)..(image.rows() - min_radius as usize) {
-        for col in (min_radius as usize)..(image.cols() - min_radius as usize) {
+    #[allow(clippy::cast_sign_loss)]
+    let min_radius_usize = min_radius as usize;
+    for row in min_radius_usize..(image.rows() - min_radius_usize) {
+        for col in min_radius_usize..(image.cols() - min_radius_usize) {
             for r in min_radius..=max_radius {
                 let mut votes = 0;
 
                 // Sample points on the circle perimeter
+                #[allow(clippy::cast_possible_truncation)]
                 let num_samples = (2.0 * PI * f64::from(r)) as i32;
 
                 for i in 0..num_samples {
                     let angle = 2.0 * PI * f64::from(i) / f64::from(num_samples);
-                    let x = col as i32 + (f64::from(r) * angle.cos()) as i32;
-                    let y = row as i32 + (f64::from(r) * angle.sin()) as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let col_i32 = col as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let row_i32 = row as i32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let x = col_i32 + (f64::from(r) * angle.cos()) as i32;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let y = row_i32 + (f64::from(r) * angle.sin()) as i32;
 
-                    if x >= 0 && x < image.cols() as i32 && y >= 0 && y < image.rows() as i32 {
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                    let img_cols_i32 = image.cols() as i32;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                    let img_rows_i32 = image.rows() as i32;
+
+                    if x >= 0 && x < img_cols_i32 && y >= 0 && y < img_rows_i32 {
+                        #[allow(clippy::cast_sign_loss)]
                         let pixel = edges.at(y as usize, x as usize)?;
                         if pixel[0] > 128 {
                             votes += 1;
@@ -195,8 +223,12 @@ pub fn hough_circles(
                 let vote_ratio = f64::from(votes) / f64::from(num_samples);
 
                 if vote_ratio >= param2 {
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let center_x = col as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let center_y = row as i32;
                     circles.push(Circle {
-                        center: Point::new(col as i32, row as i32),
+                        center: Point::new(center_x, center_y),
                         radius: r,
                         votes,
                     });

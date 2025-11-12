@@ -47,7 +47,7 @@ pub async fn blur_async(src: &Mat, dst: &mut Mat, ksize: Size, use_gpu: bool) ->
         #[cfg(feature = "gpu")]
         {
             use crate::gpu::ops::box_blur_gpu_async;
-            match box_blur_gpu_async(src, dst, ksize.width as i32).await {
+            match box_blur_gpu_async(src, dst, ksize.width).await {
                 Ok(()) => return Ok(()),
                 Err(_) => {
                     // Fall through to CPU
@@ -69,8 +69,12 @@ pub fn blur(src: &Mat, dst: &mut Mat, ksize: Size) -> Result<()> {
     }
 
     // Box filter is separable - create uniform kernel
-    let kernel_x: Vec<f32> = vec![1.0 / ksize.width as f32; ksize.width as usize];
-    let kernel_y: Vec<f32> = vec![1.0 / ksize.height as f32; ksize.height as usize];
+    let kwidth_usize = usize::try_from(ksize.width).unwrap_or(0);
+    let kheight_usize = usize::try_from(ksize.height).unwrap_or(0);
+    #[allow(clippy::cast_precision_loss)]
+    let kernel_x: Vec<f32> = vec![1.0 / ksize.width as f32; kwidth_usize];
+    #[allow(clippy::cast_precision_loss)]
+    let kernel_y: Vec<f32> = vec![1.0 / ksize.height as f32; kheight_usize];
 
     apply_separable_filter(src, dst, &kernel_x, &kernel_y)
 }
@@ -101,7 +105,7 @@ pub fn median_blur(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
     let cols = src.cols();
     let channels = src.channels();
     let half = ksize / 2;
-    let kernel_area = (ksize * ksize) as usize;
+    let kernel_area = usize::try_from(ksize * ksize).unwrap_or(0);
 
     // Use rayon::scope to safely share references
     rayon::scope(|_s| {
@@ -118,10 +122,15 @@ pub fn median_blur(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
                     let mut count = 0;
 
                     // Collect values from kernel window
+                    let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+                    let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
+                    let rows_i32 = i32::try_from(rows).unwrap_or(i32::MAX);
+                    let cols_i32 = i32::try_from(cols).unwrap_or(i32::MAX);
+
                     for ky in -half..=half {
-                        let r = (row as i32 + ky).max(0).min(rows as i32 - 1) as usize;
+                        let r = usize::try_from((row_i32 + ky).max(0).min(rows_i32 - 1)).unwrap_or(0);
                         for kx in -half..=half {
-                            let c = (col as i32 + kx).max(0).min(cols as i32 - 1) as usize;
+                            let c = usize::try_from((col_i32 + kx).max(0).min(cols_i32 - 1)).unwrap_or(0);
 
                             let src_idx = (r * cols + c) * channels + ch;
                             values[count] = src_data[src_idx];
@@ -159,19 +168,23 @@ fn create_gaussian_kernel(ksize: Size, sigma: f64) -> Result<Vec<f32>> {
     };
 
     let half = size / 2;
-    let mut kernel = Vec::with_capacity(size as usize);
+    let size_usize = usize::try_from(size).unwrap_or(0);
+    let mut kernel = Vec::with_capacity(size_usize);
     let mut sum = 0.0;
 
     for i in -half..=half {
         let x = f64::from(i);
         let value = (-x * x / (2.0 * sigma * sigma)).exp();
+        #[allow(clippy::cast_possible_truncation)]
         kernel.push(value as f32);
         sum += value;
     }
 
     // Normalize
+    #[allow(clippy::cast_possible_truncation)]
+    let sum_f32 = sum as f32;
     for val in &mut kernel {
-        *val /= sum as f32;
+        *val /= sum_f32;
     }
 
     Ok(kernel)
@@ -202,12 +215,17 @@ fn apply_separable_filter(
         let row_size = cols * channels;
 
         temp_data.par_chunks_mut(row_size).enumerate().for_each(|(row, temp_row)| {
+            let cols_i32 = i32::try_from(cols).unwrap_or(i32::MAX);
+            let half_x_i32 = i32::try_from(half_x).unwrap_or(i32::MAX);
+
             for col in 0..cols {
                 let mut sums = [0f32; 4];
+                let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
 
                 for (i, &k) in kernel_x.iter().enumerate() {
-                    let offset = i as i32 - half_x as i32;
-                    let c = (col as i32 + offset).max(0).min(cols as i32 - 1) as usize;
+                    let i_i32 = i32::try_from(i).unwrap_or(i32::MAX);
+                    let offset = i_i32 - half_x_i32;
+                    let c = usize::try_from((col_i32 + offset).max(0).min(cols_i32 - 1)).unwrap_or(0);
 
                     let src_idx = (row * cols + c) * channels;
                     let pixel = &src_data[src_idx..src_idx + channels];
@@ -240,22 +258,39 @@ fn apply_separable_filter(
 
                 match channels {
                     1 => {
-                        temp_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                        let clamped = sums[0].round().clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        { temp_pixel[0] = clamped as u8; }
                     }
                     3 => {
-                        temp_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
-                        temp_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
-                        temp_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
+                        let clamped0 = sums[0].round().clamp(0.0, 255.0);
+                        let clamped1 = sums[1].round().clamp(0.0, 255.0);
+                        let clamped2 = sums[2].round().clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        {
+                            temp_pixel[0] = clamped0 as u8;
+                            temp_pixel[1] = clamped1 as u8;
+                            temp_pixel[2] = clamped2 as u8;
+                        }
                     }
                     4 => {
-                        temp_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
-                        temp_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
-                        temp_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
-                        temp_pixel[3] = sums[3].round().clamp(0.0, 255.0) as u8;
+                        let clamped0 = sums[0].round().clamp(0.0, 255.0);
+                        let clamped1 = sums[1].round().clamp(0.0, 255.0);
+                        let clamped2 = sums[2].round().clamp(0.0, 255.0);
+                        let clamped3 = sums[3].round().clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        {
+                            temp_pixel[0] = clamped0 as u8;
+                            temp_pixel[1] = clamped1 as u8;
+                            temp_pixel[2] = clamped2 as u8;
+                            temp_pixel[3] = clamped3 as u8;
+                        }
                     }
                     _ => {
                         for ch in 0..channels {
-                            temp_pixel[ch] = sums[ch].round().clamp(0.0, 255.0) as u8;
+                            let clamped = sums[ch].round().clamp(0.0, 255.0);
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                            { temp_pixel[ch] = clamped as u8; }
                         }
                     }
                 }
@@ -276,12 +311,17 @@ fn apply_separable_filter(
         let row_size = cols * channels;
 
         dst_data.par_chunks_mut(row_size).enumerate().for_each(|(row, dst_row)| {
+            let rows_i32 = i32::try_from(rows).unwrap_or(i32::MAX);
+            let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+            let half_y_i32 = i32::try_from(half_y).unwrap_or(i32::MAX);
+
             for col in 0..cols {
                 let mut sums = [0f32; 4];
 
                 for (i, &k) in kernel_y.iter().enumerate() {
-                    let offset = i as i32 - half_y as i32;
-                    let r = (row as i32 + offset).max(0).min(rows as i32 - 1) as usize;
+                    let i_i32 = i32::try_from(i).unwrap_or(i32::MAX);
+                    let offset = i_i32 - half_y_i32;
+                    let r = usize::try_from((row_i32 + offset).max(0).min(rows_i32 - 1)).unwrap_or(0);
 
                     let temp_idx = (r * cols + col) * channels;
                     let pixel = &temp_data[temp_idx..temp_idx + channels];
@@ -314,22 +354,39 @@ fn apply_separable_filter(
 
                 match channels {
                     1 => {
-                        dst_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
+                        let clamped = sums[0].round().clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        { dst_pixel[0] = clamped as u8; }
                     }
                     3 => {
-                        dst_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
+                        let clamped0 = sums[0].round().clamp(0.0, 255.0);
+                        let clamped1 = sums[1].round().clamp(0.0, 255.0);
+                        let clamped2 = sums[2].round().clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        {
+                            dst_pixel[0] = clamped0 as u8;
+                            dst_pixel[1] = clamped1 as u8;
+                            dst_pixel[2] = clamped2 as u8;
+                        }
                     }
                     4 => {
-                        dst_pixel[0] = sums[0].round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[1] = sums[1].round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[2] = sums[2].round().clamp(0.0, 255.0) as u8;
-                        dst_pixel[3] = sums[3].round().clamp(0.0, 255.0) as u8;
+                        let clamped0 = sums[0].round().clamp(0.0, 255.0);
+                        let clamped1 = sums[1].round().clamp(0.0, 255.0);
+                        let clamped2 = sums[2].round().clamp(0.0, 255.0);
+                        let clamped3 = sums[3].round().clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        {
+                            dst_pixel[0] = clamped0 as u8;
+                            dst_pixel[1] = clamped1 as u8;
+                            dst_pixel[2] = clamped2 as u8;
+                            dst_pixel[3] = clamped3 as u8;
+                        }
                     }
                     _ => {
                         for ch in 0..channels {
-                            dst_pixel[ch] = sums[ch].round().clamp(0.0, 255.0) as u8;
+                            let clamped = sums[ch].round().clamp(0.0, 255.0);
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                            { dst_pixel[ch] = clamped as u8; }
                         }
                     }
                 }

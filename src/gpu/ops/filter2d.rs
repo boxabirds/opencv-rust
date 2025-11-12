@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 use crate::gpu::device::GpuContext;
@@ -74,11 +75,11 @@ async fn execute_filter2d_impl(
     kernel: &Mat,
     anchor: (i32, i32),
 ) -> Result<()> {
-    let width = src.cols() as u32;
-    let height = src.rows() as u32;
-    let channels = src.channels() as u32;
-    let kernel_width = kernel.cols() as u32;
-    let kernel_height = kernel.rows() as u32;
+    let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
+    let kernel_width = u32::try_from(kernel.cols()).unwrap_or(u32::MAX);
+    let kernel_height = u32::try_from(kernel.rows()).unwrap_or(u32::MAX);
 
     let (anchor_x, anchor_y) = if anchor == (-1, -1) {
         (kernel_width as i32 / 2, kernel_height as i32 / 2)
@@ -98,7 +99,7 @@ async fn execute_filter2d_impl(
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    let output_buffer_size = (width * height * channels) as u64;
+    let output_buffer_size = u64::from(width) * u64::from(height) * u64::from(channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,

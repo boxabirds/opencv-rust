@@ -26,9 +26,11 @@ pub enum MorphShape {
 }
 
 /// Get structuring element for morphological operations
-#[must_use] 
+#[must_use]
 pub fn get_structuring_element(shape: MorphShape, ksize: Size) -> Vec<Vec<bool>> {
+    #[allow(clippy::cast_sign_loss)]
     let rows = ksize.height as usize;
+    #[allow(clippy::cast_sign_loss)]
     let cols = ksize.width as usize;
     let mut kernel = vec![vec![false; cols]; rows];
 
@@ -51,12 +53,16 @@ pub fn get_structuring_element(shape: MorphShape, ksize: Size) -> Vec<Vec<bool>>
             }
         }
         MorphShape::Ellipse => {
+            #[allow(clippy::cast_precision_loss)]
             let a = center_x as f64;
+            #[allow(clippy::cast_precision_loss)]
             let b = center_y as f64;
 
             for (y, row) in kernel.iter_mut().enumerate() {
                 for (x, elem) in row.iter_mut().enumerate() {
+                    #[allow(clippy::cast_precision_loss)]
                     let dx = (x as f64 - center_x as f64) / a;
+                    #[allow(clippy::cast_precision_loss)]
                     let dy = (y as f64 - center_y as f64) / b;
                     *elem = dx * dx + dy * dy <= 1.0;
                 }
@@ -96,10 +102,18 @@ pub fn erode(src: &Mat, dst: &mut Mat, kernel: &[Vec<bool>]) -> Result<()> {
                         continue;
                     }
 
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let y = row as i32 + ky as i32 - half_h as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let x = col as i32 + kx as i32 - half_w as i32;
 
-                    if y >= 0 && y < src.rows() as i32 && x >= 0 && x < src.cols() as i32 {
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                    let src_rows_i32 = src.rows() as i32;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                    let src_cols_i32 = src.cols() as i32;
+
+                    if y >= 0 && y < src_rows_i32 && x >= 0 && x < src_cols_i32 {
+                        #[allow(clippy::cast_sign_loss)]
                         let pixel = src.at(y as usize, x as usize)?;
                         for ch in 0..src.channels() {
                             min_vals[ch] = min_vals[ch].min(pixel[ch]);
@@ -147,10 +161,18 @@ pub fn dilate(src: &Mat, dst: &mut Mat, kernel: &[Vec<bool>]) -> Result<()> {
                         continue;
                     }
 
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let y = row as i32 + ky as i32 - half_h as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                     let x = col as i32 + kx as i32 - half_w as i32;
 
-                    if y >= 0 && y < src.rows() as i32 && x >= 0 && x < src.cols() as i32 {
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                    let src_rows_i32 = src.rows() as i32;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                    let src_cols_i32 = src.cols() as i32;
+
+                    if y >= 0 && y < src_rows_i32 && x >= 0 && x < src_cols_i32 {
+                        #[allow(clippy::cast_sign_loss)]
                         let pixel = src.at(y as usize, x as usize)?;
                         for ch in 0..src.channels() {
                             max_vals[ch] = max_vals[ch].max(pixel[ch]);
@@ -271,6 +293,7 @@ pub async fn erode_async(
             // Check if kernel is rectangular (all true)
             let is_rect = kernel.iter().all(|row| row.iter().all(|&v| v));
             if is_rect && !kernel.is_empty() && !kernel[0].is_empty() {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 let ksize = kernel.len() as i32; // Assume square kernel
                 match erode_gpu_async(src, dst, ksize).await {
                     Ok(()) => return Ok(()),
@@ -301,6 +324,7 @@ pub async fn dilate_async(
             // Check if kernel is rectangular (all true)
             let is_rect = kernel.iter().all(|row| row.iter().all(|&v| v));
             if is_rect && !kernel.is_empty() && !kernel[0].is_empty() {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 let ksize = kernel.len() as i32; // Assume square kernel
                 match dilate_gpu_async(src, dst, ksize).await {
                     Ok(()) => return Ok(()),

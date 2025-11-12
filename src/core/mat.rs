@@ -65,7 +65,10 @@ impl Mat {
 
     /// Create a new Mat from Size
     pub fn new_size(size: Size, channels: usize, depth: MatDepth) -> Result<Self> {
-        Self::new_rows_cols(size.height as usize, size.width as usize, channels, depth)
+        // Convert i32 to usize, treating negative values as 0
+        let height = usize::try_from(size.height).unwrap_or(0);
+        let width = usize::try_from(size.width).unwrap_or(0);
+        Self::new_rows_cols(height, width, channels, depth)
     }
 
     /// Create a Mat filled with a scalar value (opencv-rust compatible name)
@@ -99,13 +102,10 @@ impl Mat {
         depth: MatDepth,
         value: Scalar,
     ) -> Result<Self> {
-        Self::new_rows_cols_with_default(
-            size.height as usize,
-            size.width as usize,
-            channels,
-            depth,
-            value,
-        )
+        // Convert i32 to usize, treating negative values as 0
+        let height = usize::try_from(size.height).unwrap_or(0);
+        let width = usize::try_from(size.width).unwrap_or(0);
+        Self::new_rows_cols_with_default(height, width, channels, depth, value)
     }
 
     /// Create a Mat from raw data
@@ -210,13 +210,20 @@ impl Mat {
 
     /// Create an identity matrix from Size
     pub fn eye_size(size: Size, depth: MatDepth) -> Result<Self> {
-        Self::eye(size.height as usize, size.width as usize, depth)
+        // Convert i32 to usize, treating negative values as 0
+        let height = usize::try_from(size.height).unwrap_or(0);
+        let width = usize::try_from(size.width).unwrap_or(0);
+        Self::eye(height, width, depth)
     }
 
     /// Get dimensions
-    #[must_use] 
+    #[must_use]
     pub fn size(&self) -> Size {
-        Size::new(self.cols as i32, self.rows as i32)
+        // Convert usize to i32, saturating at i32::MAX if needed
+        // Mat dimensions are typically much smaller than i32::MAX
+        let cols = i32::try_from(self.cols).unwrap_or(i32::MAX);
+        let rows = i32::try_from(self.rows).unwrap_or(i32::MAX);
+        Size::new(cols, rows)
     }
 
     #[must_use] 
@@ -276,7 +283,7 @@ impl Mat {
 
     /// Get the type identifier (combining depth and channels)
     /// Returns a value compatible with `OpenCV`'s type system
-    #[must_use] 
+    #[must_use]
     pub fn type_(&self) -> i32 {
         // OpenCV type encoding: ((depth) + ((channels-1) << 3))
         let depth_val = match self.depth {
@@ -285,7 +292,9 @@ impl Mat {
             MatDepth::F32 => 5,
             MatDepth::F64 => 6,
         };
-        depth_val + ((self.channels - 1) << 3) as i32
+        // Channels are typically small (1-4), safe to convert to i32
+        let channel_bits = i32::try_from((self.channels - 1) << 3).unwrap_or(i32::MAX);
+        depth_val + channel_bits
     }
 
     /// Get number of dimensions (always 2 for this implementation)
@@ -384,7 +393,11 @@ impl Mat {
             for col in 0..self.cols {
                 let pixel = self.at_mut(row, col)?;
                 for (ch, &val) in value.val.iter().take(num_channels).enumerate() {
-                    pixel[ch] = val as u8;
+                    // Clamp float to valid u8 range [0, 255], then cast
+                    // The clamp ensures the value is in valid range for u8
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let byte_val = val.clamp(0.0, 255.0) as u8;
+                    pixel[ch] = byte_val;
                 }
             }
         }
@@ -393,14 +406,15 @@ impl Mat {
 
     /// Clone a region of interest (ROI)
     pub fn roi(&self, rect: Rect) -> Result<Mat> {
-        if rect.x < 0 || rect.y < 0 {
-            return Err(Error::OutOfRange("ROI coordinates must be non-negative".to_string()));
+        if rect.x < 0 || rect.y < 0 || rect.width < 0 || rect.height < 0 {
+            return Err(Error::OutOfRange("ROI coordinates and dimensions must be non-negative".to_string()));
         }
 
-        let x = rect.x as usize;
-        let y = rect.y as usize;
-        let w = rect.width as usize;
-        let h = rect.height as usize;
+        // Convert to usize after validation - values are guaranteed non-negative
+        let x = usize::try_from(rect.x).unwrap_or(0);
+        let y = usize::try_from(rect.y).unwrap_or(0);
+        let w = usize::try_from(rect.width).unwrap_or(0);
+        let h = usize::try_from(rect.height).unwrap_or(0);
 
         if x + w > self.cols || y + h > self.rows {
             return Err(Error::OutOfRange("ROI exceeds matrix dimensions".to_string()));
@@ -431,12 +445,14 @@ impl Mat {
             return Err(Error::OutOfRange("Row/column range exceeds matrix dimensions".to_string()));
         }
 
-        let rect = Rect::new(
-            col_start as i32,
-            row_start as i32,
-            (col_end - col_start) as i32,
-            (row_end - row_start) as i32,
-        );
+        // Convert usize to i32 for Rect, using saturating conversion
+        // These values should fit since they come from Mat dimensions
+        let col_start_i32 = i32::try_from(col_start).unwrap_or(i32::MAX);
+        let row_start_i32 = i32::try_from(row_start).unwrap_or(i32::MAX);
+        let width_i32 = i32::try_from(col_end - col_start).unwrap_or(i32::MAX);
+        let height_i32 = i32::try_from(row_end - row_start).unwrap_or(i32::MAX);
+
+        let rect = Rect::new(col_start_i32, row_start_i32, width_i32, height_i32);
         self.roi(rect)
     }
 

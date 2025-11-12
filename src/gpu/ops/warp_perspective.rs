@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 use crate::gpu::device::GpuContext;
@@ -76,9 +77,9 @@ async fn execute_warp_perspective_impl(
     dst: &mut Mat,
     perspective_matrix: &[f32; 9],
 ) -> Result<()> {
-    let width = dst.cols() as u32;
-    let height = dst.rows() as u32;
-    let channels = src.channels() as u32;
+    let width = u32::try_from(dst.cols()).unwrap_or(u32::MAX);
+    let height = u32::try_from(dst.rows()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
 
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Warp Perspective Shader"),
@@ -92,7 +93,7 @@ async fn execute_warp_perspective_impl(
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    let output_buffer_size = (width * height * channels) as u64;
+    let output_buffer_size = u64::from(width) * u64::from(height) * u64::from(channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,
@@ -101,8 +102,8 @@ async fn execute_warp_perspective_impl(
     });
 
     let params = WarpPerspectiveParams {
-        width: src.cols() as u32,  // Source dimensions for sampling
-        height: src.rows() as u32,
+        width: u32::try_from(src.cols()).unwrap_or(u32::MAX),  // Source dimensions for sampling
+        height: u32::try_from(src.rows()).unwrap_or(u32::MAX),
         channels,
         _pad: 0,
         m00: perspective_matrix[0],

@@ -10,11 +10,13 @@ pub struct BackgroundSubtractorMOG2 {
 }
 
 impl BackgroundSubtractorMOG2 {
-    #[must_use] 
+    #[must_use]
     pub fn new(history: i32, var_threshold: f64) -> Self {
+        #[allow(clippy::cast_sign_loss)]
+        let max_history = history as usize;
         Self {
             history: Vec::new(),
-            max_history: history as usize,
+            max_history,
             var_threshold,
         }
     }
@@ -121,8 +123,17 @@ impl MeanShiftTracker {
 
             for y in current_window.y..(current_window.y + current_window.height) {
                 for x in current_window.x..(current_window.x + current_window.width) {
-                    if y >= 0 && y < prob_image.rows() as i32 && x >= 0 && x < prob_image.cols() as i32 {
-                        let pixel = prob_image.at(y as usize, x as usize)?;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let rows_i32 = prob_image.rows() as i32;
+                    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+                    let cols_i32 = prob_image.cols() as i32;
+
+                    if y >= 0 && y < rows_i32 && x >= 0 && x < cols_i32 {
+                        #[allow(clippy::cast_sign_loss)]
+                        let y_usize = y as usize;
+                        #[allow(clippy::cast_sign_loss)]
+                        let x_usize = x as usize;
+                        let pixel = prob_image.at(y_usize, x_usize)?;
                         let weight = f64::from(pixel[0]);
 
                         sum_x += f64::from(x) * weight;
@@ -136,7 +147,9 @@ impl MeanShiftTracker {
                 break;
             }
 
+            #[allow(clippy::cast_possible_truncation)]
             let centroid_x = (sum_x / sum_weight) as i32;
+            #[allow(clippy::cast_possible_truncation)]
             let centroid_y = (sum_y / sum_weight) as i32;
 
             // Move window to centroid

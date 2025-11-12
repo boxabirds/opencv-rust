@@ -84,7 +84,10 @@ fn trace_contour(
         }
 
         visited[row][col] = true;
-        contour.push(Point::new(col as i32, row as i32));
+        // Convert usize coordinates to i32 for Point
+        let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
+        let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+        contour.push(Point::new(col_i32, row_i32));
 
         // Check 8-connected neighbors
         for dy in -1..=1 {
@@ -93,12 +96,20 @@ fn trace_contour(
                     continue;
                 }
 
-                let ny = row as i32 + dy;
-                let nx = col as i32 + dx;
+                // Convert to i32 for neighbor offset calculation
+                let row_i32 = i32::try_from(row).unwrap_or(i32::MAX);
+                let col_i32 = i32::try_from(col).unwrap_or(i32::MAX);
+                let ny = row_i32 + dy;
+                let nx = col_i32 + dx;
 
-                if ny > 0 && ny < image.rows() as i32 - 1 && nx > 0 && nx < image.cols() as i32 - 1 {
-                    let ny = ny as usize;
-                    let nx = nx as usize;
+                // Convert dimensions to i32 for bounds checking
+                let rows_i32 = i32::try_from(image.rows()).unwrap_or(i32::MAX);
+                let cols_i32 = i32::try_from(image.cols()).unwrap_or(i32::MAX);
+
+                if ny > 0 && ny < rows_i32 - 1 && nx > 0 && nx < cols_i32 - 1 {
+                    // Safe conversion back to usize after bounds check
+                    let ny = usize::try_from(ny).unwrap_or(0);
+                    let nx = usize::try_from(nx).unwrap_or(0);
 
                     if !visited[ny][nx] {
                         stack.push((ny, nx));

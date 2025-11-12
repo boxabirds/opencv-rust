@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use crate::core::{Mat, MatDepth};
 use crate::error::{Error, Result};
 use crate::gpu::device::GpuContext;
@@ -77,7 +78,7 @@ async fn execute_merge_impl(ctx: &GpuContext, src: &[Mat], dst: &mut Mat) -> Res
         source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/merge.wgsl").into()),
     });
 
-    let single_channel_size = (width * height) as u64;
+    let single_channel_size = u64::from(width) * u64::from(height);
 
     // Create input buffers for each channel (max 4, pad with zeros if less)
     let mut input_buffers = Vec::new();
@@ -95,7 +96,7 @@ async fn execute_merge_impl(ctx: &GpuContext, src: &[Mat], dst: &mut Mat) -> Res
         }));
     }
 
-    let output_buffer_size = (width * height * channels) as u64;
+    let output_buffer_size = u64::from(width) * u64::from(height) * u64::from(channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,

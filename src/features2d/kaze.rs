@@ -80,6 +80,8 @@ impl KAZE {
 
         for octave in 0..self.n_octaves {
             for layer in 0..self.n_octave_layers {
+                // Scale space sigma calculation - precision loss acceptable in mathematical formula
+                #[allow(clippy::cast_precision_loss)]
                 let sigma = sigma_0 * (2.0_f64).powf(
                     (layer as f64 + octave as f64 * self.n_octave_layers as f64) / self.n_octave_layers as f64
                 );
@@ -119,8 +121,10 @@ impl KAZE {
     fn nonlinear_diffusion(&self, image: &Mat, sigma: f64) -> Result<Mat> {
         let mut result = image.clone_mat();
 
-        // Number of diffusion iterations
+        // Number of diffusion iterations - diffusion calculation, precision loss acceptable
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let n_iterations = ((sigma * sigma / 0.25) as usize).max(1);
+        #[allow(clippy::cast_precision_loss)]
         let tau = 0.25 / n_iterations as f64;
 
         for _ in 0..n_iterations {
@@ -146,6 +150,7 @@ impl KAZE {
                     let down = result.at_f32(row + 1, col, 0)?;
 
                     let laplacian = left + right + up + down - 4.0 * center;
+                    #[allow(clippy::cast_possible_truncation)]
                     let update = diffusivity * laplacian * tau as f32;
 
                     result.set_f32(row, col, 0, (center + update).clamp(0.0, 1.0))?;
@@ -157,6 +162,7 @@ impl KAZE {
     }
 
     fn compute_diffusivity(&self, grad_mag_sq: f32, k: f64) -> f32 {
+        #[allow(clippy::cast_possible_truncation)]
         let k_sq = (k * k) as f32;
         match self.diffusivity {
             DiffusivityType::PmG1 => {
@@ -290,7 +296,9 @@ impl KAZE {
 
                     let det_hessian = lxx * lyy - lxy * lxy;
 
-                    if det_hessian > self.threshold as f32
+                    #[allow(clippy::cast_possible_truncation)]
+                    let threshold_f32 = self.threshold as f32;
+                    if det_hessian > threshold_f32
                         && self.is_local_maximum(det_hessian, step, prev, next, row, col)? {
                             let scale = 1 << step.octave;
                             let angle = if self.upright {
@@ -299,12 +307,22 @@ impl KAZE {
                                 self.compute_main_orientation(step, row, col)?
                             };
 
+                            // Convert keypoint coordinates - scale is power of 2, so safe to convert
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                            let pt_x = col as i32 * scale;
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                            let pt_y = row as i32 * scale;
+                            #[allow(clippy::cast_possible_truncation)]
+                            let size = step.sigma as f32;
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                            let octave = step.octave as i32;
+
                             let kp = KeyPoint {
-                                pt: Point::new(col as i32 * scale, row as i32 * scale),
-                                size: step.sigma as f32,
+                                pt: Point::new(pt_x, pt_y),
+                                size,
                                 angle,
                                 response: det_hessian,
-                                octave: step.octave as i32,
+                                octave,
                             };
                             keypoints.push(kp);
                         }
@@ -327,7 +345,10 @@ impl KAZE {
         for evolution in &[prev, curr, next] {
             for dy in -1..=1 {
                 for dx in -1..=1 {
+                    // Coordinate offset calculations for neighborhood check
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                     let y = (row as i32 + dy) as usize;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                     let x = (col as i32 + dx) as usize;
 
                     if y >= evolution.lxx.rows() || x >= evolution.lxx.cols() {
@@ -355,7 +376,10 @@ impl KAZE {
 
         for dy in -radius..=radius {
             for dx in -radius..=radius {
+                // Clamp coordinates to valid range for orientation histogram
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let y = (row as i32 + dy).max(0).min(step.lx.rows() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let x = (col as i32 + dx).max(0).min(step.lx.cols() as i32 - 1) as usize;
 
                 let gx = step.lx.at_f32(y, x, 0)?;
@@ -364,8 +388,12 @@ impl KAZE {
                 let mag = (gx * gx + gy * gy).sqrt();
                 let angle = gy.atan2(gx);
 
+                // Gaussian weighting for orientation histogram
+                #[allow(clippy::cast_possible_wrap, clippy::cast_precision_loss)]
                 let weight = mag * (-(dx * dx + dy * dy) as f32 / (2.0 * radius as f32 * radius as f32)).exp();
 
+                // Convert angle to histogram bin
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
                 let bin = (((angle * 180.0 / PI as f32 + 180.0) / 10.0) as usize) % 36;
                 hist[bin] += weight;
             }
@@ -377,7 +405,12 @@ impl KAZE {
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .map_or(0, |(idx, _)| idx);
 
-        Ok((max_bin as f32 * 10.0 - 180.0) * PI as f32 / 180.0)
+        // Convert bin back to angle in radians
+        #[allow(clippy::cast_precision_loss)]
+        let angle_deg = max_bin as f32 * 10.0 - 180.0;
+        #[allow(clippy::cast_possible_truncation)]
+        let pi_f32 = PI as f32;
+        Ok(angle_deg * pi_f32 / 180.0)
     }
 
     fn compute_descriptors(&self, evolution: &[EvolutionStep], keypoints: &[KeyPoint]) -> Result<Vec<Vec<f32>>> {
@@ -397,7 +430,10 @@ impl KAZE {
 
             let step = &evolution[step_idx];
             let scale = 1 << step.octave;
+            // Convert keypoint coordinates back to current scale level
+            #[allow(clippy::cast_sign_loss)]
             let row = (kp.pt.y / scale) as usize;
+            #[allow(clippy::cast_sign_loss)]
             let col = (kp.pt.x / scale) as usize;
 
             let pattern_size = 10;
@@ -427,14 +463,21 @@ impl KAZE {
 
                     for sub_y in 0..subregion_size {
                         for sub_x in 0..subregion_size {
+                            // Compute offsets for descriptor grid
+                            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                             let y_offset = (grid_y * subregion_size + sub_y) - pattern_size as i32;
+                            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                             let x_offset = (grid_x * subregion_size + sub_x) - pattern_size as i32;
 
-                            // Rotate
+                            // Rotate for rotation invariance
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
                             let y_rot = (y_offset as f32 * cos_angle - x_offset as f32 * sin_angle) as i32;
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
                             let x_rot = (y_offset as f32 * sin_angle + x_offset as f32 * cos_angle) as i32;
 
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                             let y = (row as i32 + y_rot).max(1).min(step.lx.rows() as i32 - 2) as usize;
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                             let x = (col as i32 + x_rot).max(1).min(step.lx.cols() as i32 - 2) as usize;
 
                             let dx = step.lx.at_f32(y, x, 0)?;
