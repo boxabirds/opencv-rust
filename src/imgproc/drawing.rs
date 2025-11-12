@@ -32,11 +32,23 @@ pub fn line(
         // Draw pixel (with thickness support via circle)
         if thickness > 1 {
             circle(img, Point::new(x0, y0), thickness / 2, color)?;
-        } else if x0 >= 0 && x0 < img.cols() as i32 && y0 >= 0 && y0 < img.rows() as i32 {
-            let num_channels = img.channels();
-            let pixel = img.at_mut(y0 as usize, x0 as usize)?;
-            for ch in 0..num_channels.min(4) {
-                pixel[ch] = color.val[ch] as u8;
+        } else {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            let cols_i32 = img.cols() as i32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            let rows_i32 = img.rows() as i32;
+
+            if x0 >= 0 && x0 < cols_i32 && y0 >= 0 && y0 < rows_i32 {
+                let num_channels = img.channels();
+                #[allow(clippy::cast_sign_loss)]
+                let pixel = img.at_mut(y0 as usize, x0 as usize)?;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+                for ch in 0..num_channels.min(4) {
+                    // Clamp to valid u8 range
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let val = color.val[ch].clamp(0.0, 255.0) as u8;
+                    pixel[ch] = val;
+                }
             }
         }
 
@@ -63,12 +75,22 @@ pub fn rectangle(img: &mut Mat, rect: Rect, color: Scalar, thickness: i32) -> Re
     if thickness < 0 {
         // Filled rectangle
         let num_channels = img.channels();
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let cols_i32 = img.cols() as i32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let rows_i32 = img.rows() as i32;
+
         for y in rect.y..(rect.y + rect.height) {
             for x in rect.x..(rect.x + rect.width) {
-                if y >= 0 && y < img.rows() as i32 && x >= 0 && x < img.cols() as i32 {
+                if y >= 0 && y < rows_i32 && x >= 0 && x < cols_i32 {
+                    #[allow(clippy::cast_sign_loss)]
                     let pixel = img.at_mut(y as usize, x as usize)?;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                     for ch in 0..num_channels.min(4) {
-                        pixel[ch] = color.val[ch] as u8;
+                        // Clamp to valid u8 range
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        let val = color.val[ch].clamp(0.0, 255.0) as u8;
+                        pixel[ch] = val;
                     }
                 }
             }
@@ -116,11 +138,21 @@ pub fn circle(img: &mut Mat, center: Point, radius: i32, color: Scalar) -> Resul
         ];
 
         let num_channels = img.channels();
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let cols_i32 = img.cols() as i32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let rows_i32 = img.rows() as i32;
+
         for &(px, py) in &points {
-            if px >= 0 && px < img.cols() as i32 && py >= 0 && py < img.rows() as i32 {
+            if px >= 0 && px < cols_i32 && py >= 0 && py < rows_i32 {
+                #[allow(clippy::cast_sign_loss)]
                 let pixel = img.at_mut(py as usize, px as usize)?;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 for ch in 0..num_channels.min(4) {
-                    pixel[ch] = color.val[ch] as u8;
+                    // Clamp to valid u8 range
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let val = color.val[ch].clamp(0.0, 255.0) as u8;
+                    pixel[ch] = val;
                 }
             }
         }
@@ -141,6 +173,10 @@ pub fn circle(img: &mut Mat, center: Point, radius: i32, color: Scalar) -> Resul
 pub fn circle_filled(img: &mut Mat, center: Point, radius: i32, color: Scalar) -> Result<()> {
     let r_squared = radius * radius;
     let num_channels = img.channels();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let cols_i32 = img.cols() as i32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let rows_i32 = img.rows() as i32;
 
     for dy in -radius..=radius {
         for dx in -radius..=radius {
@@ -148,10 +184,15 @@ pub fn circle_filled(img: &mut Mat, center: Point, radius: i32, color: Scalar) -
                 let x = center.x + dx;
                 let y = center.y + dy;
 
-                if x >= 0 && x < img.cols() as i32 && y >= 0 && y < img.rows() as i32 {
+                if x >= 0 && x < cols_i32 && y >= 0 && y < rows_i32 {
+                    #[allow(clippy::cast_sign_loss)]
                     let pixel = img.at_mut(y as usize, x as usize)?;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                     for ch in 0..num_channels.min(4) {
-                        pixel[ch] = color.val[ch] as u8;
+                        // Clamp to valid u8 range
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        let val = color.val[ch].clamp(0.0, 255.0) as u8;
+                        pixel[ch] = val;
                     }
                 }
             }
@@ -198,15 +239,27 @@ pub fn ellipse(
         let x_rot = x_local * cos_angle - y_local * sin_angle;
         let y_rot = x_local * sin_angle + y_local * cos_angle;
 
-        // Translate
+        // Translate - f64 to i32 conversion is acceptable for coordinate calculations
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let x = center.x + x_rot as i32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let y = center.y + y_rot as i32;
 
         let num_channels = img.channels();
-        if x >= 0 && x < img.cols() as i32 && y >= 0 && y < img.rows() as i32 {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let cols_i32 = img.cols() as i32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let rows_i32 = img.rows() as i32;
+
+        if x >= 0 && x < cols_i32 && y >= 0 && y < rows_i32 {
+            #[allow(clippy::cast_sign_loss)]
             let pixel = img.at_mut(y as usize, x as usize)?;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             for ch in 0..num_channels.min(4) {
-                pixel[ch] = color.val[ch] as u8;
+                // Clamp to valid u8 range
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let val = color.val[ch].clamp(0.0, 255.0) as u8;
+                pixel[ch] = val;
             }
         }
     }
@@ -258,6 +311,11 @@ pub fn fill_poly(img: &mut Mat, pts: &[Point], color: Scalar) -> Result<()> {
 
     // Scan-line fill algorithm
     let num_channels = img.channels();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let cols_i32 = img.cols() as i32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let rows_i32 = img.rows() as i32;
+
     for y in min_y..=max_y {
         let mut intersections = Vec::new();
 
@@ -266,6 +324,8 @@ pub fn fill_poly(img: &mut Mat, pts: &[Point], color: Scalar) -> Result<()> {
             let p2 = pts[(i + 1) % pts.len()];
 
             if (p1.y <= y && p2.y > y) || (p2.y <= y && p1.y > y) {
+                // Calculate intersection point - f64 used for precision, then converted to i32
+                #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 let x = p1.x + (f64::from(y - p1.y) / f64::from(p2.y - p1.y) * f64::from(p2.x - p1.x)) as i32;
                 intersections.push(x);
             }
@@ -276,10 +336,15 @@ pub fn fill_poly(img: &mut Mat, pts: &[Point], color: Scalar) -> Result<()> {
         for i in (0..intersections.len()).step_by(2) {
             if i + 1 < intersections.len() {
                 for x in intersections[i]..=intersections[i + 1] {
-                    if x >= 0 && x < img.cols() as i32 && y >= 0 && y < img.rows() as i32 {
+                    if x >= 0 && x < cols_i32 && y >= 0 && y < rows_i32 {
+                        #[allow(clippy::cast_sign_loss)]
                         let pixel = img.at_mut(y as usize, x as usize)?;
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                         for ch in 0..num_channels.min(4) {
-                            pixel[ch] = color.val[ch] as u8;
+                            // Clamp to valid u8 range
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                            let val = color.val[ch].clamp(0.0, 255.0) as u8;
+                            pixel[ch] = val;
                         }
                     }
                 }
@@ -299,10 +364,13 @@ pub fn put_text(
     color: Scalar,
 ) -> Result<()> {
     // Very simple text rendering - just draw rectangles to represent characters
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     let char_width = (8.0 * font_scale) as i32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     let char_height = (12.0 * font_scale) as i32;
 
     for (i, _ch) in text.chars().enumerate() {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let x = org.x + i as i32 * char_width;
         let y = org.y;
 

@@ -99,6 +99,7 @@ pub fn equalize_hist(src: &Mat, dst: &mut Mat) -> Result<()> {
 
     for i in 0..256 {
         if total_pixels > cdf_min {
+            #[allow(clippy::cast_precision_loss)]
             let normalized = (f64::from((cdf[i].saturating_sub(cdf_min))) / f64::from(total_pixels - cdf_min)) * 255.0;
             // Safe cast: normalized is in [0, 255] range
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

@@ -47,7 +47,7 @@ pub async fn blur_async(src: &Mat, dst: &mut Mat, ksize: Size, use_gpu: bool) ->
         #[cfg(feature = "gpu")]
         {
             use crate::gpu::ops::box_blur_gpu_async;
-            match box_blur_gpu_async(src, dst, ksize.width as i32).await {
+            match box_blur_gpu_async(src, dst, ksize.width).await {
                 Ok(()) => return Ok(()),
                 Err(_) => {
                     // Fall through to CPU

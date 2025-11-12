@@ -19,7 +19,9 @@ pub fn resize(src: &Mat, dst: &mut Mat, dsize: Size, interpolation: Interpolatio
         ));
     }
 
+    #[allow(clippy::cast_sign_loss)]
     let new_rows = dsize.height as usize;
+    #[allow(clippy::cast_sign_loss)]
     let new_cols = dsize.width as usize;
 
     *dst = Mat::new(new_rows, new_cols, src.channels(), src.depth())?;
@@ -35,7 +37,9 @@ pub fn resize(src: &Mat, dst: &mut Mat, dsize: Size, interpolation: Interpolatio
 
 /// Nearest neighbor interpolation - optimized parallel version
 fn resize_nearest(src: &Mat, dst: &mut Mat) -> Result<()> {
+    #[allow(clippy::cast_precision_loss)]
     let x_ratio = src.cols() as f32 / dst.cols() as f32;
+    #[allow(clippy::cast_precision_loss)]
     let y_ratio = src.rows() as f32 / dst.rows() as f32;
 
     let src_rows = src.rows();
@@ -51,7 +55,9 @@ fn resize_nearest(src: &Mat, dst: &mut Mat) -> Result<()> {
 
         dst_data.par_chunks_mut(row_size).enumerate().for_each(|(dst_row, dst_row_data)| {
             for dst_col in 0..dst_cols {
+                #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let src_row = ((dst_row as f32 * y_ratio) as usize).min(src_rows - 1);
+                #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let src_col = ((dst_col as f32 * x_ratio) as usize).min(src_cols - 1);
 
                 let src_idx = (src_row * src_cols + src_col) * channels;
@@ -70,11 +76,13 @@ fn resize_nearest(src: &Mat, dst: &mut Mat) -> Result<()> {
 /// Bilinear interpolation - optimized parallel version
 fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
     // Map corners exactly: dst pixel 0 -> src pixel 0, dst pixel (n-1) -> src pixel (m-1)
+    #[allow(clippy::cast_precision_loss)]
     let x_ratio = if dst.cols() > 1 {
         (src.cols() - 1) as f32 / (dst.cols() - 1) as f32
     } else {
         0.0
     };
+    #[allow(clippy::cast_precision_loss)]
     let y_ratio = if dst.rows() > 1 {
         (src.rows() - 1) as f32 / (dst.rows() - 1) as f32
     } else {
@@ -95,15 +103,21 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
 
         dst_data.par_chunks_mut(row_size).enumerate().for_each(|(dst_row, dst_row_data)| {
             for dst_col in 0..dst_cols {
+                #[allow(clippy::cast_precision_loss)]
                 let src_x = dst_col as f32 * x_ratio;
+                #[allow(clippy::cast_precision_loss)]
                 let src_y = dst_row as f32 * y_ratio;
 
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let x1 = src_x.floor() as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let y1 = src_y.floor() as usize;
                 let x2 = (x1 + 1).min(src_cols - 1);
                 let y2 = (y1 + 1).min(src_rows - 1);
 
+                #[allow(clippy::cast_precision_loss)]
                 let dx = src_x - x1 as f32;
+                #[allow(clippy::cast_precision_loss)]
                 let dy = src_y - y1 as f32;
 
                 // Calculate source pixel indices
@@ -128,11 +142,14 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                             + f32::from(src_data[idx21]) * w2
                             + f32::from(src_data[idx12]) * w3
                             + f32::from(src_data[idx22]) * w4;
-                        dst_pixel[0] = (v + 0.5) as u8; // Fast rounding via add 0.5
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        let pixel_val = (v + 0.5) as u8; // Fast rounding via add 0.5
+                        dst_pixel[0] = pixel_val;
                     }
                     3 => {
                         // Optimized 3-channel: process inline with minimal conversions
                         #[inline(always)]
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                         fn interp(v11: u8, v21: u8, v12: u8, v22: u8, w1: f32, w2: f32, w3: f32, w4: f32) -> u8 {
                             (f32::from(v11) * w1 + f32::from(v21) * w2 + f32::from(v12) * w3 + f32::from(v22) * w4 + 0.5) as u8
                         }
@@ -144,6 +161,7 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                     4 => {
                         // Optimized 4-channel
                         #[inline(always)]
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                         fn interp(v11: u8, v21: u8, v12: u8, v22: u8, w1: f32, w2: f32, w3: f32, w4: f32) -> u8 {
                             (f32::from(v11) * w1 + f32::from(v21) * w2 + f32::from(v12) * w3 + f32::from(v22) * w4 + 0.5) as u8
                         }
@@ -160,7 +178,9 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                                 + f32::from(src_data[idx21 + ch]) * w2
                                 + f32::from(src_data[idx12 + ch]) * w3
                                 + f32::from(src_data[idx22 + ch]) * w4;
-                            dst_pixel[ch] = (v + 0.5) as u8; // Fast rounding
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                            let pixel_val = (v + 0.5) as u8; // Fast rounding
+                            dst_pixel[ch] = pixel_val;
                         }
                     }
                 }
@@ -244,23 +264,37 @@ pub fn warp_affine(
     m: &[[f64; 3]; 2],
     dsize: Size,
 ) -> Result<()> {
-    *dst = Mat::new(dsize.height as usize, dsize.width as usize, src.channels(), src.depth())?;
+    #[allow(clippy::cast_sign_loss)]
+    let dst_height = dsize.height as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let dst_width = dsize.width as usize;
+    *dst = Mat::new(dst_height, dst_width, src.channels(), src.depth())?;
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let src_rows_i32 = src.rows() as i32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let src_cols_i32 = src.cols() as i32;
 
     for row in 0..dst.rows() {
         for col in 0..dst.cols() {
+            #[allow(clippy::cast_precision_loss)]
             let x = col as f64;
+            #[allow(clippy::cast_precision_loss)]
             let y = row as f64;
 
             // Apply transformation
             let src_x = m[0][0] * x + m[0][1] * y + m[0][2];
             let src_y = m[1][0] * x + m[1][1] * y + m[1][2];
 
+            #[allow(clippy::cast_possible_truncation)]
             let src_col = src_x as i32;
+            #[allow(clippy::cast_possible_truncation)]
             let src_row = src_y as i32;
 
-            if src_row >= 0 && src_row < src.rows() as i32
-                && src_col >= 0 && src_col < src.cols() as i32
+            if src_row >= 0 && src_row < src_rows_i32
+                && src_col >= 0 && src_col < src_cols_i32
             {
+                #[allow(clippy::cast_sign_loss)]
                 let src_pixel = src.at(src_row as usize, src_col as usize)?;
                 let dst_pixel = dst.at_mut(row, col)?;
                 dst_pixel.copy_from_slice(src_pixel);
@@ -278,11 +312,22 @@ pub fn warp_perspective(
     m: &[[f64; 3]; 3],
     dsize: Size,
 ) -> Result<()> {
-    *dst = Mat::new(dsize.height as usize, dsize.width as usize, src.channels(), src.depth())?;
+    #[allow(clippy::cast_sign_loss)]
+    let dst_height = dsize.height as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let dst_width = dsize.width as usize;
+    *dst = Mat::new(dst_height, dst_width, src.channels(), src.depth())?;
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let src_rows_i32 = src.rows() as i32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let src_cols_i32 = src.cols() as i32;
 
     for row in 0..dst.rows() {
         for col in 0..dst.cols() {
+            #[allow(clippy::cast_precision_loss)]
             let x = col as f64;
+            #[allow(clippy::cast_precision_loss)]
             let y = row as f64;
 
             // Apply homography
@@ -295,12 +340,15 @@ pub fn warp_perspective(
             let src_x = (m[0][0] * x + m[0][1] * y + m[0][2]) / w;
             let src_y = (m[1][0] * x + m[1][1] * y + m[1][2]) / w;
 
+            #[allow(clippy::cast_possible_truncation)]
             let src_col = src_x as i32;
+            #[allow(clippy::cast_possible_truncation)]
             let src_row = src_y as i32;
 
-            if src_row >= 0 && src_row < src.rows() as i32
-                && src_col >= 0 && src_col < src.cols() as i32
+            if src_row >= 0 && src_row < src_rows_i32
+                && src_col >= 0 && src_col < src_cols_i32
             {
+                #[allow(clippy::cast_sign_loss)]
                 let src_pixel = src.at(src_row as usize, src_col as usize)?;
                 let dst_pixel = dst.at_mut(row, col)?;
                 dst_pixel.copy_from_slice(src_pixel);

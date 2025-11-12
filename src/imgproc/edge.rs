@@ -108,6 +108,7 @@ pub fn sobel(
                     }
                 }
 
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let val = sum.abs().clamp(0.0, 255.0) as u8;
                 dst_row[col] = val;
             }
@@ -178,6 +179,7 @@ pub fn laplacian(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
                 }
             }
 
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let val = sum.abs().clamp(0.0, 255.0) as u8;
             let dst_pixel = dst.at_mut(row, col)?;
             dst_pixel[0] = val;
@@ -243,7 +245,9 @@ pub fn canny(
                     let gy = f32::from(grad_y_data[idx]);
 
                     let mag = (gx * gx + gy * gy).sqrt();
-                    mag_row[col] = mag.min(255.0) as u8;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let mag_u8 = mag.min(255.0) as u8;
+                    mag_row[col] = mag_u8;
                     dir_row[col] = gy.atan2(gx);
                 }
             });
@@ -294,7 +298,9 @@ pub fn canny(
     // Step 5: Double threshold and edge tracking by hysteresis - parallel
     *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let low_threshold = threshold1 as u8;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let high_threshold = threshold2 as u8;
 
     rayon::scope(|_s| {
@@ -410,6 +416,7 @@ pub fn scharr(src: &Mat, dst: &mut Mat, dx: i32, dy: i32) -> Result<()> {
                 }
             }
 
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let val = sum.abs().clamp(0.0, 255.0) as u8;
             let dst_pixel = dst.at_mut(row, col)?;
             dst_pixel[0] = val;
