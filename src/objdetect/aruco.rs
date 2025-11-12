@@ -343,7 +343,8 @@ mod tests {
         let image = Mat::new_with_default(100, 100, 1, MatDepth::U8, Scalar::all(255.0)).unwrap();
 
         let markers = detector.detect_markers(&image).unwrap();
-        assert!(markers.len() >= 0);
+        // Verify it succeeds (len is always >= 0 for Vec)
+        let _ = markers.len();
     }
 
     #[test]

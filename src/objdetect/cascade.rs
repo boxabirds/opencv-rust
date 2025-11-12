@@ -221,7 +221,7 @@ mod tests {
             .detect_multi_scale(&img, 1.1, 3, (20, 20), (80, 80))
             .unwrap();
 
-        // May or may not detect depending on features
-        assert!(detections.len() >= 0);
+        // May or may not detect depending on features (len is always >= 0 for Vec)
+        let _ = detections.len();
     }
 }

@@ -61,8 +61,13 @@ export const matToImageDataURL = (mat) => {
         pixels[idx + 3] = 255;         // A
       }
     } else if (channels === 4) {
-      // RGBA - direct copy
-      pixels.set(data);
+      // RGBA - copy but force alpha=255
+      for (let i = 0; i < data.length; i += 4) {
+        pixels[i] = data[i];         // R
+        pixels[i + 1] = data[i + 1]; // G
+        pixels[i + 2] = data[i + 2]; // B
+        pixels[i + 3] = 255;         // A (force opaque)
+      }
     }
 
     ctx.putImageData(imageData, 0, 0);

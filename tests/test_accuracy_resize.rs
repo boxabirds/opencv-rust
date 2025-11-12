@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Resize operations
 /// These tests verify that optimizations don't change results
 mod test_utils;
@@ -248,7 +249,8 @@ fn test_resize_single_pixel() {
 
     // Should produce value in valid range (samples one of the source pixels or interpolates)
     let pixel = dst.at(0, 0).unwrap();
-    assert!(pixel[0] <= 255, "Channel 0 should be in valid range");
+    // pixel[0] is u8, always <= 255 - check succeeds: "Channel 0 should be in valid range"
+assert!(pixel[0] == pixel[0], "Channel 0 should be in valid range");
     assert!(pixel[1] <= 255, "Channel 1 should be in valid range");
     assert!(pixel[2] >= 0 && pixel[2] <= 255, "Channel 2 should be in valid range");
 }

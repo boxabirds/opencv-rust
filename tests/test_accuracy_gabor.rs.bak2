@@ -1,0 +1,325 @@
+/// Bit-level accuracy tests for Gabor Filter
+/// These tests verify that optimizations don't change results
+mod test_utils;
+
+use opencv_rust::core::{Mat, MatDepth};
+use opencv_rust::core::types::Scalar;
+use opencv_rust::imgproc::gabor_filter;
+use std::f64::consts::PI;
+use test_utils::*;
+
+/// Test gabor filter is deterministic
+#[test]
+fn test_gabor_deterministic() {
+    let mut src = Mat::new(50, 50, 1, MatDepth::U8).unwrap();
+
+    // Create pattern
+    for row in 0..50 {
+        for col in 0..50 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 5) as u8;
+        }
+    }
+
+    let mut dst1 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst2 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst1, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+    gabor_filter(&src, &mut dst2, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+
+    // Results should be bit-exact identical
+    assert_images_equal(&dst1, &dst2, "Gabor filter should be deterministic");
+}
+
+/// Test gabor filter on uniform image processes without errors
+#[test]
+fn test_gabor_uniform_image() {
+    let src = Mat::new_with_default(50, 50, 1, MatDepth::U8, Scalar::all(128.0)).unwrap();
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+
+    // Gabor filter should process uniform image without errors
+    assert_eq!(dst.rows(), 50);
+    assert_eq!(dst.cols(), 50);
+}
+
+/// Test gabor filter with different orientations
+#[test]
+fn test_gabor_orientation_variations() {
+    let mut src = Mat::new(50, 50, 1, MatDepth::U8).unwrap();
+
+    // Create vertical stripes (frequency = 8 pixels)
+    for row in 0..50 {
+        for col in 0..50 {
+            let value = if (col / 4) % 2 == 0 { 100 } else { 200 };
+            src.at_mut(row, col).unwrap()[0] = value;
+        }
+    }
+
+    let mut dst_vertical = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_horizontal = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    // Vertical orientation (theta=0)
+    gabor_filter(&src, &mut dst_vertical, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+
+    // Horizontal orientation (theta=PI/2)
+    gabor_filter(&src, &mut dst_horizontal, 9, 3.0, PI/2.0, 8.0, 0.5, 0.0).unwrap();
+
+    // Both orientations should process without errors
+    assert_eq!(dst_vertical.rows(), 50);
+    assert_eq!(dst_horizontal.rows(), 50);
+}
+
+/// Test gabor filter theta (orientation) parameter
+#[test]
+fn test_gabor_theta_variations() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    // Create diagonal pattern
+    for row in 0..40 {
+        for col in 0..40 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 6) as u8;
+        }
+    }
+
+    let mut dst_0 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_45 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_90 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst_0, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+    gabor_filter(&src, &mut dst_45, 9, 3.0, PI/4.0, 8.0, 0.5, 0.0).unwrap();
+    gabor_filter(&src, &mut dst_90, 9, 3.0, PI/2.0, 8.0, 0.5, 0.0).unwrap();
+
+    // All should process without errors
+    assert_eq!(dst_0.rows(), 40);
+    assert_eq!(dst_45.rows(), 40);
+    assert_eq!(dst_90.rows(), 40);
+}
+
+/// Test gabor filter lambda (wavelength) parameter
+#[test]
+fn test_gabor_lambda_variations() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    // Create pattern with varying frequencies
+    for row in 0..40 {
+        for col in 0..40 {
+            let value = ((col as f64 * PI / 4.0).sin() * 50.0 + 128.0) as u8;
+            src.at_mut(row, col).unwrap()[0] = value;
+        }
+    }
+
+    let mut dst_low = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_high = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst_low, 9, 3.0, 0.0, 4.0, 0.5, 0.0).unwrap();   // Low wavelength
+    gabor_filter(&src, &mut dst_high, 9, 3.0, 0.0, 16.0, 0.5, 0.0).unwrap(); // High wavelength
+
+    // Both should process without errors
+    assert_eq!(dst_low.rows(), 40);
+    assert_eq!(dst_high.rows(), 40);
+}
+
+/// Test gabor filter sigma (bandwidth) parameter
+#[test]
+fn test_gabor_sigma_variations() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    for row in 0..40 {
+        for col in 0..40 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 6) as u8;
+        }
+    }
+
+    let mut dst_narrow = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_wide = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst_narrow, 9, 2.0, 0.0, 8.0, 0.5, 0.0).unwrap();  // Narrow
+    gabor_filter(&src, &mut dst_wide, 9, 5.0, 0.0, 8.0, 0.5, 0.0).unwrap();    // Wide
+
+    // Both should process without errors
+    assert_eq!(dst_narrow.rows(), 40);
+    assert_eq!(dst_wide.rows(), 40);
+}
+
+/// Test gabor filter gamma (aspect ratio) parameter
+#[test]
+fn test_gabor_gamma_variations() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    for row in 0..40 {
+        for col in 0..40 {
+            src.at_mut(row, col).unwrap()[0] = ((row * col) % 256) as u8;
+        }
+    }
+
+    let mut dst_round = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_elliptic = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst_round, 9, 3.0, 0.0, 8.0, 1.0, 0.0).unwrap();    // Circular (gamma=1)
+    gabor_filter(&src, &mut dst_elliptic, 9, 3.0, 0.0, 8.0, 0.3, 0.0).unwrap(); // Elliptical
+
+    // Both should process without errors
+    assert_eq!(dst_round.rows(), 40);
+    assert_eq!(dst_elliptic.rows(), 40);
+}
+
+/// Test gabor filter psi (phase offset) parameter
+#[test]
+fn test_gabor_psi_variations() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    for row in 0..40 {
+        for col in 0..40 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 5) as u8;
+        }
+    }
+
+    let mut dst_0 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_90 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst_0, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();      // psi=0
+    gabor_filter(&src, &mut dst_90, 9, 3.0, 0.0, 8.0, 0.5, PI/2.0).unwrap(); // psi=PI/2
+
+    // Both should process without errors
+    assert_eq!(dst_0.rows(), 40);
+    assert_eq!(dst_90.rows(), 40);
+}
+
+/// Test gabor filter kernel size variations
+#[test]
+fn test_gabor_kernel_size() {
+    let mut src = Mat::new(50, 50, 1, MatDepth::U8).unwrap();
+
+    for row in 0..50 {
+        for col in 0..50 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 5) as u8;
+        }
+    }
+
+    let mut dst_5 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_9 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    let mut dst_13 = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+
+    gabor_filter(&src, &mut dst_5, 5, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+    gabor_filter(&src, &mut dst_9, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+    gabor_filter(&src, &mut dst_13, 13, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+
+    // All should process without errors
+    assert_eq!(dst_5.rows(), 50);
+    assert_eq!(dst_9.rows(), 50);
+    assert_eq!(dst_13.rows(), 50);
+}
+
+/// Test gabor filter output range
+#[test]
+fn test_gabor_output_range() {
+    let mut src = Mat::new(40, 40, 1, MatDepth::U8).unwrap();
+
+    // Create extreme pattern
+    for row in 0..40 {
+        for col in 0..40 {
+            src.at_mut(row, col).unwrap()[0] = if (row + col) % 2 == 0 { 0 } else { 255 };
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    gabor_filter(&src, &mut dst, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+
+    // All values should be in valid range
+    for row in 0..40 {
+        for col in 0..40 {
+            let val = dst.at(row, col).unwrap()[0];
+            assert!(val <= 255,
+                "Gabor output at ({}, {}) out of range: {}", row, col, val);
+        }
+    }
+}
+
+/// Test gabor filter boundary handling
+#[test]
+fn test_gabor_boundary() {
+    let mut src = Mat::new(10, 10, 1, MatDepth::U8).unwrap();
+
+    for row in 0..10 {
+        for col in 0..10 {
+            src.at_mut(row, col).unwrap()[0] = ((row + col) * 20) as u8;
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    gabor_filter(&src, &mut dst, 5, 2.0, 0.0, 4.0, 0.5, 0.0).unwrap();
+
+    // Border pixels should be valid
+    for i in 0..10 {
+        assert!(dst.at(0, i).unwrap()[0] <= 255, "Top border valid");
+        assert!(dst.at(9, i).unwrap()[0] <= 255, "Bottom border valid");
+        assert!(dst.at(i, 0).unwrap()[0] <= 255, "Left border valid");
+        assert!(dst.at(i, 9).unwrap()[0] <= 255, "Right border valid");
+    }
+}
+
+/// Test gabor filter on small image
+#[test]
+fn test_gabor_small_image() {
+    let mut src = Mat::new(5, 5, 1, MatDepth::U8).unwrap();
+
+    for i in 0..25 {
+        src.data_mut()[i] = ((i * 10) % 256) as u8;
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    gabor_filter(&src, &mut dst, 3, 1.0, 0.0, 4.0, 0.5, 0.0).unwrap();
+
+    assert_eq!(dst.rows(), 5);
+    assert_eq!(dst.cols(), 5);
+}
+
+/// Test gabor filter processes textured pattern
+#[test]
+fn test_gabor_textured_pattern() {
+    let mut src = Mat::new(50, 50, 1, MatDepth::U8).unwrap();
+
+    // Create sinusoidal pattern matching lambda=8
+    for row in 0..50 {
+        for col in 0..50 {
+            let value = ((col as f64 * 2.0 * PI / 8.0).sin() * 50.0 + 128.0) as u8;
+            src.at_mut(row, col).unwrap()[0] = value;
+        }
+    }
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    gabor_filter(&src, &mut dst, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+
+    // Gabor should process textured pattern without errors
+    assert_eq!(dst.rows(), 50);
+    assert_eq!(dst.cols(), 50);
+}
+
+/// Visual inspection test (ignored by default)
+#[test]
+#[ignore]
+fn test_gabor_visual_inspection() {
+    let mut src = Mat::new(30, 30, 1, MatDepth::U8).unwrap();
+
+    // Create texture pattern (vertical stripes)
+    for row in 0..30 {
+        for col in 0..30 {
+            let value = if (col / 4) % 2 == 0 { 100 } else { 200 };
+            src.at_mut(row, col).unwrap()[0] = value;
+        }
+    }
+
+    println!("\nInput (vertical stripes):");
+    print_image_data(&src, "Source", 30, 30);
+
+    let mut dst = Mat::new(1, 1, 1, MatDepth::U8).unwrap();
+    gabor_filter(&src, &mut dst, 9, 3.0, 0.0, 8.0, 0.5, 0.0).unwrap();
+
+    println!("\nAfter Gabor filter (theta=0, lambda=8):");
+    print_image_data(&dst, "Filtered", 30, 30);
+
+    let stats = compute_diff_stats(&src, &dst);
+    println!("\nDifference from original:");
+    println!("{}", stats);
+}

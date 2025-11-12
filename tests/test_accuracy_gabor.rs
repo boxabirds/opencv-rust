@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 /// Bit-level accuracy tests for Gabor Filter
 /// These tests verify that optimizations don't change results
 mod test_utils;
@@ -230,7 +231,8 @@ fn test_gabor_output_range() {
     for row in 0..40 {
         for col in 0..40 {
             let val = dst.at(row, col).unwrap()[0];
-            assert!(val <= 255,
+            // val is u8, always <= 255
+assert!(val == val,
                 "Gabor output at ({}, {}) out of range: {}", row, col, val);
         }
     }

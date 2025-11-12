@@ -280,7 +280,8 @@ mod tests {
         let image = Mat::new_with_default(100, 100, 1, MatDepth::U8, Scalar::all(255.0)).unwrap();
 
         let result = detector.detect_multi(&image).unwrap();
-        assert!(result.len() >= 0);
+        // Verify it succeeds (len is always >= 0 for Vec)
+        let _ = result.len();
     }
 
     #[test]

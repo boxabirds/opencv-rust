@@ -123,10 +123,10 @@ tests/
 
 ### WASM Test Template
 
-Use `tests/WASM_TEST_TEMPLATE.rs` as a starting point for new WASM tests:
+Use `docs/WASM_TEST_TEMPLATE.rs` as a starting point for new WASM tests:
 
 ```bash
-cp tests/WASM_TEST_TEMPLATE.rs tests/wasm_my_operation_tests.rs
+cp docs/WASM_TEST_TEMPLATE.rs tests/wasm_my_operation_tests.rs
 # Edit the template, replacing placeholders
 ```
 
