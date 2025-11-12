@@ -26,7 +26,14 @@ pub struct FisheyeDistortion {
     pub k4: f64,
 }
 
+impl Default for FisheyeDistortion {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FisheyeDistortion {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             k1: 0.0,
@@ -36,6 +43,7 @@ impl FisheyeDistortion {
         }
     }
 
+    #[must_use] 
     pub fn from_array(coeffs: &[f64; 4]) -> Self {
         Self {
             k1: coeffs[0],
@@ -45,6 +53,7 @@ impl FisheyeDistortion {
         }
     }
 
+    #[must_use] 
     pub fn to_array(&self) -> [f64; 4] {
         [self.k1, self.k2, self.k3, self.k4]
     }
@@ -60,10 +69,12 @@ pub struct FisheyeCameraMatrix {
 }
 
 impl FisheyeCameraMatrix {
+    #[must_use] 
     pub fn new(fx: f64, fy: f64, cx: f64, cy: f64) -> Self {
         Self { fx, fy, cx, cy }
     }
 
+    #[must_use] 
     pub fn to_matrix(&self) -> [[f64; 3]; 3] {
         [
             [self.fx, 0.0, self.cx],
@@ -94,9 +105,9 @@ pub fn fisheye_project_points(
         // Transform point to camera coordinates
         let mut cam_point = [0.0f64; 3];
         for i in 0..3 {
-            cam_point[i] = r_matrix[i][0] * point.x as f64
-                + r_matrix[i][1] * point.y as f64
-                + r_matrix[i][2] * point.z as f64
+            cam_point[i] = r_matrix[i][0] * f64::from(point.x)
+                + r_matrix[i][1] * f64::from(point.y)
+                + r_matrix[i][2] * f64::from(point.z)
                 + tvec[i];
         }
 
@@ -153,8 +164,8 @@ pub fn fisheye_undistort_points(
 
     for point in distorted_points {
         // Convert to normalized image coordinates
-        let x_d = ((point.x as f64) - camera_matrix.cx) / camera_matrix.fx;
-        let y_d = ((point.y as f64) - camera_matrix.cy) / camera_matrix.fy;
+        let x_d = (f64::from(point.x) - camera_matrix.cx) / camera_matrix.fx;
+        let y_d = (f64::from(point.y) - camera_matrix.cy) / camera_matrix.fy;
 
         // Iteratively solve for undistorted coordinates
         let mut x = x_d;
@@ -233,15 +244,15 @@ pub fn fisheye_calibrate(
 
     for img_pts in image_points {
         for pt in img_pts {
-            let dx = (pt.x as f64 - cx).abs();
-            let dy = (pt.y as f64 - cy).abs();
+            let dx = (f64::from(pt.x) - cx).abs();
+            let dy = (f64::from(pt.y) - cy).abs();
             total_spread += dx.max(dy);
             count += 1;
         }
     }
 
     if count > 0 {
-        let avg_spread = total_spread / count as f64;
+        let avg_spread = total_spread / f64::from(count);
         camera_matrix.fx = avg_spread * 2.0;
         camera_matrix.fy = avg_spread * 2.0;
     }

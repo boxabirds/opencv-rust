@@ -37,6 +37,7 @@ pub struct ConvolutionLayer {
 }
 
 impl ConvolutionLayer {
+    #[must_use] 
     pub fn new(
         name: String,
         num_filters: usize,
@@ -58,6 +59,7 @@ impl ConvolutionLayer {
         }
     }
 
+    #[must_use] 
     pub fn with_weights(mut self, weights: Blob, bias: Option<Blob>) -> Self {
         self.weights = weights;
         self.bias = bias;
@@ -153,6 +155,7 @@ pub enum PoolType {
 }
 
 impl PoolingLayer {
+    #[must_use] 
     pub fn new(
         name: String,
         pool_type: PoolType,
@@ -249,6 +252,7 @@ pub enum ActivationType {
 }
 
 impl ActivationLayer {
+    #[must_use] 
     pub fn new(name: String, activation: ActivationType) -> Self {
         Self { name, activation }
     }
@@ -303,6 +307,7 @@ pub struct FullyConnectedLayer {
 }
 
 impl FullyConnectedLayer {
+    #[must_use] 
     pub fn new(name: String, num_inputs: usize, num_outputs: usize) -> Self {
         let weights = Blob::new(vec![num_outputs, num_inputs]);
 
@@ -314,6 +319,7 @@ impl FullyConnectedLayer {
         }
     }
 
+    #[must_use] 
     pub fn with_weights(mut self, weights: Blob, bias: Option<Blob>) -> Self {
         self.weights = weights;
         self.bias = bias;
@@ -365,6 +371,7 @@ pub struct FlattenLayer {
 }
 
 impl FlattenLayer {
+    #[must_use] 
     pub fn new(name: String) -> Self {
         Self { name }
     }
@@ -397,6 +404,7 @@ pub struct SoftmaxLayer {
 }
 
 impl SoftmaxLayer {
+    #[must_use] 
     pub fn new(name: String) -> Self {
         Self { name }
     }

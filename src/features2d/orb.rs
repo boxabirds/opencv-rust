@@ -16,6 +16,7 @@ pub struct ORB {
 }
 
 impl ORB {
+    #[must_use] 
     pub fn new(n_features: usize) -> Self {
         Self {
             n_features,
@@ -29,11 +30,13 @@ impl ORB {
         }
     }
 
+    #[must_use] 
     pub fn with_scale_factor(mut self, scale_factor: f32) -> Self {
         self.scale_factor = scale_factor;
         self
     }
 
+    #[must_use] 
     pub fn with_n_levels(mut self, n_levels: usize) -> Self {
         self.n_levels = n_levels;
         self
@@ -117,26 +120,26 @@ impl ORB {
         // FAST-9 detector (simplified)
         for row in 3..image.rows() - 3 {
             for col in 3..image.cols() - 3 {
-                let center = image.at(row, col)?[0] as i32;
+                let center = i32::from(image.at(row, col)?[0]);
 
                 // Check circle of 16 pixels
                 let circle = [
-                    image.at(row - 3, col)?[0] as i32,
-                    image.at(row - 3, col + 1)?[0] as i32,
-                    image.at(row - 2, col + 2)?[0] as i32,
-                    image.at(row - 1, col + 3)?[0] as i32,
-                    image.at(row, col + 3)?[0] as i32,
-                    image.at(row + 1, col + 3)?[0] as i32,
-                    image.at(row + 2, col + 2)?[0] as i32,
-                    image.at(row + 3, col + 1)?[0] as i32,
-                    image.at(row + 3, col)?[0] as i32,
-                    image.at(row + 3, col - 1)?[0] as i32,
-                    image.at(row + 2, col - 2)?[0] as i32,
-                    image.at(row + 1, col - 3)?[0] as i32,
-                    image.at(row, col - 3)?[0] as i32,
-                    image.at(row - 1, col - 3)?[0] as i32,
-                    image.at(row - 2, col - 2)?[0] as i32,
-                    image.at(row - 3, col - 1)?[0] as i32,
+                    i32::from(image.at(row - 3, col)?[0]),
+                    i32::from(image.at(row - 3, col + 1)?[0]),
+                    i32::from(image.at(row - 2, col + 2)?[0]),
+                    i32::from(image.at(row - 1, col + 3)?[0]),
+                    i32::from(image.at(row, col + 3)?[0]),
+                    i32::from(image.at(row + 1, col + 3)?[0]),
+                    i32::from(image.at(row + 2, col + 2)?[0]),
+                    i32::from(image.at(row + 3, col + 1)?[0]),
+                    i32::from(image.at(row + 3, col)?[0]),
+                    i32::from(image.at(row + 3, col - 1)?[0]),
+                    i32::from(image.at(row + 2, col - 2)?[0]),
+                    i32::from(image.at(row + 1, col - 3)?[0]),
+                    i32::from(image.at(row, col - 3)?[0]),
+                    i32::from(image.at(row - 1, col - 3)?[0]),
+                    i32::from(image.at(row - 2, col - 2)?[0]),
+                    i32::from(image.at(row - 3, col - 1)?[0]),
                 ];
 
                 // Count brighter and darker pixels
@@ -172,7 +175,7 @@ impl ORB {
     }
 
     fn compute_orientation(&self, image: &Mat, kp: &KeyPoint) -> Result<f32> {
-        let scale = self.scale_factor.powi(kp.octave as i32);
+        let scale = self.scale_factor.powi(kp.octave);
         let row = (kp.pt.y as f32 / scale) as usize;
         let col = (kp.pt.x as f32 / scale) as usize;
 
@@ -181,12 +184,12 @@ impl ORB {
         let mut m01 = 0.0f32;
         let mut m10 = 0.0f32;
 
-        for dy in -(radius as i32)..=(radius as i32) {
-            for dx in -(radius as i32)..=(radius as i32) {
+        for dy in -radius..=radius {
+            for dx in -radius..=radius {
                 let y = (row as i32 + dy).max(0).min(image.rows() as i32 - 1) as usize;
                 let x = (col as i32 + dx).max(0).min(image.cols() as i32 - 1) as usize;
 
-                let val = image.at(y, x)?[0] as f32;
+                let val = f32::from(image.at(y, x)?[0]);
 
                 m01 += dy as f32 * val;
                 m10 += dx as f32 * val;

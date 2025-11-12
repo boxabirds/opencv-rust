@@ -156,8 +156,8 @@ pub fn compute_stereo_disparity(
                         let x_left = (col as i32 + dx) as usize;
                         let x_right = (right_col + dx) as usize;
 
-                        let val_left = left.at(y, x_left)?[0] as f32;
-                        let val_right = right.at(y, x_right)?[0] as f32;
+                        let val_left = f32::from(left.at(y, x_left)?[0]);
+                        let val_right = f32::from(right.at(y, x_right)?[0]);
 
                         sad += (val_left - val_right).abs();
                     }
@@ -184,11 +184,11 @@ pub fn triangulate_point(
     stereo_params: &StereoParameters,
 ) -> Result<Point3f> {
     // Normalize image coordinates
-    let x1 = (point_left.x as f64 - stereo_params.camera_matrix_left.cx) / stereo_params.camera_matrix_left.fx;
-    let y1 = (point_left.y as f64 - stereo_params.camera_matrix_left.cy) / stereo_params.camera_matrix_left.fy;
+    let x1 = (f64::from(point_left.x) - stereo_params.camera_matrix_left.cx) / stereo_params.camera_matrix_left.fx;
+    let y1 = (f64::from(point_left.y) - stereo_params.camera_matrix_left.cy) / stereo_params.camera_matrix_left.fy;
 
-    let x2 = (point_right.x as f64 - stereo_params.camera_matrix_right.cx) / stereo_params.camera_matrix_right.fx;
-    let y2 = (point_right.y as f64 - stereo_params.camera_matrix_right.cy) / stereo_params.camera_matrix_right.fy;
+    let x2 = (f64::from(point_right.x) - stereo_params.camera_matrix_right.cx) / stereo_params.camera_matrix_right.fx;
+    let y2 = (f64::from(point_right.y) - stereo_params.camera_matrix_right.cy) / stereo_params.camera_matrix_right.fy;
 
     // Compute disparity
     let baseline = (stereo_params.translation[0] * stereo_params.translation[0] +

@@ -1,6 +1,7 @@
 use crate::core::types::{Point, Rect};
 
 /// Compute perimeter of a contour
+#[must_use] 
 pub fn arc_length(contour: &[Point], closed: bool) -> f64 {
     if contour.len() < 2 {
         return 0.0;
@@ -18,8 +19,8 @@ pub fn arc_length(contour: &[Point], closed: bool) -> f64 {
         let p1 = &contour[i];
         let p2 = &contour[(i + 1) % contour.len()];
 
-        let dx = (p2.x - p1.x) as f64;
-        let dy = (p2.y - p1.y) as f64;
+        let dx = f64::from(p2.x - p1.x);
+        let dy = f64::from(p2.y - p1.y);
 
         length += (dx * dx + dy * dy).sqrt();
     }
@@ -28,6 +29,7 @@ pub fn arc_length(contour: &[Point], closed: bool) -> f64 {
 }
 
 /// Compute area of a contour
+#[must_use] 
 pub fn contour_area(contour: &[Point]) -> f64 {
     if contour.len() < 3 {
         return 0.0;
@@ -37,14 +39,15 @@ pub fn contour_area(contour: &[Point]) -> f64 {
 
     for i in 0..contour.len() {
         let j = (i + 1) % contour.len();
-        area += (contour[i].x * contour[j].y) as f64;
-        area -= (contour[j].x * contour[i].y) as f64;
+        area += f64::from(contour[i].x * contour[j].y);
+        area -= f64::from(contour[j].x * contour[i].y);
     }
 
     area.abs() / 2.0
 }
 
 /// Compute circularity (4π·area / perimeter²)
+#[must_use] 
 pub fn circularity(contour: &[Point]) -> f64 {
     let area = contour_area(contour);
     let perimeter = arc_length(contour, true);
@@ -57,6 +60,7 @@ pub fn circularity(contour: &[Point]) -> f64 {
 }
 
 /// Compute convexity (convex hull area / contour area)
+#[must_use] 
 pub fn convexity(contour: &[Point]) -> f64 {
     let area = contour_area(contour);
 
@@ -71,6 +75,7 @@ pub fn convexity(contour: &[Point]) -> f64 {
 }
 
 /// Compute convex hull using Graham scan
+#[must_use] 
 pub fn convex_hull(points: &[Point]) -> Vec<Point> {
     if points.len() < 3 {
         return points.to_vec();
@@ -91,8 +96,8 @@ pub fn convex_hull(points: &[Point]) -> Vec<Point> {
 
     // Sort by polar angle
     pts[1..].sort_by(|a, b| {
-        let angle_a = ((a.y - anchor.y) as f64).atan2((a.x - anchor.x) as f64);
-        let angle_b = ((b.y - anchor.y) as f64).atan2((b.x - anchor.x) as f64);
+        let angle_a = f64::from(a.y - anchor.y).atan2(f64::from(a.x - anchor.x));
+        let angle_b = f64::from(b.y - anchor.y).atan2(f64::from(b.x - anchor.x));
 
         angle_a.partial_cmp(&angle_b).unwrap()
     });
@@ -112,10 +117,11 @@ pub fn convex_hull(points: &[Point]) -> Vec<Point> {
 }
 
 fn ccw(p1: &Point, p2: &Point, p3: &Point) -> f64 {
-    ((p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)) as f64
+    f64::from((p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x))
 }
 
 /// Compute minimum enclosing circle (Welzl's algorithm)
+#[must_use] 
 pub fn min_enclosing_circle(points: &[Point]) -> (Point, f32) {
     if points.is_empty() {
         return (Point::new(0, 0), 0.0);
@@ -162,20 +168,20 @@ fn min_circle_recursive(
 }
 
 fn circle_from_2_points(p1: &Point, p2: &Point) -> (Point, f32) {
-    let cx = (p1.x + p2.x) / 2;
-    let cy = (p1.y + p2.y) / 2;
+    let cx = i32::midpoint(p1.x, p2.x);
+    let cy = i32::midpoint(p1.y, p2.y);
     let r = distance(p1, p2) / 2.0;
 
     (Point::new(cx, cy), r)
 }
 
 fn circle_from_3_points(p1: &Point, p2: &Point, p3: &Point) -> (Point, f32) {
-    let ax = p1.x as f64;
-    let ay = p1.y as f64;
-    let bx = p2.x as f64;
-    let by = p2.y as f64;
-    let cx = p3.x as f64;
-    let cy = p3.y as f64;
+    let ax = f64::from(p1.x);
+    let ay = f64::from(p1.y);
+    let bx = f64::from(p2.x);
+    let by = f64::from(p2.y);
+    let cx = f64::from(p3.x);
+    let cy = f64::from(p3.y);
 
     let d = 2.0 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
 
@@ -204,6 +210,7 @@ fn is_inside(p: &Point, center: &Point, radius: f32) -> bool {
 }
 
 /// Compute bounding rectangle
+#[must_use] 
 pub fn bounding_rect(points: &[Point]) -> Rect {
     if points.is_empty() {
         return Rect::new(0, 0, 0, 0);
@@ -225,6 +232,7 @@ pub fn bounding_rect(points: &[Point]) -> Rect {
 }
 
 /// Compute aspect ratio (width / height)
+#[must_use] 
 pub fn aspect_ratio(contour: &[Point]) -> f64 {
     let rect = bounding_rect(contour);
 
@@ -232,14 +240,15 @@ pub fn aspect_ratio(contour: &[Point]) -> f64 {
         return f64::INFINITY;
     }
 
-    rect.width as f64 / rect.height as f64
+    f64::from(rect.width) / f64::from(rect.height)
 }
 
 /// Compute extent (contour area / bounding rect area)
+#[must_use] 
 pub fn extent(contour: &[Point]) -> f64 {
     let area = contour_area(contour);
     let rect = bounding_rect(contour);
-    let rect_area = (rect.width * rect.height) as f64;
+    let rect_area = f64::from(rect.width * rect.height);
 
     if rect_area == 0.0 {
         return 0.0;
@@ -249,6 +258,7 @@ pub fn extent(contour: &[Point]) -> f64 {
 }
 
 /// Compute solidity (contour area / convex hull area)
+#[must_use] 
 pub fn solidity(contour: &[Point]) -> f64 {
     let area = contour_area(contour);
     let hull = convex_hull(contour);

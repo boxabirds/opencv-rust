@@ -10,6 +10,7 @@ pub struct Blob {
 
 impl Blob {
     /// Create new blob with given shape
+    #[must_use] 
     pub fn new(shape: Vec<usize>) -> Self {
         let size: usize = shape.iter().product();
         Self {
@@ -43,7 +44,7 @@ impl Blob {
             for row in 0..height {
                 for col in 0..width {
                     let pixel = image.at(row, col)?;
-                    data.push(pixel[c] as f32 / 255.0);
+                    data.push(f32::from(pixel[c]) / 255.0);
                 }
             }
         }
@@ -55,16 +56,19 @@ impl Blob {
     }
 
     /// Get blob shape
+    #[must_use] 
     pub fn shape(&self) -> &[usize] {
         &self.shape
     }
 
     /// Get total number of elements
+    #[must_use] 
     pub fn total(&self) -> usize {
         self.data.len()
     }
 
     /// Get data reference
+    #[must_use] 
     pub fn data(&self) -> &[f32] {
         &self.data
     }
@@ -124,6 +128,7 @@ impl Blob {
     }
 
     /// Clone blob data
+    #[must_use] 
     pub fn clone_blob(&self) -> Self {
         Self {
             data: self.data.clone(),
@@ -158,7 +163,7 @@ pub fn blob_from_image(
                     c
                 };
 
-                let value = (pixel[channel_idx] as f32 * scale_factor) - mean[c];
+                let value = (f32::from(pixel[channel_idx]) * scale_factor) - mean[c];
                 data.push(value);
             }
         }
@@ -207,7 +212,7 @@ pub fn blob_from_images(
                         c
                     };
 
-                    let value = (pixel[channel_idx] as f32 * scale_factor) - mean[c];
+                    let value = (f32::from(pixel[channel_idx]) * scale_factor) - mean[c];
                     data.push(value);
                 }
             }

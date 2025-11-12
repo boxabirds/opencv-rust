@@ -10,6 +10,7 @@ pub struct BackgroundSubtractorMOG2 {
 }
 
 impl BackgroundSubtractorMOG2 {
+    #[must_use] 
     pub fn new(history: i32, var_threshold: f64) -> Self {
         Self {
             history: Vec::new(),
@@ -51,10 +52,10 @@ impl BackgroundSubtractorMOG2 {
                 for hist_img in &self.history {
                     if let Ok(hist_pixel) = hist_img.at(row, col) {
                         let val = if image.channels() == 1 {
-                            hist_pixel[0] as f64
+                            f64::from(hist_pixel[0])
                         } else {
                             // Use brightness for multi-channel
-                            (hist_pixel[0] as f64 + hist_pixel[1] as f64 + hist_pixel[2] as f64) / 3.0
+                            (f64::from(hist_pixel[0]) + f64::from(hist_pixel[1]) + f64::from(hist_pixel[2])) / 3.0
                         };
                         history_vals.push(val);
                     }
@@ -70,9 +71,9 @@ impl BackgroundSubtractorMOG2 {
 
                 // Compare current with median
                 let current_val = if image.channels() == 1 {
-                    current_pixel[0] as f64
+                    f64::from(current_pixel[0])
                 } else {
-                    (current_pixel[0] as f64 + current_pixel[1] as f64 + current_pixel[2] as f64) / 3.0
+                    (f64::from(current_pixel[0]) + f64::from(current_pixel[1]) + f64::from(current_pixel[2])) / 3.0
                 };
 
                 let diff = (current_val - median).abs();
@@ -86,7 +87,7 @@ impl BackgroundSubtractorMOG2 {
     }
 }
 
-/// MeanShift tracker
+/// `MeanShift` tracker
 pub struct MeanShiftTracker {
     window: Rect,
     max_iterations: i32,
@@ -94,6 +95,7 @@ pub struct MeanShiftTracker {
 }
 
 impl MeanShiftTracker {
+    #[must_use] 
     pub fn new(window: Rect) -> Self {
         Self {
             window,
@@ -121,10 +123,10 @@ impl MeanShiftTracker {
                 for x in current_window.x..(current_window.x + current_window.width) {
                     if y >= 0 && y < prob_image.rows() as i32 && x >= 0 && x < prob_image.cols() as i32 {
                         let pixel = prob_image.at(y as usize, x as usize)?;
-                        let weight = pixel[0] as f64;
+                        let weight = f64::from(pixel[0]);
 
-                        sum_x += x as f64 * weight;
-                        sum_y += y as f64 * weight;
+                        sum_x += f64::from(x) * weight;
+                        sum_y += f64::from(y) * weight;
                         sum_weight += weight;
                     }
                 }
@@ -141,7 +143,7 @@ impl MeanShiftTracker {
             let new_x = centroid_x - current_window.width / 2;
             let new_y = centroid_y - current_window.height / 2;
 
-            let shift = ((new_x - current_window.x).pow(2) + (new_y - current_window.y).pow(2)) as f64;
+            let shift = f64::from((new_x - current_window.x).pow(2) + (new_y - current_window.y).pow(2));
 
             current_window.x = new_x;
             current_window.y = new_y;
@@ -156,12 +158,13 @@ impl MeanShiftTracker {
     }
 }
 
-/// CamShift tracker (continuously adaptive mean shift)
+/// `CamShift` tracker (continuously adaptive mean shift)
 pub struct CamShiftTracker {
     mean_shift: MeanShiftTracker,
 }
 
 impl CamShiftTracker {
+    #[must_use] 
     pub fn new(window: Rect) -> Self {
         Self {
             mean_shift: MeanShiftTracker::new(window),

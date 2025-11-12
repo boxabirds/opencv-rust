@@ -21,10 +21,9 @@ pub enum ActivationFunction {
 
 impl AnnMlp {
     /// Create new neural network with specified layer sizes
+    #[must_use] 
     pub fn new(layer_sizes: Vec<usize>) -> Self {
-        if layer_sizes.len() < 2 {
-            panic!("Network must have at least input and output layers");
-        }
+        assert!(layer_sizes.len() >= 2, "Network must have at least input and output layers");
 
         let mut weights = Vec::new();
         let mut biases = Vec::new();
@@ -263,6 +262,7 @@ impl AnnMlp {
     }
 
     /// Save model weights
+    #[must_use] 
     pub fn get_weights(&self) -> Vec<Vec<Vec<f64>>> {
         self.weights.clone()
     }

@@ -92,7 +92,7 @@ pub fn sobel(
                             let y = row + ky - 1;
                             let x = col + kx - 1;
                             let src_idx = y * cols + x;
-                            sum += src_data[src_idx] as f64 * kernel_x[ky][kx];
+                            sum += f64::from(src_data[src_idx]) * kernel_x[ky][kx];
                         }
                     }
                 }
@@ -103,7 +103,7 @@ pub fn sobel(
                             let y = row + ky - 1;
                             let x = col + kx - 1;
                             let src_idx = y * cols + x;
-                            sum += src_data[src_idx] as f64 * kernel_y[ky][kx];
+                            sum += f64::from(src_data[src_idx]) * kernel_y[ky][kx];
                         }
                     }
                 }
@@ -174,7 +174,7 @@ pub fn laplacian(src: &Mat, dst: &mut Mat, ksize: i32) -> Result<()> {
                     let y = row + ky - 1;
                     let x = col + kx - 1;
                     let pixel = src.at(y, x)?;
-                    sum += pixel[0] as f64 * kernel[ky][kx];
+                    sum += f64::from(pixel[0]) * kernel[ky][kx];
                 }
             }
 
@@ -239,8 +239,8 @@ pub fn canny(
             .for_each(|(row, (mag_row, dir_row))| {
                 for col in 0..cols {
                     let idx = row * cols + col;
-                    let gx = grad_x_data[idx] as f32;
-                    let gy = grad_y_data[idx] as f32;
+                    let gx = f32::from(grad_x_data[idx]);
+                    let gy = f32::from(grad_y_data[idx]);
 
                     let mag = (gx * gx + gy * gy).sqrt();
                     mag_row[col] = mag.min(255.0) as u8;
@@ -272,7 +272,7 @@ pub fn canny(
                     // Quantize angle to 0, 45, 90, 135 degrees
                     let angle_deg = (angle * 180.0 / std::f32::consts::PI + 180.0) % 180.0;
 
-                    let (n1, n2) = if angle_deg < 22.5 || angle_deg >= 157.5 {
+                    let (n1, n2) = if !(22.5..157.5).contains(&angle_deg) {
                         // 0 degrees - horizontal
                         (magnitude_data[mag_idx - 1], magnitude_data[mag_idx + 1])
                     } else if angle_deg < 67.5 {
@@ -394,7 +394,7 @@ pub fn scharr(src: &Mat, dst: &mut Mat, dx: i32, dy: i32) -> Result<()> {
                         let y = row + ky - 1;
                         let x = col + kx - 1;
                         let pixel = src.at(y, x)?;
-                        sum += pixel[0] as f64 * kernel_x[ky][kx];
+                        sum += f64::from(pixel[0]) * kernel_x[ky][kx];
                     }
                 }
             }
@@ -405,7 +405,7 @@ pub fn scharr(src: &Mat, dst: &mut Mat, dx: i32, dy: i32) -> Result<()> {
                         let y = row + ky - 1;
                         let x = col + kx - 1;
                         let pixel = src.at(y, x)?;
-                        sum += pixel[0] as f64 * kernel_y[ky][kx];
+                        sum += f64::from(pixel[0]) * kernel_y[ky][kx];
                     }
                 }
             }

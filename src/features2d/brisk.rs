@@ -12,6 +12,7 @@ pub struct BRISK {
 }
 
 impl BRISK {
+    #[must_use] 
     pub fn new(threshold: i32, octaves: usize) -> Self {
         Self {
             threshold,
@@ -20,6 +21,7 @@ impl BRISK {
         }
     }
 
+    #[must_use] 
     pub fn with_pattern_scale(mut self, scale: f32) -> Self {
         self.pattern_scale = scale;
         self
@@ -125,9 +127,9 @@ impl BRISK {
 
                     for &(y, x) in &circle {
                         let val = image.at(y, x)?[0];
-                        if val as i32 > center as i32 + self.threshold {
+                        if i32::from(val) > i32::from(center) + self.threshold {
                             brighter += 1;
-                        } else if (val as i32) < center as i32 - self.threshold {
+                        } else if i32::from(val) < i32::from(center) - self.threshold {
                             darker += 1;
                         }
                     }
@@ -179,7 +181,7 @@ impl BRISK {
 
         for &(y, x) in &circle {
             let val = image.at(y, x)?[0];
-            let diff = (val as i32 - center as i32).abs() as f32;
+            let diff = (i32::from(val) - i32::from(center)).abs() as f32;
             max_score = max_score.max(diff);
         }
 
@@ -255,8 +257,8 @@ impl BRISK {
             let y2 = (row as i32 + p2.0).max(0).min(image.rows() as i32 - 1) as usize;
             let x2 = (col as i32 + p2.1).max(0).min(image.cols() as i32 - 1) as usize;
 
-            let val1 = image.at(y1, x1)?[0] as f32;
-            let val2 = image.at(y2, x2)?[0] as f32;
+            let val1 = f32::from(image.at(y1, x1)?[0]);
+            let val2 = f32::from(image.at(y2, x2)?[0]);
 
             let diff = val1 - val2;
             gx += diff * (p2.1 - p1.1) as f32;

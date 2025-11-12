@@ -10,6 +10,7 @@ pub struct DMatch {
 }
 
 impl DMatch {
+    #[must_use] 
     pub fn new(query_idx: usize, train_idx: usize, distance: f32) -> Self {
         Self {
             query_idx,
@@ -33,6 +34,7 @@ pub struct BFMatcher {
 }
 
 impl BFMatcher {
+    #[must_use] 
     pub fn new(distance_type: DistanceType, cross_check: bool) -> Self {
         Self {
             distance_type,
@@ -162,7 +164,7 @@ impl BFMatcher {
                     .iter()
                     .zip(desc2.iter())
                     .map(|(a, b)| {
-                        let diff = *a as f64 - *b as f64;
+                        let diff = f64::from(*a) - f64::from(*b);
                         diff * diff
                     })
                     .sum();
@@ -214,6 +216,7 @@ impl BFMatcher {
 }
 
 /// Apply Lowe's ratio test to filter matches
+#[must_use] 
 pub fn ratio_test_filter(knn_matches: &[Vec<DMatch>], ratio: f32) -> Vec<DMatch> {
     let mut good_matches = Vec::new();
 

@@ -19,7 +19,14 @@ pub enum CostType {
     ColorGrad,  // Color + gradient
 }
 
+impl Default for GraphCutSeamFinder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GraphCutSeamFinder {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             cost_type: CostType::ColorGrad,
@@ -28,6 +35,7 @@ impl GraphCutSeamFinder {
         }
     }
 
+    #[must_use] 
     pub fn with_cost_type(mut self, cost_type: CostType) -> Self {
         self.cost_type = cost_type;
         self
@@ -173,8 +181,8 @@ impl GraphCutSeamFinder {
         let mut cost = 0.0f32;
 
         for ch in 0..img1.channels().min(img2.channels()) {
-            let val1 = img1.at(row, col)?[ch] as f32;
-            let val2 = img2.at(row, col)?[ch] as f32;
+            let val1 = f32::from(img1.at(row, col)?[ch]);
+            let val2 = f32::from(img2.at(row, col)?[ch]);
             cost += (val1 - val2).abs();
         }
 
@@ -197,13 +205,13 @@ impl GraphCutSeamFinder {
 
         for ch in 0..img1.channels().min(img2.channels()) {
             // Gradient magnitude in img1
-            let dx1 = img1.at(row, col + 1)?[ch] as f32 - img1.at(row, col - 1)?[ch] as f32;
-            let dy1 = img1.at(row + 1, col)?[ch] as f32 - img1.at(row - 1, col)?[ch] as f32;
+            let dx1 = f32::from(img1.at(row, col + 1)?[ch]) - f32::from(img1.at(row, col - 1)?[ch]);
+            let dy1 = f32::from(img1.at(row + 1, col)?[ch]) - f32::from(img1.at(row - 1, col)?[ch]);
             let grad1 = (dx1 * dx1 + dy1 * dy1).sqrt();
 
             // Gradient magnitude in img2
-            let dx2 = img2.at(row, col + 1)?[ch] as f32 - img2.at(row, col - 1)?[ch] as f32;
-            let dy2 = img2.at(row + 1, col)?[ch] as f32 - img2.at(row - 1, col)?[ch] as f32;
+            let dx2 = f32::from(img2.at(row, col + 1)?[ch]) - f32::from(img2.at(row, col - 1)?[ch]);
+            let dy2 = f32::from(img2.at(row + 1, col)?[ch]) - f32::from(img2.at(row - 1, col)?[ch]);
             let grad2 = (dx2 * dx2 + dy2 * dy2).sqrt();
 
             grad_cost += (grad1 - grad2).abs();
@@ -304,7 +312,14 @@ impl GraphCutSeamFinder {
 /// Voronoi seam finder (simpler, faster alternative)
 pub struct VoronoiSeamFinder;
 
+impl Default for VoronoiSeamFinder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VoronoiSeamFinder {
+    #[must_use] 
     pub fn new() -> Self {
         Self
     }

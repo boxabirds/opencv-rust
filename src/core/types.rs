@@ -8,6 +8,7 @@ pub struct Point {
 }
 
 impl Point {
+    #[must_use] 
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
@@ -43,6 +44,7 @@ pub struct Point2f {
 }
 
 impl Point2f {
+    #[must_use] 
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
@@ -57,6 +59,7 @@ pub struct Point3f {
 }
 
 impl Point3f {
+    #[must_use] 
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
@@ -70,10 +73,12 @@ pub struct Size {
 }
 
 impl Size {
+    #[must_use] 
     pub fn new(width: i32, height: i32) -> Self {
         Self { width, height }
     }
 
+    #[must_use] 
     pub fn area(&self) -> i32 {
         self.width * self.height
     }
@@ -89,22 +94,27 @@ pub struct Rect {
 }
 
 impl Rect {
+    #[must_use] 
     pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
         Self { x, y, width, height }
     }
 
+    #[must_use] 
     pub fn area(&self) -> i32 {
         self.width * self.height
     }
 
+    #[must_use] 
     pub fn top_left(&self) -> Point {
         Point::new(self.x, self.y)
     }
 
+    #[must_use] 
     pub fn bottom_right(&self) -> Point {
         Point::new(self.x + self.width, self.y + self.height)
     }
 
+    #[must_use] 
     pub fn contains(&self, point: Point) -> bool {
         point.x >= self.x
             && point.x < self.x + self.width
@@ -120,23 +130,27 @@ pub struct Scalar {
 }
 
 impl Scalar {
+    #[must_use] 
     pub fn new(v0: f64, v1: f64, v2: f64, v3: f64) -> Self {
         Self { val: [v0, v1, v2, v3] }
     }
 
+    #[must_use] 
     pub fn all(v: f64) -> Self {
         Self { val: [v, v, v, v] }
     }
 
+    #[must_use] 
     pub fn from_rgb(r: u8, g: u8, b: u8) -> Self {
         Self {
-            val: [r as f64, g as f64, b as f64, 0.0],
+            val: [f64::from(r), f64::from(g), f64::from(b), 0.0],
         }
     }
 
+    #[must_use] 
     pub fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self {
-            val: [r as f64, g as f64, b as f64, a as f64],
+            val: [f64::from(r), f64::from(g), f64::from(b), f64::from(a)],
         }
     }
 }

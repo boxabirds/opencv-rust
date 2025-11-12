@@ -9,6 +9,7 @@ pub struct QRCodeDetector {
 
 impl QRCodeDetector {
     /// Create a new QR code detector
+    #[must_use] 
     pub fn new() -> Self {
         Self { initialized: true }
     }
@@ -104,8 +105,7 @@ impl QRCodeDetector {
         }
 
         // Calculate center and size
-        let size = (horizontal_ratio.iter().sum::<usize>() + vertical_ratio.iter().sum::<usize>())
-            / 2;
+        let size = usize::midpoint(horizontal_ratio.iter().sum::<usize>(), vertical_ratio.iter().sum::<usize>());
 
         Ok(Some(FinderPattern {
             center: Point2f::new(col as f32, row as f32),

@@ -112,6 +112,7 @@ fn trace_contour(
 }
 
 /// Calculate contour area
+#[must_use] 
 pub fn contour_area(contour: &Contour) -> f64 {
     if contour.len() < 3 {
         return 0.0;
@@ -124,13 +125,14 @@ pub fn contour_area(contour: &Contour) -> f64 {
         let p1 = contour[i];
         let p2 = contour[(i + 1) % contour.len()];
 
-        area += (p1.x * p2.y - p2.x * p1.y) as f64;
+        area += f64::from(p1.x * p2.y - p2.x * p1.y);
     }
 
     (area / 2.0).abs()
 }
 
 /// Calculate arc length (perimeter) of contour
+#[must_use] 
 pub fn arc_length(contour: &Contour, closed: bool) -> f64 {
     if contour.is_empty() {
         return 0.0;
@@ -142,8 +144,8 @@ pub fn arc_length(contour: &Contour, closed: bool) -> f64 {
         let p1 = contour[i];
         let p2 = contour[i + 1];
 
-        let dx = (p2.x - p1.x) as f64;
-        let dy = (p2.y - p1.y) as f64;
+        let dx = f64::from(p2.x - p1.x);
+        let dy = f64::from(p2.y - p1.y);
 
         length += (dx * dx + dy * dy).sqrt();
     }
@@ -152,8 +154,8 @@ pub fn arc_length(contour: &Contour, closed: bool) -> f64 {
         let p1 = contour[contour.len() - 1];
         let p2 = contour[0];
 
-        let dx = (p2.x - p1.x) as f64;
-        let dy = (p2.y - p1.y) as f64;
+        let dx = f64::from(p2.x - p1.x);
+        let dy = f64::from(p2.y - p1.y);
 
         length += (dx * dx + dy * dy).sqrt();
     }
@@ -162,6 +164,7 @@ pub fn arc_length(contour: &Contour, closed: bool) -> f64 {
 }
 
 /// Approximate a contour with fewer points using Douglas-Peucker algorithm
+#[must_use] 
 pub fn approx_poly_dp(contour: &Contour, epsilon: f64, closed: bool) -> Contour {
     if contour.len() <= 2 {
         return contour.clone();
@@ -201,13 +204,13 @@ fn douglas_peucker(points: &[Point], epsilon: f64, start: usize, end: usize) -> 
 }
 
 fn perpendicular_distance(point: Point, line_start: Point, line_end: Point) -> f64 {
-    let dx = (line_end.x - line_start.x) as f64;
-    let dy = (line_end.y - line_start.y) as f64;
+    let dx = f64::from(line_end.x - line_start.x);
+    let dy = f64::from(line_end.y - line_start.y);
 
-    let num = ((line_end.y - line_start.y) * point.x - (line_end.x - line_start.x) * point.y
+    let num = f64::from(((line_end.y - line_start.y) * point.x - (line_end.x - line_start.x) * point.y
         + line_end.x * line_start.y
         - line_end.y * line_start.x)
-        .abs() as f64;
+        .abs());
 
     let den = (dx * dx + dy * dy).sqrt();
 
@@ -219,6 +222,7 @@ fn perpendicular_distance(point: Point, line_start: Point, line_end: Point) -> f
 }
 
 /// Calculate bounding rectangle for a contour
+#[must_use] 
 pub fn bounding_rect(contour: &Contour) -> crate::core::types::Rect {
     if contour.is_empty() {
         return crate::core::types::Rect::new(0, 0, 0, 0);
@@ -250,6 +254,7 @@ pub struct Moments {
 }
 
 impl Moments {
+    #[must_use] 
     pub fn centroid(&self) -> (f64, f64) {
         if self.m00 == 0.0 {
             (0.0, 0.0)
@@ -259,6 +264,7 @@ impl Moments {
     }
 }
 
+#[must_use] 
 pub fn moments(contour: &Contour) -> Moments {
     let mut m00 = 0.0;
     let mut m10 = 0.0;
@@ -268,8 +274,8 @@ pub fn moments(contour: &Contour) -> Moments {
     let mut m02 = 0.0;
 
     for point in contour {
-        let x = point.x as f64;
-        let y = point.y as f64;
+        let x = f64::from(point.x);
+        let y = f64::from(point.y);
 
         m00 += 1.0;
         m10 += x;

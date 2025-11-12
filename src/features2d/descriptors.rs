@@ -13,6 +13,7 @@ pub struct ORB {
 }
 
 impl ORB {
+    #[must_use] 
     pub fn new(n_features: usize) -> Self {
         Self {
             n_features,
@@ -117,6 +118,7 @@ pub struct BRIEF {
 }
 
 impl BRIEF {
+    #[must_use] 
     pub fn new(bytes: usize) -> Self {
         Self { bytes }
     }
@@ -138,6 +140,7 @@ pub struct SimpleSIFT {
 }
 
 impl SimpleSIFT {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             n_octaves: 4,
@@ -170,6 +173,7 @@ impl Default for SimpleSIFT {
 }
 
 /// Hamming distance between two binary descriptors
+#[must_use] 
 pub fn hamming_distance(desc1: &[u8], desc2: &[u8]) -> u32 {
     desc1.iter()
         .zip(desc2.iter())

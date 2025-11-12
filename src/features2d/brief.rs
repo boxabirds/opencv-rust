@@ -11,13 +11,21 @@ pub struct BRIEF {
     test_pairs: Vec<(Point, Point)>,
 }
 
+impl Default for BRIEF {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BRIEF {
     /// Create BRIEF descriptor with default parameters
+    #[must_use] 
     pub fn new() -> Self {
         Self::with_params(32, 48, false)
     }
 
     /// Create BRIEF descriptor with custom parameters
+    #[must_use] 
     pub fn with_params(bytes: usize, patch_size: i32, use_orientation: bool) -> Self {
         let mut brief = Self {
             bytes,
@@ -37,7 +45,7 @@ impl BRIEF {
         // Simple pseudo-random generator for reproducibility
         let mut rng = SimpleRng::new(42);
 
-        let sigma = self.patch_size as f64 / 5.0;
+        let sigma = f64::from(self.patch_size) / 5.0;
         let num_pairs = self.bytes * 8;
 
         for _ in 0..num_pairs {
@@ -80,7 +88,7 @@ impl BRIEF {
 
         // Compute rotation matrix if using orientation
         let (cos_angle, sin_angle) = if self.use_orientation {
-            let angle = keypoint.angle as f64 * std::f64::consts::PI / 180.0;
+            let angle = f64::from(keypoint.angle) * std::f64::consts::PI / 180.0;
             (angle.cos(), angle.sin())
         } else {
             (1.0, 0.0)
@@ -99,25 +107,25 @@ impl BRIEF {
 
                 // Apply rotation if needed
                 let x1 = if self.use_orientation {
-                    center_x + (p1.x as f64 * cos_angle - p1.y as f64 * sin_angle) as i32
+                    center_x + (f64::from(p1.x) * cos_angle - f64::from(p1.y) * sin_angle) as i32
                 } else {
                     center_x + p1.x
                 };
 
                 let y1 = if self.use_orientation {
-                    center_y + (p1.x as f64 * sin_angle + p1.y as f64 * cos_angle) as i32
+                    center_y + (f64::from(p1.x) * sin_angle + f64::from(p1.y) * cos_angle) as i32
                 } else {
                     center_y + p1.y
                 };
 
                 let x2 = if self.use_orientation {
-                    center_x + (p2.x as f64 * cos_angle - p2.y as f64 * sin_angle) as i32
+                    center_x + (f64::from(p2.x) * cos_angle - f64::from(p2.y) * sin_angle) as i32
                 } else {
                     center_x + p2.x
                 };
 
                 let y2 = if self.use_orientation {
-                    center_y + (p2.x as f64 * sin_angle + p2.y as f64 * cos_angle) as i32
+                    center_y + (f64::from(p2.x) * sin_angle + f64::from(p2.y) * cos_angle) as i32
                 } else {
                     center_y + p2.y
                 };

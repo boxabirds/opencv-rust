@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// OpenCV error types
+/// `OpenCV` error types
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Invalid image format: {0}")]

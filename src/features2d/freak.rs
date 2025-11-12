@@ -20,13 +20,21 @@ struct ReceptiveField {
     layer: usize,
 }
 
+impl Default for FREAK {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FREAK {
     /// Create FREAK descriptor with default parameters
+    #[must_use] 
     pub fn new() -> Self {
         Self::with_params(true, true, 22.0)
     }
 
     /// Create FREAK descriptor with custom parameters
+    #[must_use] 
     pub fn with_params(
         orientation_normalized: bool,
         scale_normalized: bool,
@@ -138,7 +146,7 @@ impl FREAK {
         let angle = if self.orientation_normalized {
             self.compute_orientation(&intensities)
         } else {
-            keypoint.angle as f32
+            keypoint.angle
         };
 
         let cos_angle = (angle * std::f32::consts::PI / 180.0).cos();
@@ -199,7 +207,7 @@ impl FREAK {
 
                     if px >= 0 && px < image.cols() as i32 && py >= 0 && py < image.rows() as i32 {
                         let pixel = image.at(py as usize, px as usize)?;
-                        sum += pixel[0] as f32;
+                        sum += f32::from(pixel[0]);
                         count += 1;
                     }
                 }

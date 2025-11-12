@@ -117,8 +117,8 @@ pub fn hough_lines_p(
             }
 
             let p2 = edge_points[j];
-            let dx = (p2.x - p1.x) as f64;
-            let dy = (p2.y - p1.y) as f64;
+            let dx = f64::from(p2.x - p1.x);
+            let dy = f64::from(p2.y - p1.y);
             let len = (dx * dx + dy * dy).sqrt();
 
             if len > best_len && len >= min_line_length {
@@ -177,12 +177,12 @@ pub fn hough_circles(
                 let mut votes = 0;
 
                 // Sample points on the circle perimeter
-                let num_samples = (2.0 * PI * r as f64) as i32;
+                let num_samples = (2.0 * PI * f64::from(r)) as i32;
 
                 for i in 0..num_samples {
-                    let angle = 2.0 * PI * i as f64 / num_samples as f64;
-                    let x = col as i32 + (r as f64 * angle.cos()) as i32;
-                    let y = row as i32 + (r as f64 * angle.sin()) as i32;
+                    let angle = 2.0 * PI * f64::from(i) / f64::from(num_samples);
+                    let x = col as i32 + (f64::from(r) * angle.cos()) as i32;
+                    let y = row as i32 + (f64::from(r) * angle.sin()) as i32;
 
                     if x >= 0 && x < image.cols() as i32 && y >= 0 && y < image.rows() as i32 {
                         let pixel = edges.at(y as usize, x as usize)?;
@@ -192,7 +192,7 @@ pub fn hough_circles(
                     }
                 }
 
-                let vote_ratio = votes as f64 / num_samples as f64;
+                let vote_ratio = f64::from(votes) / f64::from(num_samples);
 
                 if vote_ratio >= param2 {
                     circles.push(Circle {
@@ -214,8 +214,8 @@ pub fn hough_circles(
         let mut is_maximum = true;
 
         for existing in &filtered_circles {
-            let dx = (circle.center.x - existing.center.x) as f64;
-            let dy = (circle.center.y - existing.center.y) as f64;
+            let dx = f64::from(circle.center.x - existing.center.x);
+            let dy = f64::from(circle.center.y - existing.center.y);
             let dist = (dx * dx + dy * dy).sqrt();
 
             if dist < min_dist {

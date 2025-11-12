@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 
-/// AdaBoost classifier
+/// `AdaBoost` classifier
 pub struct AdaBoostClassifier {
     weak_classifiers: Vec<WeakClassifier>,
     alphas: Vec<f64>,
@@ -16,7 +16,8 @@ struct WeakClassifier {
 }
 
 impl AdaBoostClassifier {
-    /// Create new AdaBoost classifier
+    /// Create new `AdaBoost` classifier
+    #[must_use] 
     pub fn new(num_iterations: usize) -> Self {
         Self {
             weak_classifiers: Vec::new(),
@@ -86,7 +87,7 @@ impl AdaBoostClassifier {
         let mut score = 0.0;
 
         for (classifier, &alpha) in self.weak_classifiers.iter().zip(self.alphas.iter()) {
-            score += alpha * classifier.predict(features) as f64;
+            score += alpha * f64::from(classifier.predict(features));
         }
 
         Ok(if score >= 0.0 { 1 } else { -1 })
@@ -114,7 +115,7 @@ impl AdaBoostClassifier {
 
             // Try thresholds at midpoints
             for i in 0..values.len() - 1 {
-                let threshold = (values[i] + values[i + 1]) / 2.0;
+                let threshold = f64::midpoint(values[i], values[i + 1]);
 
                 // Try both polarities
                 for &polarity in &[1, -1] {
@@ -177,6 +178,7 @@ struct RegressionTree {
 
 impl GradientBoostingRegressor {
     /// Create new gradient boosting regressor
+    #[must_use] 
     pub fn new(num_iterations: usize, learning_rate: f64, max_depth: usize) -> Self {
         Self {
             trees: Vec::new(),
@@ -320,7 +322,7 @@ impl GradientBoostingRegressor {
             values.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
             for i in 0..values.len() - 1 {
-                let threshold = (values[i].0 + values[i + 1].0) / 2.0;
+                let threshold = f64::midpoint(values[i].0, values[i + 1].0);
 
                 let (left_targets, right_targets): (Vec<f64>, Vec<f64>) =
                     values.iter().partition_map(|(v, t)| {
@@ -414,7 +416,7 @@ trait PartitionMapExt {
         F: FnMut(&Self::Left) -> itertools::Either<L, R>;
 }
 
-impl<'a, T> PartitionMapExt for std::slice::Iter<'a, T> {
+impl<T> PartitionMapExt for std::slice::Iter<'_, T> {
     type Left = T;
     type Right = T;
 

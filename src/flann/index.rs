@@ -16,6 +16,7 @@ impl Index {
     }
 
     /// Create LSH index
+    #[must_use] 
     pub fn new_lsh(dimension: usize, num_tables: usize, num_bits: usize) -> Self {
         Index::LSH(LSHIndex::new(dimension, num_tables, num_bits))
     }
@@ -206,6 +207,7 @@ impl Default for IndexParams {
 }
 
 impl IndexParams {
+    #[must_use] 
     pub fn kdtree(trees: usize) -> Self {
         Self {
             algorithm: Algorithm::KDTree,
@@ -214,6 +216,7 @@ impl IndexParams {
         }
     }
 
+    #[must_use] 
     pub fn lsh(table_number: usize, key_size: usize, multi_probe_level: usize) -> Self {
         Self {
             algorithm: Algorithm::LSH,
@@ -224,6 +227,7 @@ impl IndexParams {
         }
     }
 
+    #[must_use] 
     pub fn linear() -> Self {
         Self {
             algorithm: Algorithm::Linear,

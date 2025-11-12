@@ -48,7 +48,7 @@ pub fn fast_nl_means_denoising_colored(
 
                         let neighbor = src.at(y as usize, x as usize)?;
                         for ch in 0..3 {
-                            pixel_sum[ch] += weight * neighbor[ch] as f32;
+                            pixel_sum[ch] += weight * f32::from(neighbor[ch]);
                         }
                         weight_sum += weight;
                     }
@@ -94,7 +94,7 @@ fn calculate_color_patch_distance(
                 let p2 = img.at(y2 as usize, x2 as usize)?;
 
                 for ch in 0..3 {
-                    let diff = p1[ch] as f32 - p2[ch] as f32;
+                    let diff = f32::from(p1[ch]) - f32::from(p2[ch]);
                     dist += diff * diff;
                 }
                 count += 1;
@@ -129,7 +129,7 @@ pub fn bilateral_filter(
     for row in 0..src.rows() {
         for col in 0..src.cols() {
             for ch in 0..src.channels() {
-                let center_val = src.at(row, col)?[ch] as f32;
+                let center_val = f32::from(src.at(row, col)?[ch]);
                 let mut sum = 0.0f32;
                 let mut weight_sum = 0.0f32;
 
@@ -138,7 +138,7 @@ pub fn bilateral_filter(
                         let y = (row as i32 + dy).clamp(0, src.rows() as i32 - 1) as usize;
                         let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
 
-                        let neighbor_val = src.at(y, x)?[ch] as f32;
+                        let neighbor_val = f32::from(src.at(y, x)?[ch]);
                         let color_diff = neighbor_val - center_val;
 
                         let color_weight = (-(color_diff * color_diff) / (2.0 * sigma_color * sigma_color)).exp();
@@ -178,13 +178,13 @@ pub fn anisotropic_diffusion(
 
         for row in 1..src.rows() - 1 {
             for col in 1..src.cols() - 1 {
-                let center = result.at(row, col)?[0] as f32;
+                let center = f32::from(result.at(row, col)?[0]);
 
                 // Compute gradients
-                let north = result.at(row - 1, col)?[0] as f32 - center;
-                let south = result.at(row + 1, col)?[0] as f32 - center;
-                let east = result.at(row, col + 1)?[0] as f32 - center;
-                let west = result.at(row, col - 1)?[0] as f32 - center;
+                let north = f32::from(result.at(row - 1, col)?[0]) - center;
+                let south = f32::from(result.at(row + 1, col)?[0]) - center;
+                let east = f32::from(result.at(row, col + 1)?[0]) - center;
+                let west = f32::from(result.at(row, col - 1)?[0]) - center;
 
                 // Compute conductance (edge-stopping function)
                 let cn = (-((north / kappa).powi(2))).exp();
@@ -208,7 +208,7 @@ pub fn anisotropic_diffusion(
 
 /// Median filter for salt-and-pepper noise
 pub fn median_filter(src: &Mat, kernel_size: usize) -> Result<Mat> {
-    if kernel_size % 2 == 0 {
+    if kernel_size.is_multiple_of(2) {
         return Err(Error::InvalidParameter(
             "Kernel size must be odd".to_string(),
         ));
@@ -259,11 +259,11 @@ pub fn wiener_filter(src: &Mat, noise_variance: f32) -> Result<Mat> {
             let mut sum_sq = 0.0f32;
             let mut count = 0;
 
-            for dy in -(radius as i32)..=(radius as i32) {
-                for dx in -(radius as i32)..=(radius as i32) {
+            for dy in -radius..=radius {
+                for dx in -radius..=radius {
                     let y = (row as i32 + dy).clamp(0, src.rows() as i32 - 1) as usize;
                     let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
-                    let val = src.at(y, x)?[0] as f32;
+                    let val = f32::from(src.at(y, x)?[0]);
                     sum += val;
                     sum_sq += val * val;
                     count += 1;
@@ -274,7 +274,7 @@ pub fn wiener_filter(src: &Mat, noise_variance: f32) -> Result<Mat> {
             let variance = (sum_sq / count as f32) - (mean * mean);
 
             // Wiener filter formula
-            let center = src.at(row, col)?[0] as f32;
+            let center = f32::from(src.at(row, col)?[0]);
             let filtered = if variance > noise_variance {
                 mean + ((variance - noise_variance) / variance) * (center - mean)
             } else {
@@ -307,13 +307,13 @@ pub fn total_variation_denoise(
 
         for row in 1..src.rows() - 1 {
             for col in 1..src.cols() - 1 {
-                let center = result.at(row, col)?[0] as f32;
+                let center = f32::from(result.at(row, col)?[0]);
 
                 // Compute gradients
-                let dx_forward = result.at(row, col + 1)?[0] as f32 - center;
-                let dx_backward = center - result.at(row, col - 1)?[0] as f32;
-                let dy_forward = result.at(row + 1, col)?[0] as f32 - center;
-                let dy_backward = center - result.at(row - 1, col)?[0] as f32;
+                let dx_forward = f32::from(result.at(row, col + 1)?[0]) - center;
+                let dx_backward = center - f32::from(result.at(row, col - 1)?[0]);
+                let dy_forward = f32::from(result.at(row + 1, col)?[0]) - center;
+                let dy_backward = center - f32::from(result.at(row - 1, col)?[0]);
 
                 // Compute divergence
                 let grad_mag_x = (dx_forward.powi(2) + dy_forward.powi(2)).sqrt() + 1e-8;
@@ -323,7 +323,7 @@ pub fn total_variation_denoise(
                     + (dy_forward / grad_mag_x - dy_backward / grad_mag_y);
 
                 // Update
-                let data_term = center - src.at(row, col)?[0] as f32;
+                let data_term = center - f32::from(src.at(row, col)?[0]);
                 let update = lambda * div - data_term;
 
                 let new_val = (center + 0.1 * update).clamp(0.0, 255.0);

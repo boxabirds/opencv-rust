@@ -15,11 +15,13 @@ pub struct CameraMatrix {
 }
 
 impl CameraMatrix {
+    #[must_use] 
     pub fn new(fx: f64, fy: f64, cx: f64, cy: f64) -> Self {
         Self { fx, fy, cx, cy }
     }
 
     /// Create from 3x3 matrix data
+    #[must_use] 
     pub fn from_matrix(data: &[[f64; 3]; 3]) -> Self {
         Self {
             fx: data[0][0],
@@ -30,6 +32,7 @@ impl CameraMatrix {
     }
 
     /// Convert to 3x3 matrix
+    #[must_use] 
     pub fn to_matrix(&self) -> [[f64; 3]; 3] {
         [
             [self.fx, 0.0, self.cx],
@@ -39,16 +42,18 @@ impl CameraMatrix {
     }
 
     /// Project a 3D point to 2D image coordinates
+    #[must_use] 
     pub fn project(&self, point_3d: &Point3f) -> Point {
-        let x = self.fx * point_3d.x as f64 / point_3d.z as f64 + self.cx;
-        let y = self.fy * point_3d.y as f64 / point_3d.z as f64 + self.cy;
+        let x = self.fx * f64::from(point_3d.x) / f64::from(point_3d.z) + self.cx;
+        let y = self.fy * f64::from(point_3d.y) / f64::from(point_3d.z) + self.cy;
         Point::new(x as i32, y as i32)
     }
 
     /// Unproject a 2D point to 3D ray (normalized at depth=1)
+    #[must_use] 
     pub fn unproject(&self, point_2d: &Point, depth: f64) -> Point3f {
-        let x = (point_2d.x as f64 - self.cx) * depth / self.fx;
-        let y = (point_2d.y as f64 - self.cy) * depth / self.fy;
+        let x = (f64::from(point_2d.x) - self.cx) * depth / self.fx;
+        let y = (f64::from(point_2d.y) - self.cy) * depth / self.fy;
         Point3f::new(x as f32, y as f32, depth as f32)
     }
 }
@@ -63,6 +68,7 @@ pub struct DistortionCoefficients {
 }
 
 impl DistortionCoefficients {
+    #[must_use] 
     pub fn new(k1: f64, k2: f64, k3: f64, p1: f64, p2: f64) -> Self {
         Self {
             k: [k1, k2, k3],
@@ -70,6 +76,7 @@ impl DistortionCoefficients {
         }
     }
 
+    #[must_use] 
     pub fn zero() -> Self {
         Self {
             k: [0.0, 0.0, 0.0],
@@ -78,6 +85,7 @@ impl DistortionCoefficients {
     }
 
     /// Apply distortion to normalized image coordinates
+    #[must_use] 
     pub fn distort(&self, x: f64, y: f64) -> (f64, f64) {
         let r2 = x * x + y * y;
         let r4 = r2 * r2;
@@ -97,6 +105,7 @@ impl DistortionCoefficients {
     }
 
     /// Remove distortion from image coordinates (iterative)
+    #[must_use] 
     pub fn undistort(&self, x_dist: f64, y_dist: f64) -> (f64, f64) {
         let mut x = x_dist;
         let mut y = y_dist;
@@ -104,8 +113,8 @@ impl DistortionCoefficients {
         // Iterative undistortion
         for _ in 0..5 {
             let (x_d, y_d) = self.distort(x, y);
-            x = x - (x_d - x_dist);
-            y = y - (y_d - y_dist);
+            x -= (x_d - x_dist);
+            y -= (y_d - y_dist);
         }
 
         (x, y)
@@ -163,8 +172,8 @@ pub fn calibrate_camera(
                 // Project 3D point
                 let projected = project_point(obj_pt, &rvec, &tvec, &camera, &dist);
 
-                let dx = projected.x as f64 - img_pt.x as f64;
-                let dy = projected.y as f64 - img_pt.y as f64;
+                let dx = f64::from(projected.x) - f64::from(img_pt.x);
+                let dy = f64::from(projected.y) - f64::from(img_pt.y);
 
                 total_error += dx * dx + dy * dy;
                 num_points += 1;
@@ -174,7 +183,7 @@ pub fn calibrate_camera(
             }
         }
 
-        let rms_error = (total_error / num_points as f64).sqrt();
+        let rms_error = (total_error / f64::from(num_points)).sqrt();
 
         if (prev_error - rms_error).abs() < 1e-6 {
             return Ok((camera, dist, rms_error));
@@ -224,9 +233,9 @@ fn project_point(
     let r_mat = rodrigues(rvec);
 
     // Transform point: R * P + t
-    let x = r_mat[0][0] * point_3d.x as f64 + r_mat[0][1] * point_3d.y as f64 + r_mat[0][2] * point_3d.z as f64 + tvec[0];
-    let y = r_mat[1][0] * point_3d.x as f64 + r_mat[1][1] * point_3d.y as f64 + r_mat[1][2] * point_3d.z as f64 + tvec[1];
-    let z = r_mat[2][0] * point_3d.x as f64 + r_mat[2][1] * point_3d.y as f64 + r_mat[2][2] * point_3d.z as f64 + tvec[2];
+    let x = r_mat[0][0] * f64::from(point_3d.x) + r_mat[0][1] * f64::from(point_3d.y) + r_mat[0][2] * f64::from(point_3d.z) + tvec[0];
+    let y = r_mat[1][0] * f64::from(point_3d.x) + r_mat[1][1] * f64::from(point_3d.y) + r_mat[1][2] * f64::from(point_3d.z) + tvec[1];
+    let z = r_mat[2][0] * f64::from(point_3d.x) + r_mat[2][1] * f64::from(point_3d.y) + r_mat[2][2] * f64::from(point_3d.z) + tvec[2];
 
     // Normalize
     let xn = x / z;
@@ -243,6 +252,7 @@ fn project_point(
 }
 
 /// Convert rotation vector to rotation matrix using Rodrigues formula
+#[must_use] 
 pub fn rodrigues(rvec: &[f64; 3]) -> [[f64; 3]; 3] {
     let theta = (rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2]).sqrt();
 

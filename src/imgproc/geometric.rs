@@ -28,8 +28,7 @@ pub fn resize(src: &Mat, dst: &mut Mat, dsize: Size, interpolation: Interpolatio
         InterpolationFlag::Nearest => resize_nearest(src, dst),
         InterpolationFlag::Linear => resize_bilinear(src, dst),
         _ => Err(Error::UnsupportedOperation(format!(
-            "Interpolation method {:?} not yet implemented",
-            interpolation
+            "Interpolation method {interpolation:?} not yet implemented"
         ))),
     }
 }
@@ -125,17 +124,17 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                 // Manual unrolling for common channel counts - optimized
                 match channels {
                     1 => {
-                        let v = src_data[idx11] as f32 * w1
-                            + src_data[idx21] as f32 * w2
-                            + src_data[idx12] as f32 * w3
-                            + src_data[idx22] as f32 * w4;
+                        let v = f32::from(src_data[idx11]) * w1
+                            + f32::from(src_data[idx21]) * w2
+                            + f32::from(src_data[idx12]) * w3
+                            + f32::from(src_data[idx22]) * w4;
                         dst_pixel[0] = (v + 0.5) as u8; // Fast rounding via add 0.5
                     }
                     3 => {
                         // Optimized 3-channel: process inline with minimal conversions
                         #[inline(always)]
                         fn interp(v11: u8, v21: u8, v12: u8, v22: u8, w1: f32, w2: f32, w3: f32, w4: f32) -> u8 {
-                            (v11 as f32 * w1 + v21 as f32 * w2 + v12 as f32 * w3 + v22 as f32 * w4 + 0.5) as u8
+                            (f32::from(v11) * w1 + f32::from(v21) * w2 + f32::from(v12) * w3 + f32::from(v22) * w4 + 0.5) as u8
                         }
 
                         dst_pixel[0] = interp(src_data[idx11], src_data[idx21], src_data[idx12], src_data[idx22], w1, w2, w3, w4);
@@ -146,7 +145,7 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                         // Optimized 4-channel
                         #[inline(always)]
                         fn interp(v11: u8, v21: u8, v12: u8, v22: u8, w1: f32, w2: f32, w3: f32, w4: f32) -> u8 {
-                            (v11 as f32 * w1 + v21 as f32 * w2 + v12 as f32 * w3 + v22 as f32 * w4 + 0.5) as u8
+                            (f32::from(v11) * w1 + f32::from(v21) * w2 + f32::from(v12) * w3 + f32::from(v22) * w4 + 0.5) as u8
                         }
 
                         dst_pixel[0] = interp(src_data[idx11], src_data[idx21], src_data[idx12], src_data[idx22], w1, w2, w3, w4);
@@ -157,10 +156,10 @@ fn resize_bilinear(src: &Mat, dst: &mut Mat) -> Result<()> {
                     _ => {
                         // Generic case for other channel counts
                         for ch in 0..channels {
-                            let v = src_data[idx11 + ch] as f32 * w1
-                                + src_data[idx21 + ch] as f32 * w2
-                                + src_data[idx12 + ch] as f32 * w3
-                                + src_data[idx22 + ch] as f32 * w4;
+                            let v = f32::from(src_data[idx11 + ch]) * w1
+                                + f32::from(src_data[idx21 + ch]) * w2
+                                + f32::from(src_data[idx12 + ch]) * w3
+                                + f32::from(src_data[idx22 + ch]) * w4;
                             dst_pixel[ch] = (v + 0.5) as u8; // Fast rounding
                         }
                     }
@@ -313,31 +312,33 @@ pub fn warp_perspective(
 }
 
 /// Get rotation matrix for 2D rotation
+#[must_use] 
 pub fn get_rotation_matrix_2d(center: Point2f, angle: f64, scale: f64) -> [[f64; 3]; 2] {
     let alpha = scale * angle.to_radians().cos();
     let beta = scale * angle.to_radians().sin();
 
     [
-        [alpha, beta, (1.0 - alpha) * center.x as f64 - beta * center.y as f64],
-        [-beta, alpha, beta * center.x as f64 + (1.0 - alpha) * center.y as f64],
+        [alpha, beta, (1.0 - alpha) * f64::from(center.x) - beta * f64::from(center.y)],
+        [-beta, alpha, beta * f64::from(center.x) + (1.0 - alpha) * f64::from(center.y)],
     ]
 }
 
 /// Get affine transformation from three point pairs
+#[must_use] 
 pub fn get_affine_transform(src: &[Point2f; 3], dst: &[Point2f; 3]) -> [[f64; 3]; 2] {
-    let x0 = src[0].x as f64;
-    let y0 = src[0].y as f64;
-    let x1 = src[1].x as f64;
-    let y1 = src[1].y as f64;
-    let x2 = src[2].x as f64;
-    let y2 = src[2].y as f64;
+    let x0 = f64::from(src[0].x);
+    let y0 = f64::from(src[0].y);
+    let x1 = f64::from(src[1].x);
+    let y1 = f64::from(src[1].y);
+    let x2 = f64::from(src[2].x);
+    let y2 = f64::from(src[2].y);
 
-    let u0 = dst[0].x as f64;
-    let v0 = dst[0].y as f64;
-    let u1 = dst[1].x as f64;
-    let v1 = dst[1].y as f64;
-    let u2 = dst[2].x as f64;
-    let v2 = dst[2].y as f64;
+    let u0 = f64::from(dst[0].x);
+    let v0 = f64::from(dst[0].y);
+    let u1 = f64::from(dst[1].x);
+    let v1 = f64::from(dst[1].y);
+    let u2 = f64::from(dst[2].x);
+    let v2 = f64::from(dst[2].y);
 
     let det = x0 * (y1 - y2) - x1 * (y0 - y2) + x2 * (y0 - y1);
 

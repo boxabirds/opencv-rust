@@ -39,6 +39,7 @@ impl VideoWriter {
     }
 
     /// Check if video writer is opened
+    #[must_use] 
     pub fn is_opened(&self) -> bool {
         self.is_opened
     }
@@ -91,19 +92,23 @@ impl VideoWriter {
     }
 
     /// Get number of frames written
+    #[must_use] 
     pub fn frame_count(&self) -> usize {
         self.frames.len()
     }
 
     /// Get video properties
+    #[must_use] 
     pub fn get_fps(&self) -> f64 {
         self.fps
     }
 
+    #[must_use] 
     pub fn get_frame_size(&self) -> (usize, usize) {
         (self.frame_width, self.frame_height)
     }
 
+    #[must_use] 
     pub fn get_fourcc(&self) -> FourCC {
         self.fourcc
     }
@@ -141,12 +146,13 @@ pub enum FourCC {
 }
 
 impl FourCC {
-    /// Create FourCC from four characters
+    /// Create `FourCC` from four characters
+    #[must_use] 
     pub fn from_chars(c1: u8, c2: u8, c3: u8, c4: u8) -> Self {
         FourCC::Custom([c1, c2, c3, c4])
     }
 
-    /// Create FourCC from string
+    /// Create `FourCC` from string
     pub fn from_str(s: &str) -> Result<Self> {
         if s.len() != 4 {
             return Err(Error::InvalidParameter(
@@ -158,7 +164,8 @@ impl FourCC {
         Ok(FourCC::Custom([bytes[0], bytes[1], bytes[2], bytes[3]]))
     }
 
-    /// Convert FourCC to integer
+    /// Convert `FourCC` to integer
+    #[must_use] 
     pub fn to_int(&self) -> i32 {
         let bytes = match self {
             FourCC::MJPEG => [b'M', b'J', b'P', b'G'],
@@ -176,7 +183,8 @@ impl FourCC {
         i32::from_le_bytes(bytes)
     }
 
-    /// Create FourCC from integer
+    /// Create `FourCC` from integer
+    #[must_use] 
     pub fn from_int(code: i32) -> Self {
         let bytes = code.to_le_bytes();
         FourCC::Custom(bytes)
@@ -184,6 +192,7 @@ impl FourCC {
 }
 
 /// Get available video codecs
+#[must_use] 
 pub fn get_available_codecs() -> Vec<FourCC> {
     vec![
         FourCC::MJPEG,
@@ -198,6 +207,7 @@ pub fn get_available_codecs() -> Vec<FourCC> {
 }
 
 /// Check if codec is available
+#[must_use] 
 pub fn is_codec_available(fourcc: FourCC) -> bool {
     // In real implementation, would query system for codec support
     matches!(fourcc,

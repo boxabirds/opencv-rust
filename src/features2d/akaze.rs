@@ -32,7 +32,14 @@ pub enum DiffusivityType {
     Charbonnier, // Charbonnier diffusivity
 }
 
+impl Default for AKAZE {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AKAZE {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             descriptor_type: DescriptorType::MLDB,
@@ -45,6 +52,7 @@ impl AKAZE {
         }
     }
 
+    #[must_use] 
     pub fn with_threshold(mut self, threshold: f64) -> Self {
         self.threshold = threshold;
         self
@@ -78,7 +86,7 @@ impl AKAZE {
         let mut base_image = Mat::new(image.rows(), image.cols(), 1, MatDepth::F32)?;
         for row in 0..image.rows() {
             for col in 0..image.cols() {
-                let val = (image.at(row, col)?[0] as f32) / 255.0;
+                let val = f32::from(image.at(row, col)?[0]) / 255.0;
                 base_image.set_f32(row, col, 0, val)?;
             }
         }
@@ -384,8 +392,7 @@ impl AKAZE {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
 
         Ok((max_bin as f32 * 10.0 - 180.0) * PI as f32 / 180.0)
     }
@@ -396,7 +403,7 @@ impl AKAZE {
 
         // M-LDB sampling pattern (simplified - using grid pattern)
         let pattern_size = 10;
-        let num_bits = 486; // Standard AKAZE descriptor size
+        let num_bits: usize = 486; // Standard AKAZE descriptor size
 
         for kp in keypoints {
             let octave = kp.octave as usize;
@@ -407,7 +414,7 @@ impl AKAZE {
             // Find appropriate scale level
             let mut step_idx = 0;
             for (i, step) in evolution.iter().enumerate() {
-                if (step.sigma - kp.size as f64).abs() < 0.1 {
+                if (step.sigma - f64::from(kp.size)).abs() < 0.1 {
                     step_idx = i;
                     break;
                 }
@@ -424,7 +431,7 @@ impl AKAZE {
             }
 
             // Compute M-LDB descriptor
-            let mut descriptor = vec![0u8; (num_bits + 7) / 8];
+            let mut descriptor = vec![0u8; num_bits.div_ceil(8)];
             let mut bit_idx = 0;
 
             let cos_angle = kp.angle.cos();

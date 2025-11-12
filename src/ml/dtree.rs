@@ -21,6 +21,7 @@ struct TreeNode {
 
 impl DecisionTree {
     /// Create new decision tree classifier
+    #[must_use] 
     pub fn classifier() -> Self {
         Self {
             root: None,
@@ -32,6 +33,7 @@ impl DecisionTree {
     }
 
     /// Create new decision tree regressor
+    #[must_use] 
     pub fn regressor() -> Self {
         Self {
             root: None,
@@ -43,18 +45,21 @@ impl DecisionTree {
     }
 
     /// Set maximum depth of the tree
+    #[must_use] 
     pub fn with_max_depth(mut self, depth: usize) -> Self {
         self.max_depth = depth;
         self
     }
 
     /// Set minimum samples required to split a node
+    #[must_use] 
     pub fn with_min_samples_split(mut self, samples: usize) -> Self {
         self.min_samples_split = samples;
         self
     }
 
     /// Set minimum samples required in a leaf node
+    #[must_use] 
     pub fn with_min_samples_leaf(mut self, samples: usize) -> Self {
         self.min_samples_leaf = samples;
         self
@@ -167,7 +172,7 @@ impl DecisionTree {
 
             // Try each unique value as threshold
             for i in 0..values.len() - 1 {
-                let threshold = (values[i] + values[i + 1]) / 2.0;
+                let threshold = f64::midpoint(values[i], values[i + 1]);
 
                 let (left, right) = self.split_data(data, indices, feature, threshold);
 
@@ -277,7 +282,7 @@ impl DecisionTree {
             }
 
             let (&class, _) = counts.iter().max_by_key(|(_, &count)| count).unwrap();
-            class as f64
+            f64::from(class)
         } else {
             // Mean value for regression
             indices.iter().map(|&i| labels[i]).sum::<f64>() / indices.len() as f64
@@ -295,22 +300,20 @@ impl DecisionTree {
     }
 
     fn predict_node(&self, node: &TreeNode, sample: &[f64]) -> f64 {
-        match node.value {
-            Some(value) => value,
-            None => {
-                let feature = node.feature_index.unwrap();
-                let threshold = node.threshold.unwrap();
+        if let Some(value) = node.value { value } else {
+            let feature = node.feature_index.unwrap();
+            let threshold = node.threshold.unwrap();
 
-                if sample[feature] <= threshold {
-                    self.predict_node(node.left.as_ref().unwrap(), sample)
-                } else {
-                    self.predict_node(node.right.as_ref().unwrap(), sample)
-                }
+            if sample[feature] <= threshold {
+                self.predict_node(node.left.as_ref().unwrap(), sample)
+            } else {
+                self.predict_node(node.right.as_ref().unwrap(), sample)
             }
         }
     }
 
     /// Get tree depth
+    #[must_use] 
     pub fn get_depth(&self) -> usize {
         match &self.root {
             None => 0,
@@ -329,6 +332,7 @@ impl DecisionTree {
     }
 
     /// Get number of leaves
+    #[must_use] 
     pub fn get_leaf_count(&self) -> usize {
         match &self.root {
             None => 0,
@@ -344,13 +348,11 @@ impl DecisionTree {
         let left_count = node
             .left
             .as_ref()
-            .map(|n| self.count_leaves(n))
-            .unwrap_or(0);
+            .map_or(0, |n| self.count_leaves(n));
         let right_count = node
             .right
             .as_ref()
-            .map(|n| self.count_leaves(n))
-            .unwrap_or(0);
+            .map_or(0, |n| self.count_leaves(n));
 
         left_count + right_count
     }
