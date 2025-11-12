@@ -55,7 +55,9 @@ impl BRIEF {
             let x2 = rng.gaussian(0.0, sigma);
             let y2 = rng.gaussian(0.0, sigma);
 
+            #[allow(clippy::cast_possible_truncation)]
             let p1 = Point::new(x1 as i32, y1 as i32);
+            #[allow(clippy::cast_possible_truncation)]
             let p2 = Point::new(x2 as i32, y2 as i32);
 
             self.test_pairs.push((p1, p2));
@@ -94,6 +96,7 @@ impl BRIEF {
             (1.0, 0.0)
         };
 
+        #[allow(clippy::cast_possible_truncation)]
         for byte_idx in 0..self.bytes {
             let mut byte_value = 0u8;
 
@@ -106,34 +109,42 @@ impl BRIEF {
                 let (p1, p2) = &self.test_pairs[pair_idx];
 
                 // Apply rotation if needed
+                #[allow(clippy::cast_possible_truncation)]
                 let x1 = if self.use_orientation {
                     center_x + (f64::from(p1.x) * cos_angle - f64::from(p1.y) * sin_angle) as i32
                 } else {
                     center_x + p1.x
                 };
 
+                #[allow(clippy::cast_possible_truncation)]
                 let y1 = if self.use_orientation {
                     center_y + (f64::from(p1.x) * sin_angle + f64::from(p1.y) * cos_angle) as i32
                 } else {
                     center_y + p1.y
                 };
 
+                #[allow(clippy::cast_possible_truncation)]
                 let x2 = if self.use_orientation {
                     center_x + (f64::from(p2.x) * cos_angle - f64::from(p2.y) * sin_angle) as i32
                 } else {
                     center_x + p2.x
                 };
 
+                #[allow(clippy::cast_possible_truncation)]
                 let y2 = if self.use_orientation {
                     center_y + (f64::from(p2.x) * sin_angle + f64::from(p2.y) * cos_angle) as i32
                 } else {
                     center_y + p2.y
                 };
 
-                // Clamp coordinates
+                // Clamp coordinates for safe array access
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let x1 = x1.max(0).min(image.cols() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let y1 = y1.max(0).min(image.rows() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let x2 = x2.max(0).min(image.cols() as i32 - 1) as usize;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
                 let y2 = y2.max(0).min(image.rows() as i32 - 1) as usize;
 
                 // Compare intensities
@@ -165,7 +176,9 @@ impl SimpleRng {
     fn next(&mut self) -> f64 {
         // Linear congruential generator
         self.state = self.state.wrapping_mul(1_103_515_245).wrapping_add(12345);
-        ((self.state / 65536) % 32768) as f64 / 32768.0
+        #[allow(clippy::cast_precision_loss)]
+        let rand_val = ((self.state / 65536) % 32768) as f64 / 32768.0;
+        rand_val
     }
 
     fn gaussian(&mut self, mean: f64, std_dev: f64) -> f64 {

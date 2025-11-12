@@ -158,7 +158,11 @@ impl BFMatcher {
         }
 
         let distance = match self.distance_type {
-            DistanceType::Hamming => hamming_distance(desc1, desc2) as f32,
+            DistanceType::Hamming => {
+                #[allow(clippy::cast_precision_loss)]
+                let dist = hamming_distance(desc1, desc2) as f32;
+                dist
+            }
             DistanceType::L2 => {
                 let sum: f64 = desc1
                     .iter()
@@ -168,7 +172,9 @@ impl BFMatcher {
                         diff * diff
                     })
                     .sum();
-                sum.sqrt() as f32
+                #[allow(clippy::cast_possible_truncation)]
+                let dist = sum.sqrt() as f32;
+                dist
             }
         };
 
