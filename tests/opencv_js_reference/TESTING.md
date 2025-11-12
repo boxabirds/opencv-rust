@@ -1,8 +1,80 @@
 # Testing OpenCV.js Parity Tests Locally
 
-## Issue Found
+## Known Issues
 
-The tests fail in the container due to `ERR_TUNNEL_CONNECTION_FAILED` when loading OpenCV.js from CDN. The container environment blocks external network access during headless Chrome execution.
+### Issue 1: Container Chrome Crashes (RESOLVED - Root Cause Identified)
+
+**Status:** Root cause identified through comprehensive logging
+
+**Symptom:** Chrome crashes with "Target crashed" error when loading large WASM files (~10MB) in headless mode with SwiftShader
+
+**Root Cause Analysis:**
+- **Chrome crashes even loading ONLY OpenCV.js (9.6 MB)** - Isolated test confirmed
+- **Chrome crashes even loading ONLY our WASM** - Isolated test confirmed
+- **NOT a compatibility issue** between libraries
+- **Confirmed:** Large WASM files cause headless Chrome + SwiftShader to crash in container environments
+- **Crash timing:** ~2 seconds after HTTP load completes (during WASM compilation/initialization)
+
+**Evidence:**
+```
+✅ HTTP 200 OK - opencv.js loads successfully
+✅ Initialization starts properly - All logging works
+❌ Chrome crashes ~2s after loading begins
+❌ ALL 3 isolated tests crash (OpenCV.js only, WASM only, and combined)
+```
+
+**Workaround:** Tests work fine on local machines with real GPU/proper Chrome environment
+
+**Diagnostic Logging Added:**
+- Timestamped initialization steps with performance metrics
+- Memory usage tracking (heap size)
+- Network request/response monitoring
+- Detailed error capture with stack traces
+- Step-by-step WASM loading progress
+- Global error and unhandled rejection handlers
+
+**To see diagnostic output:**
+```bash
+npm test test_debug.spec.js
+```
+
+**Three diagnostic tests included:**
+1. **Comprehensive initialization diagnostics** - Full monitoring with network tracking
+2. **Isolated OpenCV.js load test** - Tests if OpenCV.js alone causes crash
+3. **Isolated WASM load test** - Tests if our WASM alone causes crash
+
+**Diagnostic output includes:**
+- Exact timing of each initialization step (with timestamps)
+- Network activity for all resources (requests/responses)
+- Console messages with timestamps (log/warn/error)
+- Error capture with full stack traces
+- State snapshots every 2 seconds during init
+- Memory usage tracking (heap size)
+- Browser and WebGPU availability info
+- Full initialization step history before failure
+
+**Example output:**
+```
+========================================
+=== STARTING TEST HARNESS DIAGNOSTICS ===
+========================================
+
+[2025-11-12T22:41:18.954Z] [LOG] [0.90ms] === INITIALIZATION START ===
+[2025-11-12T22:41:18.955Z] [LOG] [1.70ms] Browser: Mozilla/5.0 ...
+[2025-11-12T22:41:19.238Z] [LOG] [2.10ms] WebGPU available: true
+[2025-11-12T22:41:19.238Z] [LOG] [286.00ms] [Memory] Initialization start: 9.54MB used / 9.54MB total
+[2025-11-12T22:41:19.239Z] [LOG] [286.30ms] [Test Harness] Loading OpenCV.js...
+[2025-11-12T22:41:19.239Z] [LOG] [286.50ms] [OpenCV.js] Starting wait for OpenCV.js...
+[2025-11-12T22:41:19.240Z] [LOG] [287.50ms] [OpenCV.js] Script tag found, readyState: undefined
+
+Error: page.evaluate: Target crashed
+```
+
+### Issue 2: Network Access (SOLVED - CDN Cached Locally)
+
+**Status:** Solved - OpenCV.js v4.8.0 cached in `/cache/opencv.js` (9.6 MB)
+
+The original issue was `ERR_TUNNEL_CONNECTION_FAILED` when loading from CDN. This is now resolved by using local cache.
 
 ## Testing Locally (Recommended)
 

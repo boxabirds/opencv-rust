@@ -44,79 +44,152 @@
         window.opencv_js_ready = false;
         window.opencv_rust_ready = false;
         window.testImages = {};
+        window.initSteps = []; // Track initialization steps
 
         const statusEl = document.getElementById('status');
         const detailsEl = document.getElementById('details');
+        const startTime = performance.now();
+
+        function getTimestamp() {
+            return `[${(performance.now() - startTime).toFixed(2)}ms]`;
+        }
 
         function updateStatus(message, className = 'loading') {
             statusEl.textContent = message;
             statusEl.className = className;
-            console.log(`[Test Harness] ${message}`);
+            const timestamped = `${getTimestamp()} [Test Harness] ${message}`;
+            console.log(timestamped);
+            window.initSteps.push({ time: performance.now() - startTime, message, className });
         }
 
         function addDetails(message) {
             const p = document.createElement('p');
             p.textContent = message;
             detailsEl.appendChild(p);
+            console.log(`${getTimestamp()} [Details] ${message}`);
+        }
+
+        // Log memory usage if available
+        function logMemoryUsage(label) {
+            if (performance.memory) {
+                const used = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+                const total = (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
+                console.log(`${getTimestamp()} [Memory] ${label}: ${used}MB used / ${total}MB total`);
+            }
         }
 
         // Wait for OpenCV.js to load
         function waitForOpenCVJs() {
+            console.log(`${getTimestamp()} [OpenCV.js] Starting wait for OpenCV.js...`);
+
             return new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
+                    console.error(`${getTimestamp()} [OpenCV.js] TIMEOUT after 30s`);
                     reject(new Error('OpenCV.js load timeout'));
                 }, 30000);
 
+                // Check if already loaded
                 if (typeof cv !== 'undefined' && cv.Mat) {
+                    console.log(`${getTimestamp()} [OpenCV.js] Already loaded!`);
                     clearTimeout(timeout);
                     resolve();
                     return;
                 }
 
+                console.log(`${getTimestamp()} [OpenCV.js] Not yet loaded, setting up callback...`);
+
                 // OpenCV.js sets this callback when ready
                 window.onOpenCVReady = () => {
+                    console.log(`${getTimestamp()} [OpenCV.js] onOpenCVReady callback fired!`);
+                    logMemoryUsage('After OpenCV.js load');
                     clearTimeout(timeout);
                     resolve();
                 };
+
+                // Also monitor the script tag
+                const scriptTag = document.querySelector('script[src="/cache/opencv.js"]');
+                if (scriptTag) {
+                    console.log(`${getTimestamp()} [OpenCV.js] Script tag found, readyState: ${scriptTag.readyState}`);
+
+                    scriptTag.addEventListener('load', () => {
+                        console.log(`${getTimestamp()} [OpenCV.js] Script tag 'load' event fired`);
+                    });
+
+                    scriptTag.addEventListener('error', (e) => {
+                        console.error(`${getTimestamp()} [OpenCV.js] Script tag 'error' event:`, e);
+                        clearTimeout(timeout);
+                        reject(new Error('OpenCV.js script load error'));
+                    });
+                }
             });
         }
 
         // Load our WASM module
         async function loadOpenCVRust() {
             try {
-                console.log('[Test Harness] Attempting to import /pkg/opencv_rust.js...');
+                console.log(`${getTimestamp()} [WASM] === Starting WASM module load ===`);
+                logMemoryUsage('Before WASM load');
+
+                console.log(`${getTimestamp()} [WASM] Step 1: Attempting to import /pkg/opencv_rust.js...`);
 
                 // Import our WASM module (absolute path from web root)
+                const importStart = performance.now();
                 const module = await import('/pkg/opencv_rust.js');
-                console.log('[Test Harness] Module imported, initializing WASM...');
+                const importDuration = performance.now() - importStart;
 
-                // Initialize WASM
+                console.log(`${getTimestamp()} [WASM] Step 1 COMPLETE: Module imported in ${importDuration.toFixed(2)}ms`);
+                console.log(`${getTimestamp()} [WASM] Module exports:`, Object.keys(module));
+                logMemoryUsage('After module import');
+
+                console.log(`${getTimestamp()} [WASM] Step 2: Initializing WASM (calling module.default())...`);
+                const initStart = performance.now();
+
                 await module.default();
-                console.log('[Test Harness] WASM initialized');
+
+                const initDuration = performance.now() - initStart;
+                console.log(`${getTimestamp()} [WASM] Step 2 COMPLETE: WASM initialized in ${initDuration.toFixed(2)}ms`);
+                logMemoryUsage('After WASM init');
 
                 // Try to initialize GPU (may fail in headless mode, that's OK)
+                console.log(`${getTimestamp()} [WASM] Step 3: Checking for GPU support...`);
                 try {
                     if (module.init_gpu) {
-                        console.log('[Test Harness] Attempting GPU initialization...');
+                        console.log(`${getTimestamp()} [WASM] Step 3a: init_gpu found, attempting GPU initialization...`);
+                        const gpuStart = performance.now();
+
                         await module.init_gpu();
+
+                        const gpuDuration = performance.now() - gpuStart;
+                        console.log(`${getTimestamp()} [WASM] Step 3a COMPLETE: GPU initialized in ${gpuDuration.toFixed(2)}ms`);
                         addDetails('✓ GPU initialized');
-                        console.log('[Test Harness] GPU initialized successfully');
+                        logMemoryUsage('After GPU init');
                     } else {
-                        console.log('[Test Harness] No init_gpu function found');
+                        console.log(`${getTimestamp()} [WASM] Step 3b: No init_gpu function found (CPU mode)`);
+                        addDetails('ℹ CPU mode (no GPU function)');
                     }
                 } catch (e) {
-                    console.warn('[Test Harness] GPU init failed:', e);
+                    console.warn(`${getTimestamp()} [WASM] Step 3 FAILED: GPU init failed (will use CPU):`, e);
+                    console.warn(`${getTimestamp()} [WASM] GPU error stack:`, e.stack);
                     addDetails('⚠ GPU init failed (will use CPU): ' + e.message);
                 }
 
                 // Store module globally
+                console.log(`${getTimestamp()} [WASM] Step 4: Storing module globally...`);
                 window.opencvRust = module;
                 window.opencv_rust_ready = true;
-                console.log('[Test Harness] WASM module stored globally');
+                console.log(`${getTimestamp()} [WASM] Step 4 COMPLETE: Module stored as window.opencvRust`);
+                logMemoryUsage('After storing module');
 
+                console.log(`${getTimestamp()} [WASM] === WASM module load COMPLETE ===`);
                 return module;
+
             } catch (error) {
-                console.error('[Test Harness] WASM load error:', error);
+                console.error(`${getTimestamp()} [WASM] === WASM LOAD FAILED ===`);
+                console.error(`${getTimestamp()} [WASM] Error message:`, error.message);
+                console.error(`${getTimestamp()} [WASM] Error stack:`, error.stack);
+                console.error(`${getTimestamp()} [WASM] Full error:`, error);
+                logMemoryUsage('After WASM error');
+
                 throw new Error(`Failed to load opencv-rust: ${error.message}`);
             }
         }
@@ -179,41 +252,93 @@
         // Main initialization
         async function initialize() {
             try {
-                console.log('[Test Harness] Starting initialization...');
+                console.log(`${getTimestamp()} === INITIALIZATION START ===`);
+                console.log(`${getTimestamp()} Browser: ${navigator.userAgent}`);
+                console.log(`${getTimestamp()} WebGPU available: ${!!navigator.gpu}`);
+                logMemoryUsage('Initialization start');
 
                 updateStatus('Loading OpenCV.js...', 'loading');
-                console.log('[Test Harness] Waiting for OpenCV.js from CDN...');
+                console.log(`${getTimestamp()} === PHASE 1: Loading OpenCV.js ===`);
 
+                const opencvStart = performance.now();
                 await waitForOpenCVJs();
+                const opencvDuration = performance.now() - opencvStart;
+
                 window.opencv_js_ready = true;
-                console.log('[Test Harness] OpenCV.js loaded successfully');
-                addDetails('✓ OpenCV.js loaded (version: ' + cv.getBuildInformation().split('\n')[0] + ')');
+                console.log(`${getTimestamp()} === PHASE 1 COMPLETE: OpenCV.js loaded in ${opencvDuration.toFixed(2)}ms ===`);
+
+                // Get OpenCV.js version info
+                try {
+                    const buildInfo = cv.getBuildInformation();
+                    const version = buildInfo.split('\n')[0];
+                    console.log(`${getTimestamp()} OpenCV.js version: ${version}`);
+                    addDetails('✓ OpenCV.js loaded: ' + version);
+                } catch (e) {
+                    console.warn(`${getTimestamp()} Could not get OpenCV.js build info:`, e);
+                    addDetails('✓ OpenCV.js loaded');
+                }
 
                 updateStatus('Loading opencv-rust WASM...', 'loading');
-                console.log('[Test Harness] Loading WASM from /pkg/opencv_rust.js...');
+                console.log(`${getTimestamp()} === PHASE 2: Loading opencv-rust WASM ===`);
 
+                const wasmStart = performance.now();
                 await loadOpenCVRust();
-                console.log('[Test Harness] WASM loaded successfully');
+                const wasmDuration = performance.now() - wasmStart;
+
+                console.log(`${getTimestamp()} === PHASE 2 COMPLETE: WASM loaded in ${wasmDuration.toFixed(2)}ms ===`);
                 addDetails('✓ opencv-rust WASM loaded');
 
                 // All ready
                 window.testHarnessReady = true;
+                const totalDuration = performance.now() - startTime;
                 updateStatus('✓ Test harness ready', 'ready');
-                addDetails('Ready for tests!');
-                console.log('[Test Harness] Initialization complete!');
+                addDetails(`Ready for tests! Total init time: ${totalDuration.toFixed(2)}ms`);
+
+                console.log(`${getTimestamp()} === INITIALIZATION COMPLETE ===`);
+                console.log(`${getTimestamp()} Total time: ${totalDuration.toFixed(2)}ms`);
+                console.log(`${getTimestamp()} OpenCV.js: ${opencvDuration.toFixed(2)}ms`);
+                console.log(`${getTimestamp()} WASM: ${wasmDuration.toFixed(2)}ms`);
+                logMemoryUsage('Initialization complete');
 
             } catch (error) {
+                const failTime = performance.now() - startTime;
+                console.error(`${getTimestamp()} === INITIALIZATION FAILED at ${failTime.toFixed(2)}ms ===`);
+                console.error(`${getTimestamp()} Error type: ${error.constructor.name}`);
+                console.error(`${getTimestamp()} Error message: ${error.message}`);
+                console.error(`${getTimestamp()} Error stack:`, error.stack);
+
                 updateStatus('✗ Initialization failed: ' + error.message, 'error');
-                console.error('[Test Harness] Initialization error:', error);
-                console.error('[Test Harness] Error stack:', error.stack);
                 window.testHarnessError = error;
+
+                // Log all init steps taken before failure
+                console.error(`${getTimestamp()} Init steps before failure:`, window.initSteps);
+
                 throw error;
             }
         }
 
+        // Global error handlers
+        window.addEventListener('error', (event) => {
+            console.error(`${getTimestamp()} [GLOBAL ERROR]`, {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                error: event.error
+            });
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error(`${getTimestamp()} [UNHANDLED REJECTION]`, {
+                reason: event.reason,
+                promise: event.promise
+            });
+        });
+
         // Start initialization
+        console.log(`${getTimestamp()} Calling initialize()...`);
         initialize().catch(err => {
-            console.error('Fatal error:', err);
+            console.error(`${getTimestamp()} [FATAL] Initialization failed:`, err);
         });
 
         // Export test utilities globally for Playwright tests
