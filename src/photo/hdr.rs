@@ -57,6 +57,7 @@ impl MergeDebevec {
         // Merge exposures
         for row in 0..rows {
             for col in 0..cols {
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..channels {
                     let mut weighted_sum = 0.0f32;
                     let mut weight_sum = 0.0f32;
@@ -66,7 +67,7 @@ impl MergeDebevec {
                         let w = weight(pixel_val);
 
                         if w > 0.0 {
-                            let radiance = response_curve[ch][pixel_val as usize] - times[i].ln();
+                            let radiance = response_curve[ch][usize::from(pixel_val)] - times[i].ln();
                             weighted_sum += w * radiance;
                             weight_sum += w;
                         }
@@ -91,7 +92,9 @@ impl MergeDebevec {
         let mut curves = vec![vec![0.0f32; 256]; channels];
 
         // Simplified Robertson response curve estimation
+        #[allow(clippy::cast_possible_truncation)]
         for ch in 0..channels {
+            #[allow(clippy::cast_possible_truncation)]
             for intensity in 0..256 {
                 let mut sum = 0.0f32;
                 let mut count = 0;
@@ -101,8 +104,11 @@ impl MergeDebevec {
                     for row in (0..exposure.rows()).step_by(10) {
                         for col in (0..exposure.cols()).step_by(10) {
                             let pixel_val = exposure.at(row, col)?[ch];
+                            #[allow(clippy::cast_possible_truncation)]
                             if pixel_val == intensity as u8 {
-                                sum += (intensity as f32 / 255.0 * times[i]).ln();
+                                #[allow(clippy::cast_precision_loss)]
+                                let intensity_f32 = intensity as f32;
+                                sum += (intensity_f32 / 255.0 * times[i]).ln();
                                 count += 1;
                             }
                         }
@@ -110,9 +116,13 @@ impl MergeDebevec {
                 }
 
                 curves[ch][intensity] = if count > 0 {
-                    sum / count as f32
+                    #[allow(clippy::cast_precision_loss)]
+                    let count_f32 = count as f32;
+                    sum / count_f32
                 } else {
-                    (intensity as f32 / 255.0).ln()
+                    #[allow(clippy::cast_precision_loss)]
+                    let intensity_f32 = intensity as f32;
+                    (intensity_f32 / 255.0).ln()
                 };
             }
         }
@@ -176,11 +186,14 @@ impl TonemapReinhard {
         for row in 0..rows {
             for col in 0..cols {
                 let mut lum = 0.0f32;
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..channels {
                     let val = hdr.at_f32(row, col, ch)?;
                     lum += val;
                 }
-                lum /= channels as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let channels_f32 = channels as f32;
+                lum /= channels_f32;
 
                 if lum > 0.0 {
                     log_sum += (1e-6 + lum).ln();
@@ -189,12 +202,15 @@ impl TonemapReinhard {
             }
         }
 
-        let l_avg = (log_sum / count as f32).exp();
+        #[allow(clippy::cast_precision_loss)]
+        let count_f32 = count as f32;
+        let l_avg = (log_sum / count_f32).exp();
         let alpha = 0.18; // Key value
 
         // Apply Reinhard tone mapping
         for row in 0..rows {
             for col in 0..cols {
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..channels {
                     let mut val = hdr.at_f32(row, col, ch)?;
 
@@ -208,7 +224,9 @@ impl TonemapReinhard {
                     val = val.powf(1.0 / 2.2);
 
                     // Clamp and convert to U8
-                    let byte_val = (val * 255.0).clamp(0.0, 255.0) as u8;
+                    let clamped = (val * 255.0).clamp(0.0, 255.0);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let byte_val = clamped as u8;
                     ldr.at_mut(row, col)?[ch] = byte_val;
                 }
             }
@@ -263,10 +281,13 @@ impl TonemapDrago {
         for row in 0..rows {
             for col in 0..cols {
                 let mut lum = 0.0f32;
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..channels {
                     lum += hdr.at_f32(row, col, ch)?;
                 }
-                lum /= channels as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let channels_f32 = channels as f32;
+                lum /= channels_f32;
                 max_lum = max_lum.max(lum);
             }
         }
@@ -277,6 +298,7 @@ impl TonemapDrago {
         // Apply Drago tone mapping
         for row in 0..rows {
             for col in 0..cols {
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..channels {
                     let lw = hdr.at_f32(row, col, ch)?;
 
@@ -292,7 +314,9 @@ impl TonemapDrago {
                     // Gamma correction
                     let val = ld.powf(1.0 / 2.2);
 
-                    let byte_val = (val * 255.0).clamp(0.0, 255.0) as u8;
+                    let clamped = (val * 255.0).clamp(0.0, 255.0);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let byte_val = clamped as u8;
                     ldr.at_mut(row, col)?[ch] = byte_val;
                 }
             }
@@ -316,7 +340,9 @@ pub fn calibrate_debevec(
     let mut response_curves = vec![vec![0.0f32; 256]; channels];
 
     // Simplified calibration using sampled pixels
+    #[allow(clippy::cast_possible_truncation)]
     for ch in 0..channels {
+        #[allow(clippy::cast_possible_truncation)]
         for intensity in 0..256 {
             let mut sum = 0.0f32;
             let mut count = 0;
@@ -330,8 +356,11 @@ pub fn calibrate_debevec(
 
                     if row < exposure.rows() && col < exposure.cols() {
                         let pixel_val = exposure.at(row, col)?[ch];
+                        #[allow(clippy::cast_possible_truncation)]
                         if pixel_val == intensity as u8 {
-                            sum += (intensity as f32 / 255.0 * times[i]).ln();
+                            #[allow(clippy::cast_precision_loss)]
+                            let intensity_f32 = intensity as f32;
+                            sum += (intensity_f32 / 255.0 * times[i]).ln();
                             count += 1;
                         }
                     }
@@ -339,9 +368,13 @@ pub fn calibrate_debevec(
             }
 
             response_curves[ch][intensity] = if count > 0 {
-                sum / count as f32
+                #[allow(clippy::cast_precision_loss)]
+                let count_f32 = count as f32;
+                sum / count_f32
             } else {
-                (intensity as f32 / 255.0 + 1e-6).ln()
+                #[allow(clippy::cast_precision_loss)]
+                let intensity_f32 = intensity as f32;
+                (intensity_f32 / 255.0 + 1e-6).ln()
             };
         }
     }

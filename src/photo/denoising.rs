@@ -56,9 +56,13 @@ pub fn fast_nl_means_denoising_colored(
             }
 
             let result_pixel = result.at_mut(row, col)?;
+            #[allow(clippy::cast_possible_truncation)]
             for ch in 0..3 {
                 result_pixel[ch] = if weight_sum > 0.0 {
-                    (pixel_sum[ch] / weight_sum) as u8
+                    let clamped = (pixel_sum[ch] / weight_sum).clamp(0.0, 255.0);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let pixel_val = clamped as u8;
+                    pixel_val
                 } else {
                     src.at(row, col)?[ch]
                 };
@@ -93,6 +97,7 @@ fn calculate_color_patch_distance(
                 let p1 = img.at(y1 as usize, x1 as usize)?;
                 let p2 = img.at(y2 as usize, x2 as usize)?;
 
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..3 {
                     let diff = f32::from(p1[ch]) - f32::from(p2[ch]);
                     dist += diff * diff;
@@ -102,7 +107,9 @@ fn calculate_color_patch_distance(
         }
     }
 
-    Ok(if count > 0 { dist / count as f32 } else { 0.0 })
+    #[allow(clippy::cast_precision_loss)]
+    let count_f32 = count as f32;
+    Ok(if count > 0 { dist / count_f32 } else { 0.0 })
 }
 
 /// Bilateral filter for edge-preserving smoothing
@@ -120,14 +127,21 @@ pub fn bilateral_filter(
     let mut space_weights = vec![vec![0.0f32; d as usize]; d as usize];
     for i in 0..d as usize {
         for j in 0..d as usize {
-            let dx = i as f32 - radius as f32;
-            let dy = j as f32 - radius as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let i_f32 = i as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let j_f32 = j as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let radius_f32 = radius as f32;
+            let dx = i_f32 - radius_f32;
+            let dy = j_f32 - radius_f32;
             space_weights[i][j] = (-(dx * dx + dy * dy) / (2.0 * sigma_space * sigma_space)).exp();
         }
     }
 
     for row in 0..src.rows() {
         for col in 0..src.cols() {
+            #[allow(clippy::cast_possible_truncation)]
             for ch in 0..src.channels() {
                 let center_val = f32::from(src.at(row, col)?[ch]);
                 let mut sum = 0.0f32;
@@ -150,7 +164,10 @@ pub fn bilateral_filter(
                     }
                 }
 
-                result.at_mut(row, col)?[ch] = (sum / weight_sum) as u8;
+                let clamped = (sum / weight_sum).clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = clamped as u8;
+                result.at_mut(row, col)?[ch] = pixel_val;
             }
         }
     }
@@ -196,7 +213,9 @@ pub fn anisotropic_diffusion(
                 let update = lambda * (cn * north + cs * south + ce * east + cw * west);
                 let new_val = (center + update).clamp(0.0, 255.0);
 
-                next.at_mut(row, col)?[0] = new_val as u8;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = new_val as u8;
+                next.at_mut(row, col)?[0] = pixel_val;
             }
         }
 
@@ -220,6 +239,7 @@ pub fn median_filter(src: &Mat, kernel_size: usize) -> Result<Mat> {
 
     for row in 0..src.rows() {
         for col in 0..src.cols() {
+            #[allow(clippy::cast_possible_truncation)]
             for ch in 0..src.channels() {
                 let mut values = Vec::with_capacity(window_size);
 
@@ -270,8 +290,10 @@ pub fn wiener_filter(src: &Mat, noise_variance: f32) -> Result<Mat> {
                 }
             }
 
-            let mean = sum / count as f32;
-            let variance = (sum_sq / count as f32) - (mean * mean);
+            #[allow(clippy::cast_precision_loss)]
+            let count_f32 = count as f32;
+            let mean = sum / count_f32;
+            let variance = (sum_sq / count_f32) - (mean * mean);
 
             // Wiener filter formula
             let center = f32::from(src.at(row, col)?[0]);
@@ -281,7 +303,10 @@ pub fn wiener_filter(src: &Mat, noise_variance: f32) -> Result<Mat> {
                 mean
             };
 
-            result.at_mut(row, col)?[0] = filtered.clamp(0.0, 255.0) as u8;
+            let clamped = filtered.clamp(0.0, 255.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let pixel_val = clamped as u8;
+            result.at_mut(row, col)?[0] = pixel_val;
         }
     }
 
@@ -327,7 +352,9 @@ pub fn total_variation_denoise(
                 let update = lambda * div - data_term;
 
                 let new_val = (center + 0.1 * update).clamp(0.0, 255.0);
-                next.at_mut(row, col)?[0] = new_val as u8;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = new_val as u8;
+                next.at_mut(row, col)?[0] = pixel_val;
             }
         }
 

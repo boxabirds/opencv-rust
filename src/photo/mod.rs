@@ -56,6 +56,7 @@ pub fn inpaint(
                                 // Not masked, use for inpainting
                                 let neighbor_pixel = src.at(y as usize, x as usize)?;
 
+                                #[allow(clippy::cast_possible_truncation)]
                                 for ch in 0..src.channels() {
                                     sums[ch] += f64::from(neighbor_pixel[ch]);
                                 }
@@ -69,8 +70,12 @@ pub fn inpaint(
                 if count > 0 {
                     let dst_pixel = dst.at_mut(row, col)?;
 
+                    #[allow(clippy::cast_possible_truncation)]
                     for ch in 0..src.channels() {
-                        dst_pixel[ch] = (sums[ch] / f64::from(count)) as u8;
+                        let clamped = (sums[ch] / f64::from(count)).clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        let pixel_val = clamped as u8;
+                        dst_pixel[ch] = pixel_val;
                     }
                 }
             }
@@ -134,7 +139,10 @@ pub fn fast_nl_means_denoising(
 
             let dst_pixel = dst.at_mut(row, col)?;
             dst_pixel[0] = if weight_sum > 0.0 {
-                (pixel_sum / weight_sum) as u8
+                let clamped = (pixel_sum / weight_sum).clamp(0.0, 255.0);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let pixel_val = clamped as u8;
+                pixel_val
             } else {
                 src.at(row, col)?[0]
             };
@@ -175,7 +183,9 @@ fn calculate_patch_distance(
         }
     }
 
-    Ok(if count > 0 { dist / count as f32 } else { 0.0 })
+    #[allow(clippy::cast_precision_loss)]
+    let count_f32 = count as f32;
+    Ok(if count > 0 { dist / count_f32 } else { 0.0 })
 }
 
 #[cfg(test)]

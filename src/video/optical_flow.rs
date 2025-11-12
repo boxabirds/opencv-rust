@@ -29,8 +29,13 @@ pub fn calc_optical_flow_pyr_lk(
 
     for &pt in prev_pts {
         // Extract window from previous image
-        if pt.x < half_win || pt.x >= prev_img.cols() as i32 - half_win
-            || pt.y < half_win || pt.y >= prev_img.rows() as i32 - half_win
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let cols_i32 = prev_img.cols() as i32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let rows_i32 = prev_img.rows() as i32;
+
+        if pt.x < half_win || pt.x >= cols_i32 - half_win
+            || pt.y < half_win || pt.y >= rows_i32 - half_win
         {
             next_pts.push(pt);
             status.push(0);
@@ -44,12 +49,17 @@ pub fn calc_optical_flow_pyr_lk(
         // Search in a small neighborhood
         let search_range = 10;
 
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let next_cols_i32 = next_img.cols() as i32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let next_rows_i32 = next_img.rows() as i32;
+
         for dy in -search_range..=search_range {
             for dx in -search_range..=search_range {
                 let new_pt = Point::new(pt.x + dx, pt.y + dy);
 
-                if new_pt.x < half_win || new_pt.x >= next_img.cols() as i32 - half_win
-                    || new_pt.y < half_win || new_pt.y >= next_img.rows() as i32 - half_win
+                if new_pt.x < half_win || new_pt.x >= next_cols_i32 - half_win
+                    || new_pt.y < half_win || new_pt.y >= next_rows_i32 - half_win
                 {
                     continue;
                 }
@@ -87,9 +97,13 @@ fn window_ssd(
 
     for dy in -half_win..=half_win {
         for dx in -half_win..=half_win {
+            #[allow(clippy::cast_sign_loss)]
             let y1 = (pt1.y + dy) as usize;
+            #[allow(clippy::cast_sign_loss)]
             let x1 = (pt1.x + dx) as usize;
+            #[allow(clippy::cast_sign_loss)]
             let y2 = (pt2.y + dy) as usize;
+            #[allow(clippy::cast_sign_loss)]
             let x2 = (pt2.x + dx) as usize;
 
             let val1 = f64::from(img1.at(y1, x1)?[0]);
@@ -140,9 +154,27 @@ pub fn calc_optical_flow_farneback(
     let block_size = winsize;
     let half_block = block_size / 2;
 
-    for row in (half_block as usize)..(prev.rows() - half_block as usize) {
-        for col in (half_block as usize)..(prev.cols() - half_block as usize) {
-            let pt = Point::new(col as i32, row as i32);
+    #[allow(clippy::cast_sign_loss)]
+    let start_row = half_block as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let end_row = prev.rows() - half_block as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let start_col = half_block as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let end_col = prev.cols() - half_block as usize;
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let next_cols_i32 = next.cols() as i32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let next_rows_i32 = next.rows() as i32;
+
+    for row in start_row..end_row {
+        for col in start_col..end_col {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            let col_i32 = col as i32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            let row_i32 = row as i32;
+            let pt = Point::new(col_i32, row_i32);
 
             // Find best match in next image
             let mut best_dx = 0;
@@ -153,8 +185,8 @@ pub fn calc_optical_flow_farneback(
                 for dx in -5..=5 {
                     let new_pt = Point::new(pt.x + dx, pt.y + dy);
 
-                    if new_pt.x >= half_block && new_pt.x < next.cols() as i32 - half_block
-                        && new_pt.y >= half_block && new_pt.y < next.rows() as i32 - half_block
+                    if new_pt.x >= half_block && new_pt.x < next_cols_i32 - half_block
+                        && new_pt.y >= half_block && new_pt.y < next_rows_i32 - half_block
                     {
                         let error = window_ssd(prev, next, pt, new_pt, half_block)?;
 
@@ -168,8 +200,12 @@ pub fn calc_optical_flow_farneback(
             }
 
             let flow_pixel = flow.at_mut(row, col)?;
-            flow_pixel[0] = (best_dx + 128).clamp(0, 255) as u8;
-            flow_pixel[1] = (best_dy + 128).clamp(0, 255) as u8;
+            #[allow(clippy::cast_possible_truncation)]
+            let dx_u8 = (best_dx + 128).clamp(0, 255) as u8;
+            #[allow(clippy::cast_possible_truncation)]
+            let dy_u8 = (best_dy + 128).clamp(0, 255) as u8;
+            flow_pixel[0] = dx_u8;
+            flow_pixel[1] = dy_u8;
         }
     }
 

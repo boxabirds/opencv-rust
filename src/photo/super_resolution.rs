@@ -23,8 +23,14 @@ impl SuperResolutionBicubic {
     }
 
     pub fn process(&self, src: &Mat) -> Result<Mat> {
-        let new_rows = (src.rows() as f32 * self.scale_factor) as usize;
-        let new_cols = (src.cols() as f32 * self.scale_factor) as usize;
+        #[allow(clippy::cast_precision_loss)]
+        let rows_f32 = src.rows() as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let cols_f32 = src.cols() as f32;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let new_rows = (rows_f32 * self.scale_factor) as usize;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let new_cols = (cols_f32 * self.scale_factor) as usize;
 
         // Bicubic interpolation
         let upscaled = self.bicubic_interpolation(src, new_rows, new_cols)?;
@@ -38,17 +44,25 @@ impl SuperResolutionBicubic {
     fn bicubic_interpolation(&self, src: &Mat, new_rows: usize, new_cols: usize) -> Result<Mat> {
         let mut result = Mat::new(new_rows, new_cols, src.channels(), src.depth())?;
 
+        #[allow(clippy::cast_precision_loss)]
         let row_scale = src.rows() as f32 / new_rows as f32;
+        #[allow(clippy::cast_precision_loss)]
         let col_scale = src.cols() as f32 / new_cols as f32;
 
         for row in 0..new_rows {
             for col in 0..new_cols {
+                #[allow(clippy::cast_precision_loss)]
                 let src_row = row as f32 * row_scale;
+                #[allow(clippy::cast_precision_loss)]
                 let src_col = col as f32 * col_scale;
 
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     let val = self.bicubic_sample(src, src_row, src_col, ch)?;
-                    result.at_mut(row, col)?[ch] = val.clamp(0.0, 255.0) as u8;
+                    let clamped = val.clamp(0.0, 255.0);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let pixel_val = clamped as u8;
+                    result.at_mut(row, col)?[ch] = pixel_val;
                 }
             }
         }
@@ -57,10 +71,16 @@ impl SuperResolutionBicubic {
     }
 
     fn bicubic_sample(&self, src: &Mat, y: f32, x: f32, ch: usize) -> Result<f32> {
+        #[allow(clippy::cast_possible_truncation)]
         let x0 = x.floor() as i32;
+        #[allow(clippy::cast_possible_truncation)]
         let y0 = y.floor() as i32;
-        let fx = x - x0 as f32;
-        let fy = y - y0 as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let x0_f32 = x0 as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let y0_f32 = y0 as f32;
+        let fx = x - x0_f32;
+        let fy = y - y0_f32;
 
         let mut sum = 0.0f32;
 
@@ -71,8 +91,12 @@ impl SuperResolutionBicubic {
                 let col = (x0 + i).clamp(0, src.cols() as i32 - 1) as usize;
 
                 let pixel = f32::from(src.at(row, col)?[ch]);
-                let weight_x = self.cubic_weight(fx - i as f32);
-                let weight_y = self.cubic_weight(fy - j as f32);
+                #[allow(clippy::cast_precision_loss)]
+                let i_f32 = i as f32;
+                #[allow(clippy::cast_precision_loss)]
+                let j_f32 = j as f32;
+                let weight_x = self.cubic_weight(fx - i_f32);
+                let weight_y = self.cubic_weight(fy - j_f32);
 
                 sum += pixel * weight_x * weight_y;
             }
@@ -100,6 +124,7 @@ impl SuperResolutionBicubic {
         // Unsharp mask
         for row in 1..src.rows() - 1 {
             for col in 1..src.cols() - 1 {
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     let center = f32::from(src.at(row, col)?[ch]);
 
@@ -113,7 +138,10 @@ impl SuperResolutionBicubic {
 
                     // Apply sharpening
                     let sharpened = center - self.sharpen_strength * laplacian;
-                    result.at_mut(row, col)?[ch] = sharpened.clamp(0.0, 255.0) as u8;
+                    let clamped = sharpened.clamp(0.0, 255.0);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let pixel_val = clamped as u8;
+                    result.at_mut(row, col)?[ch] = pixel_val;
                 }
             }
         }
@@ -149,9 +177,13 @@ impl SuperResolutionExample {
                 let src_row = dst_row / self.scale_factor;
                 let src_col = dst_col / self.scale_factor;
 
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     let val = self.interpolate_patch(src, src_row, src_col, ch)?;
-                    result.at_mut(dst_row, dst_col)?[ch] = val as u8;
+                    let clamped = val.clamp(0.0, 255.0);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let pixel_val = clamped as u8;
+                    result.at_mut(dst_row, dst_col)?[ch] = pixel_val;
                 }
             }
         }
@@ -169,13 +201,17 @@ impl SuperResolutionExample {
                 let y = (row as i32 + dy).clamp(0, src.rows() as i32 - 1) as usize;
                 let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
 
-                let weight = (-(dx * dx + dy * dy) as f32 / 8.0).exp();
+                #[allow(clippy::cast_precision_loss)]
+                let weight_val = (dx * dx + dy * dy) as f32;
+                let weight = (-weight_val / 8.0).exp();
                 sum += f32::from(src.at(y, x)?[ch]) * weight;
                 count += 1;
             }
         }
 
-        Ok(sum / count as f32)
+        #[allow(clippy::cast_precision_loss)]
+        let count_f32 = count as f32;
+        Ok(sum / count_f32)
     }
 }
 
@@ -223,11 +259,15 @@ impl SuperResolutionBP {
             // Update high-resolution estimate
             for row in 0..hr.rows() {
                 for col in 0..hr.cols() {
+                    #[allow(clippy::cast_possible_truncation)]
                     for ch in 0..hr.channels() {
                         let current = f32::from(hr.at(row, col)?[ch]);
                         let correction = f32::from(error_hr.at(row, col)?[ch]);
                         let updated = current + self.regularization * correction;
-                        hr.at_mut(row, col)?[ch] = updated.clamp(0.0, 255.0) as u8;
+                        let clamped = updated.clamp(0.0, 255.0);
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        let pixel_val = clamped as u8;
+                        hr.at_mut(row, col)?[ch] = pixel_val;
                     }
                 }
             }
@@ -244,6 +284,7 @@ impl SuperResolutionBP {
                 let src_row = (row * src.rows()) / new_rows;
                 let src_col = (col * src.cols()) / new_cols;
 
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     let val = src.at(src_row.min(src.rows() - 1), src_col.min(src.cols() - 1))?[ch];
                     result.at_mut(row, col)?[ch] = val;
@@ -265,6 +306,7 @@ impl SuperResolutionBP {
                 let src_row = row * self.scale_factor;
                 let src_col = col * self.scale_factor;
 
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..src.channels() {
                     result.at_mut(row, col)?[ch] = src.at(src_row, src_col)?[ch];
                 }
@@ -279,11 +321,15 @@ impl SuperResolutionBP {
 
         for row in 0..original.rows() {
             for col in 0..original.cols() {
+                #[allow(clippy::cast_possible_truncation)]
                 for ch in 0..original.channels() {
                     let orig = i32::from(original.at(row, col)?[ch]);
                     let sim = i32::from(simulated.at(row, col)?[ch]);
+                    #[allow(clippy::cast_possible_truncation)]
                     let err = (orig - sim).clamp(-255, 255) as i16;
-                    error.at_mut(row, col)?[ch] = i16::midpoint(err, 255) as u8;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let midpoint = i16::midpoint(err, 255) as u8;
+                    error.at_mut(row, col)?[ch] = midpoint;
                 }
             }
         }
