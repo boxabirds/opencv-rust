@@ -66,15 +66,15 @@ test.describe('Gaussian Blur - OpenCV.js Parity', () => {
             const wasmStart = performance.now();
 
             // Create our Mat from image data
-            const wasmSrc = new window.opencvRust.Mat(
-              img.height,
+            const wasmSrc = window.opencvRust.WasmMat.fromImageData(
+              new Uint8Array(img.data),
               img.width,
-              window.opencvRust.MatType.CV_8UC4,
-              new Uint8Array(img.data)
+              img.height,
+              4  // RGBA = 4 channels
             );
 
             // Run gaussian blur
-            const wasmDst = await window.opencvRust.gaussian_blur(
+            const wasmDst = await window.opencvRust.gaussianBlur(
               wasmSrc,
               ksize,
               sigma
@@ -83,7 +83,7 @@ test.describe('Gaussian Blur - OpenCV.js Parity', () => {
             const wasmTime = performance.now() - wasmStart;
 
             // Get result data
-            const wasmData = wasmDst.data();
+            const wasmData = wasmDst.getData();
 
             // Clean up
             cvSrc.delete();
@@ -172,14 +172,14 @@ test.describe('Gaussian Blur - Edge Cases', () => {
       const cvResult = window.matToImageData(cvDst);
 
       // Our WASM
-      const wasmSrc = new window.opencvRust.Mat(
-        img.height,
+      const wasmSrc = window.opencvRust.WasmMat.fromImageData(
+        new Uint8Array(img.data),
         img.width,
-        window.opencvRust.MatType.CV_8UC4,
-        new Uint8Array(img.data)
+        img.height,
+        4  // RGBA = 4 channels
       );
-      const wasmDst = await window.opencvRust.gaussian_blur(wasmSrc, 3, 0);
-      const wasmData = wasmDst.data();
+      const wasmDst = await window.opencvRust.gaussianBlur(wasmSrc, 3, 0);
+      const wasmData = wasmDst.getData();
 
       cvSrc.delete();
       cvDst.delete();
@@ -219,14 +219,14 @@ test.describe('Gaussian Blur - Edge Cases', () => {
       const cvResult = window.matToImageData(cvDst);
 
       // Our WASM
-      const wasmSrc = new window.opencvRust.Mat(
-        img.height,
+      const wasmSrc = window.opencvRust.WasmMat.fromImageData(
+        new Uint8Array(img.data),
         img.width,
-        window.opencvRust.MatType.CV_8UC4,
-        new Uint8Array(img.data)
+        img.height,
+        4  // RGBA = 4 channels
       );
-      const wasmDst = await window.opencvRust.gaussian_blur(wasmSrc, 21, 5.0);
-      const wasmData = wasmDst.data();
+      const wasmDst = await window.opencvRust.gaussianBlur(wasmSrc, 21, 5.0);
+      const wasmData = wasmDst.getData();
 
       cvSrc.delete();
       cvDst.delete();
