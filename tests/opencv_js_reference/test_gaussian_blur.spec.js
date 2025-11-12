@@ -64,6 +64,7 @@ test.describe('Gaussian Blur - OpenCV.js Parity', () => {
 
             // ===== Run our WASM implementation =====
             const wasmStart = performance.now();
+            console.log('[Test] Creating WASM Mat from ImageData...');
 
             // Create our Mat from image data
             const wasmSrc = window.opencvRust.WasmMat.fromImageData(
@@ -72,6 +73,7 @@ test.describe('Gaussian Blur - OpenCV.js Parity', () => {
               img.height,
               4  // RGBA = 4 channels
             );
+            console.log('[Test] WASM Mat created, calling gaussianBlur...');
 
             // Run gaussian blur
             const wasmDst = await window.opencvRust.gaussianBlur(
@@ -79,11 +81,13 @@ test.describe('Gaussian Blur - OpenCV.js Parity', () => {
               ksize,
               sigma
             );
+            console.log('[Test] gaussianBlur completed');
 
             const wasmTime = performance.now() - wasmStart;
 
             // Get result data
             const wasmData = wasmDst.getData();
+            console.log('[Test] Got WASM result data');
 
             // Clean up
             cvSrc.delete();
