@@ -18,8 +18,12 @@
  *   - Comparison report in JSON format
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Test configurations for each operation
 const TEST_CONFIGS = {
@@ -402,7 +406,7 @@ function generateToleranceConfig() {
 }
 
 // Main execution
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const command = process.argv[2] || 'generate';
 
   switch (command) {
@@ -430,7 +434,7 @@ if (require.main === module) {
   }
 }
 
-module.exports = {
+export {
   generateReferenceOutputs,
   compareOutputs,
   generateAllReferences,

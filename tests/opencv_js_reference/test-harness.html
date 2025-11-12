@@ -84,8 +84,8 @@
         // Load our WASM module
         async function loadOpenCVRust() {
             try {
-                // Import our WASM module
-                const module = await import('../../pkg/opencv_rust.js');
+                // Import our WASM module (absolute path from web root)
+                const module = await import('/pkg/opencv_rust.js');
 
                 // Initialize WASM
                 await module.default();

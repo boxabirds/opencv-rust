@@ -1,0 +1,437 @@
+{
+  "config": {
+    "configFile": "/home/user/opencv-rust/tests/opencv_js_reference/playwright.config.js",
+    "rootDir": "/home/user/opencv-rust/tests/opencv_js_reference",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/user/opencv-rust/tests/opencv_js_reference/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-webgpu",
+        "name": "chromium-webgpu",
+        "testDir": "/home/user/opencv-rust/tests/opencv_js_reference",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.spec.js"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 8,
+    "webServer": {
+      "command": "python3 -m http.server 8080",
+      "port": 8080,
+      "timeout": 120000,
+      "reuseExistingServer": true,
+      "cwd": "../../"
+    }
+  },
+  "suites": [
+    {
+      "title": "test_gaussian_blur.spec.js",
+      "file": "test_gaussian_blur.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Gaussian Blur - OpenCV.js Parity",
+          "file": "test_gaussian_blur.spec.js",
+          "line": 19,
+          "column": 6,
+          "specs": [
+            {
+              "title": "gaussian_blur ksize=5 sigma=1.5 on lenna.png",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-webgpu",
+                  "projectName": "chromium-webgpu",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 60035,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:20:8",
+                        "location": {
+                          "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                          "column": 8,
+                          "line": 20
+                        },
+                        "snippet": "  18 |\n  19 | test.describe('Gaussian Blur - OpenCV.js Parity', () => {\n> 20 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  21 |     // Navigate to test harness\n  22 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  23 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 8,
+                            "line": 20
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  18 |\n  19 | test.describe('Gaussian Blur - OpenCV.js Parity', () => {\n> 20 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  21 |     // Navigate to test harness\n  22 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  23 |\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:20:8"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 16,
+                            "line": 25
+                          },
+                          "message": "Error: page.waitForFunction: Test timeout of 60000ms exceeded.\n\n  23 |\n  24 |     // Wait for both libraries to load\n> 25 |     await page.waitForFunction(() => window.testHarnessReady, {\n     |                ^\n  26 |       timeout: 60000,\n  27 |     });\n  28 |   });\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:25:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-12T22:05:08.281Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                        "column": 8,
+                        "line": 20
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "0d10ff6830ddb92b502c-1601586e03fe7d3aba3c",
+              "file": "test_gaussian_blur.spec.js",
+              "line": 33,
+              "column": 7
+            },
+            {
+              "title": "gaussian_blur ksize=9 sigma=2 on lenna.png",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-webgpu",
+                  "projectName": "chromium-webgpu",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 60036,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:20:8",
+                        "location": {
+                          "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                          "column": 8,
+                          "line": 20
+                        },
+                        "snippet": "  18 |\n  19 | test.describe('Gaussian Blur - OpenCV.js Parity', () => {\n> 20 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  21 |     // Navigate to test harness\n  22 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  23 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 8,
+                            "line": 20
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  18 |\n  19 | test.describe('Gaussian Blur - OpenCV.js Parity', () => {\n> 20 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  21 |     // Navigate to test harness\n  22 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  23 |\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:20:8"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 16,
+                            "line": 25
+                          },
+                          "message": "Error: page.waitForFunction: Test timeout of 60000ms exceeded.\n\n  23 |\n  24 |     // Wait for both libraries to load\n> 25 |     await page.waitForFunction(() => window.testHarnessReady, {\n     |                ^\n  26 |       timeout: 60000,\n  27 |     });\n  28 |   });\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:25:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-12T22:06:10.896Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                        "column": 8,
+                        "line": 20
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "0d10ff6830ddb92b502c-3f20a71737e2b8b58f73",
+              "file": "test_gaussian_blur.spec.js",
+              "line": 33,
+              "column": 7
+            },
+            {
+              "title": "gaussian_blur ksize=15 sigma=3 on lenna.png",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-webgpu",
+                  "projectName": "chromium-webgpu",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 60037,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:20:8",
+                        "location": {
+                          "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                          "column": 8,
+                          "line": 20
+                        },
+                        "snippet": "  18 |\n  19 | test.describe('Gaussian Blur - OpenCV.js Parity', () => {\n> 20 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  21 |     // Navigate to test harness\n  22 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  23 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 8,
+                            "line": 20
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  18 |\n  19 | test.describe('Gaussian Blur - OpenCV.js Parity', () => {\n> 20 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  21 |     // Navigate to test harness\n  22 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  23 |\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:20:8"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 16,
+                            "line": 25
+                          },
+                          "message": "Error: page.waitForFunction: Test timeout of 60000ms exceeded.\n\n  23 |\n  24 |     // Wait for both libraries to load\n> 25 |     await page.waitForFunction(() => window.testHarnessReady, {\n     |                ^\n  26 |       timeout: 60000,\n  27 |     });\n  28 |   });\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:25:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-12T22:07:13.236Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                        "column": 8,
+                        "line": 20
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "0d10ff6830ddb92b502c-ed9133e017b031a46a7c",
+              "file": "test_gaussian_blur.spec.js",
+              "line": 33,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Gaussian Blur - Edge Cases",
+          "file": "test_gaussian_blur.spec.js",
+          "line": 149,
+          "column": 6,
+          "specs": [
+            {
+              "title": "handles small kernel size (ksize=3)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-webgpu",
+                  "projectName": "chromium-webgpu",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 60038,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:150:8",
+                        "location": {
+                          "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                          "column": 8,
+                          "line": 150
+                        },
+                        "snippet": "  148 |\n  149 | test.describe('Gaussian Blur - Edge Cases', () => {\n> 150 |   test.beforeEach(async ({ page }) => {\n      |        ^\n  151 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  152 |     await page.waitForFunction(() => window.testHarnessReady, {\n  153 |       timeout: 60000,"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 8,
+                            "line": 150
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  148 |\n  149 | test.describe('Gaussian Blur - Edge Cases', () => {\n> 150 |   test.beforeEach(async ({ page }) => {\n      |        ^\n  151 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  152 |     await page.waitForFunction(() => window.testHarnessReady, {\n  153 |       timeout: 60000,\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:150:8"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 16,
+                            "line": 152
+                          },
+                          "message": "Error: page.waitForFunction: Test timeout of 60000ms exceeded.\n\n  150 |   test.beforeEach(async ({ page }) => {\n  151 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n> 152 |     await page.waitForFunction(() => window.testHarnessReady, {\n      |                ^\n  153 |       timeout: 60000,\n  154 |     });\n  155 |   });\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:152:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-12T22:08:15.609Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                        "column": 8,
+                        "line": 150
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "0d10ff6830ddb92b502c-b2fcd9f7466353fbc9e3",
+              "file": "test_gaussian_blur.spec.js",
+              "line": 157,
+              "column": 3
+            },
+            {
+              "title": "handles large kernel size (ksize=21)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-webgpu",
+                  "projectName": "chromium-webgpu",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 60036,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:150:8",
+                        "location": {
+                          "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                          "column": 8,
+                          "line": 150
+                        },
+                        "snippet": "  148 |\n  149 | test.describe('Gaussian Blur - Edge Cases', () => {\n> 150 |   test.beforeEach(async ({ page }) => {\n      |        ^\n  151 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  152 |     await page.waitForFunction(() => window.testHarnessReady, {\n  153 |       timeout: 60000,"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 8,
+                            "line": 150
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  148 |\n  149 | test.describe('Gaussian Blur - Edge Cases', () => {\n> 150 |   test.beforeEach(async ({ page }) => {\n      |        ^\n  151 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n  152 |     await page.waitForFunction(() => window.testHarnessReady, {\n  153 |       timeout: 60000,\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:150:8"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                            "column": 16,
+                            "line": 152
+                          },
+                          "message": "Error: page.waitForFunction: Test timeout of 60000ms exceeded.\n\n  150 |   test.beforeEach(async ({ page }) => {\n  151 |     await page.goto('/tests/opencv_js_reference/test-harness.html');\n> 152 |     await page.waitForFunction(() => window.testHarnessReady, {\n      |                ^\n  153 |       timeout: 60000,\n  154 |     });\n  155 |   });\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js:152:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-12T22:09:17.999Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_gaussian_blur.spec.js",
+                        "column": 8,
+                        "line": 150
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "0d10ff6830ddb92b502c-f1a0d89a5a4dd61c409f",
+              "file": "test_gaussian_blur.spec.js",
+              "line": 204,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-11-12T22:05:05.501Z",
+    "duration": 312908.972,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 5,
+    "flaky": 0
+  }
+}
