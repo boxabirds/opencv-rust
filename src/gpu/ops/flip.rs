@@ -80,7 +80,7 @@ async fn execute_flip_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat, flip_code
         (&cached.bind_group_layout, &cached.compute_pipeline)
     };
 
-    #[cfg(target_arch = "wasm32"))]
+    #[cfg(target_arch = "wasm32")]
     let (bind_group_layout, compute_pipeline) = {
         PipelineCache::with_flip_pipeline(|cached| {
             (&cached.bind_group_layout, &cached.compute_pipeline)

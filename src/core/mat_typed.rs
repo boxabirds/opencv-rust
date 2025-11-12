@@ -177,16 +177,25 @@ impl Mat {
                         MatDepth::U8 => {
                             let pixel = result.at_mut(row, col)?;
                             // Multiply by 255 and round for F32/F64 → U8
-                            let scaled = (normalized_value * 255.0).round();
-                            pixel[ch] = scaled.clamp(0.0, 255.0) as u8;
+                            let scaled = (normalized_value * 255.0).round().clamp(0.0, 255.0);
+                            // Safe: clamped to valid u8 range
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                            let byte_val = scaled as u8;
+                            pixel[ch] = byte_val;
                         }
                         MatDepth::U16 => {
                             // Multiply by 65535 and round for F32/F64 → U16
-                            let scaled = (normalized_value * 65535.0).round();
-                            result.set_u16(row, col, ch, scaled.clamp(0.0, 65535.0) as u16)?;
+                            let scaled = (normalized_value * 65535.0).round().clamp(0.0, 65535.0);
+                            // Safe: clamped to valid u16 range
+                            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                            let u16_val = scaled as u16;
+                            result.set_u16(row, col, ch, u16_val)?;
                         }
                         MatDepth::F32 => {
-                            result.set_f32(row, col, ch, normalized_value as f32)?;
+                            // Acceptable precision loss when converting f64 to f32
+                            #[allow(clippy::cast_possible_truncation)]
+                            let f32_val = normalized_value as f32;
+                            result.set_f32(row, col, ch, f32_val)?;
                         }
                         MatDepth::F64 => {
                             result.set_f64(row, col, ch, normalized_value)?;
