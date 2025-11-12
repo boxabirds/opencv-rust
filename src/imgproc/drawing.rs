@@ -187,12 +187,12 @@ pub fn ellipse(
     let angle_range = end_angle - start_angle;
 
     for i in 0..num_points {
-        let t = start_angle + (i as f64 / num_points as f64) * angle_range;
+        let t = start_angle + (f64::from(i) / f64::from(num_points)) * angle_range;
         let t_rad = t * std::f64::consts::PI / 180.0;
 
         // Parametric ellipse equation
-        let x_local = a as f64 * t_rad.cos();
-        let y_local = b as f64 * t_rad.sin();
+        let x_local = f64::from(a) * t_rad.cos();
+        let y_local = f64::from(b) * t_rad.sin();
 
         // Rotate
         let x_rot = x_local * cos_angle - y_local * sin_angle;
@@ -266,7 +266,7 @@ pub fn fill_poly(img: &mut Mat, pts: &[Point], color: Scalar) -> Result<()> {
             let p2 = pts[(i + 1) % pts.len()];
 
             if (p1.y <= y && p2.y > y) || (p2.y <= y && p1.y > y) {
-                let x = p1.x + ((y - p1.y) as f64 / (p2.y - p1.y) as f64 * (p2.x - p1.x) as f64) as i32;
+                let x = p1.x + (f64::from(y - p1.y) / f64::from(p2.y - p1.y) * f64::from(p2.x - p1.x)) as i32;
                 intersections.push(x);
             }
         }

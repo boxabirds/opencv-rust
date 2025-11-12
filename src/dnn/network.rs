@@ -1,5 +1,5 @@
 use crate::dnn::blob::Blob;
-use crate::dnn::layers::*;
+use crate::dnn::layers::{Layer, ConvolutionLayer, PoolType, PoolingLayer, ActivationType, ActivationLayer, FullyConnectedLayer, FlattenLayer, SoftmaxLayer};
 use crate::error::{Error, Result};
 use std::collections::HashMap;
 
@@ -12,6 +12,7 @@ pub struct Network {
 
 impl Network {
     /// Create new empty network
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             layers: Vec::new(),
@@ -60,7 +61,7 @@ impl Network {
 
         let target_idx = self.layer_map.get(layer_name)
             .ok_or_else(|| Error::InvalidParameter(
-                format!("Layer '{}' not found", layer_name)
+                format!("Layer '{layer_name}' not found")
             ))?;
 
         let mut current = self.input_blob.as_ref().unwrap().clone_blob();
@@ -76,11 +77,13 @@ impl Network {
     }
 
     /// Get number of layers
+    #[must_use] 
     pub fn num_layers(&self) -> usize {
         self.layers.len()
     }
 
     /// Get layer names
+    #[must_use] 
     pub fn get_layer_names(&self) -> Vec<String> {
         self.layers.iter().map(|l| l.name().to_string()).collect()
     }
@@ -132,12 +135,14 @@ pub struct NetworkBuilder {
 }
 
 impl NetworkBuilder {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             network: Network::new(),
         }
     }
 
+    #[must_use] 
     pub fn add_conv(
         mut self,
         name: &str,
@@ -157,6 +162,7 @@ impl NetworkBuilder {
         self
     }
 
+    #[must_use] 
     pub fn add_pool(
         mut self,
         name: &str,
@@ -174,6 +180,7 @@ impl NetworkBuilder {
         self
     }
 
+    #[must_use] 
     pub fn add_activation(
         mut self,
         name: &str,
@@ -184,6 +191,7 @@ impl NetworkBuilder {
         self
     }
 
+    #[must_use] 
     pub fn add_fc(
         mut self,
         name: &str,
@@ -199,18 +207,21 @@ impl NetworkBuilder {
         self
     }
 
+    #[must_use] 
     pub fn add_flatten(mut self, name: &str) -> Self {
         let layer = FlattenLayer::new(name.to_string());
         self.network.add_layer(Box::new(layer));
         self
     }
 
+    #[must_use] 
     pub fn add_softmax(mut self, name: &str) -> Self {
         let layer = SoftmaxLayer::new(name.to_string());
         self.network.add_layer(Box::new(layer));
         self
     }
 
+    #[must_use] 
     pub fn build(self) -> Network {
         self.network
     }
@@ -224,9 +235,10 @@ impl Default for NetworkBuilder {
 
 /// Common network architectures
 pub mod models {
-    use super::*;
+    use super::{Network, NetworkBuilder, ActivationType, PoolType};
 
     /// Simple LeNet-5 like network
+    #[must_use] 
     pub fn lenet() -> Network {
         NetworkBuilder::new()
             .add_conv("conv1", 6, (5, 5), (1, 1), (0, 0))
@@ -246,6 +258,7 @@ pub mod models {
     }
 
     /// Simple AlexNet-like network
+    #[must_use] 
     pub fn alexnet() -> Network {
         NetworkBuilder::new()
             .add_conv("conv1", 64, (11, 11), (4, 4), (2, 2))

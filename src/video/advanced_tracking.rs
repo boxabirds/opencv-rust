@@ -10,8 +10,15 @@ pub struct MOSSETracker {
     initialized: bool,
 }
 
+impl Default for MOSSETracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MOSSETracker {
     /// Create MOSSE tracker with default parameters
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             template: Mat::new(1, 1, 1, MatDepth::U8).unwrap(),
@@ -92,7 +99,7 @@ impl MOSSETracker {
                         let y = (row + fy).min(frame.rows() - 1);
                         let x = (col + fx).min(frame.cols() - 1);
 
-                        let pixel = frame.at(y, x)?[0] as f32;
+                        let pixel = f32::from(frame.at(y, x)?[0]);
                         sum += pixel * self.filter[fy][fx];
                     }
                 }
@@ -111,7 +118,7 @@ impl MOSSETracker {
 
         for row in 0..h {
             for col in 0..w {
-                let pixel = template.at(row, col)?[0] as f32 / 255.0;
+                let pixel = f32::from(template.at(row, col)?[0]) / 255.0;
                 let g = gaussian[row][col];
 
                 // Update filter using learning rate
@@ -124,15 +131,22 @@ impl MOSSETracker {
     }
 }
 
-/// MedianFlow tracker
+/// `MedianFlow` tracker
 pub struct MedianFlowTracker {
     points: Vec<Point>,
     bbox: Rect,
     initialized: bool,
 }
 
+impl Default for MedianFlowTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MedianFlowTracker {
-    /// Create MedianFlow tracker
+    /// Create `MedianFlow` tracker
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             points: Vec::new(),
@@ -209,8 +223,15 @@ pub struct CSRTTracker {
     initialized: bool,
 }
 
+impl Default for CSRTTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CSRTTracker {
     /// Create CSRT tracker
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             template: Mat::new(1, 1, 1, MatDepth::U8).unwrap(),
@@ -349,7 +370,7 @@ fn template_match(frame: &Mat, template: &Mat, search_region: Rect) -> Result<(i
                     let template_pixel = template.at(ty, tx)?;
 
                     for ch in 0..frame.channels().min(template.channels()) {
-                        let diff = frame_pixel[ch] as f32 - template_pixel[ch] as f32;
+                        let diff = f32::from(frame_pixel[ch]) - f32::from(template_pixel[ch]);
                         ssd += diff * diff;
                     }
                 }
@@ -385,7 +406,7 @@ fn blend_templates(old_template: &Mat, new_template: &Mat, alpha: f32) -> Result
             let blended_pixel = blended.at_mut(row, col)?;
 
             for ch in 0..old_template.channels() {
-                let value = (1.0 - alpha) * old_pixel[ch] as f32 + alpha * new_pixel[ch] as f32;
+                let value = (1.0 - alpha) * f32::from(old_pixel[ch]) + alpha * f32::from(new_pixel[ch]);
                 blended_pixel[ch] = value as u8;
             }
         }

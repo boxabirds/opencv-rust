@@ -8,6 +8,7 @@ pub struct MultiBandBlender {
 }
 
 impl MultiBandBlender {
+    #[must_use] 
     pub fn new(num_bands: usize) -> Self {
         Self {
             num_bands,
@@ -15,6 +16,7 @@ impl MultiBandBlender {
         }
     }
 
+    #[must_use] 
     pub fn with_sharpness(mut self, sharpness: f32) -> Self {
         self.sharpness = sharpness;
         self
@@ -32,8 +34,8 @@ impl MultiBandBlender {
         }
 
         // Determine output size
-        let rows = images.iter().map(|img| img.rows()).max().unwrap();
-        let cols = images.iter().map(|img| img.cols()).max().unwrap();
+        let rows = images.iter().map(super::super::core::mat::Mat::rows).max().unwrap();
+        let cols = images.iter().map(super::super::core::mat::Mat::cols).max().unwrap();
         let channels = images[0].channels();
 
         // Build Laplacian pyramids for each image
@@ -154,7 +156,7 @@ impl MultiBandBlender {
         for row in 0..image.rows() {
             for col in 0..image.cols() {
                 for ch in 0..image.channels() {
-                    let val = image.at(row, col)?[ch] as f32;
+                    let val = f32::from(image.at(row, col)?[ch]);
                     current.set_f32(row, col, ch, val)?;
                 }
             }
@@ -251,6 +253,7 @@ pub struct FeatherBlender {
 }
 
 impl FeatherBlender {
+    #[must_use] 
     pub fn new(sharpness: f32) -> Self {
         Self { sharpness }
     }
@@ -279,7 +282,7 @@ impl FeatherBlender {
                     for i in 0..images.len() {
                         if row < weight_maps[i].rows() && col < weight_maps[i].cols() {
                             let weight = weight_maps[i].at_f32(row, col, 0)?;
-                            let pixel = images[i].at(row, col)?[ch] as f32;
+                            let pixel = f32::from(images[i].at(row, col)?[ch]);
 
                             weighted_sum += pixel * weight;
                             weight_sum += weight;
@@ -329,8 +332,8 @@ impl FeatherBlender {
         // Simple boundary distance (check 8-connected neighbors)
         let search_radius = 5;
 
-        for dy in -(search_radius as i32)..=(search_radius as i32) {
-            for dx in -(search_radius as i32)..=(search_radius as i32) {
+        for dy in -search_radius..=search_radius {
+            for dx in -search_radius..=search_radius {
                 let y = (row as i32 + dy).max(0).min(mask.rows() as i32 - 1) as usize;
                 let x = (col as i32 + dx).max(0).min(mask.cols() as i32 - 1) as usize;
 

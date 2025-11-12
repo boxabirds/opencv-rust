@@ -59,7 +59,7 @@ pub fn calc_optical_flow_pyr_lk(
 
                 // Add small distance penalty to prefer points closer to original
                 // This prevents drift when multiple points have similar SSD
-                let dist = ((dx * dx + dy * dy) as f64).sqrt();
+                let dist = f64::from(dx * dx + dy * dy).sqrt();
                 let error = ssd_error + dist * 0.1;
 
                 if error < best_error {
@@ -70,7 +70,7 @@ pub fn calc_optical_flow_pyr_lk(
         }
 
         next_pts.push(best_match);
-        status.push(if best_error < 1000.0 { 1 } else { 0 });
+        status.push(u8::from(best_error < 1000.0));
     }
 
     Ok((next_pts, status))
@@ -92,8 +92,8 @@ fn window_ssd(
             let y2 = (pt2.y + dy) as usize;
             let x2 = (pt2.x + dx) as usize;
 
-            let val1 = img1.at(y1, x1)?[0] as f64;
-            let val2 = img2.at(y2, x2)?[0] as f64;
+            let val1 = f64::from(img1.at(y1, x1)?[0]);
+            let val2 = f64::from(img2.at(y2, x2)?[0]);
 
             let diff = val1 - val2;
             ssd += diff * diff;

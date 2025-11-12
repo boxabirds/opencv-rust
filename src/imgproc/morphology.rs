@@ -26,6 +26,7 @@ pub enum MorphShape {
 }
 
 /// Get structuring element for morphological operations
+#[must_use] 
 pub fn get_structuring_element(shape: MorphShape, ksize: Size) -> Vec<Vec<bool>> {
     let rows = ksize.height as usize;
     let cols = ksize.width as usize;
@@ -256,7 +257,7 @@ pub fn morphology_ex(
 }
 
 /// Async version of erode with optional GPU acceleration
-/// For simple rectangular kernels, uses GPU if available and use_gpu is true
+/// For simple rectangular kernels, uses GPU if available and `use_gpu` is true
 pub async fn erode_async(
     src: &Mat,
     dst: &mut Mat,
@@ -286,7 +287,7 @@ pub async fn erode_async(
 }
 
 /// Async version of dilate with optional GPU acceleration
-/// For simple rectangular kernels, uses GPU if available and use_gpu is true
+/// For simple rectangular kernels, uses GPU if available and `use_gpu` is true
 pub async fn dilate_async(
     src: &Mat,
     dst: &mut Mat,
@@ -315,7 +316,7 @@ pub async fn dilate_async(
     dilate(src, dst, kernel)
 }
 
-/// Async version of morphology_ex with optional GPU acceleration
+/// Async version of `morphology_ex` with optional GPU acceleration
 pub async fn morphology_ex_async(
     src: &Mat,
     dst: &mut Mat,

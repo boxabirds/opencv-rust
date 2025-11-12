@@ -6,7 +6,14 @@ pub struct MergeDebevec {
     samples: usize,
 }
 
+impl Default for MergeDebevec {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MergeDebevec {
+    #[must_use] 
     pub fn new() -> Self {
         Self { samples: 256 }
     }
@@ -36,7 +43,7 @@ impl MergeDebevec {
 
         // Weight function: hat function centered at 128
         let weight = |z: u8| -> f32 {
-            let z = z as f32;
+            let z = f32::from(z);
             if z <= 127.0 {
                 z / 127.0
             } else {
@@ -121,7 +128,14 @@ pub struct TonemapReinhard {
     color_adapt: f32,
 }
 
+impl Default for TonemapReinhard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TonemapReinhard {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             intensity: 0.0,
@@ -130,11 +144,13 @@ impl TonemapReinhard {
         }
     }
 
+    #[must_use] 
     pub fn with_intensity(mut self, intensity: f32) -> Self {
         self.intensity = intensity;
         self
     }
 
+    #[must_use] 
     pub fn with_light_adapt(mut self, adapt: f32) -> Self {
         self.light_adapt = adapt;
         self
@@ -208,7 +224,14 @@ pub struct TonemapDrago {
     bias: f32,
 }
 
+impl Default for TonemapDrago {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TonemapDrago {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             saturation: 1.0,
@@ -216,6 +239,7 @@ impl TonemapDrago {
         }
     }
 
+    #[must_use] 
     pub fn with_bias(mut self, bias: f32) -> Self {
         self.bias = bias;
         self

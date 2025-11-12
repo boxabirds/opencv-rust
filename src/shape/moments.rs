@@ -36,7 +36,14 @@ pub struct Moments {
     pub nu03: f64,
 }
 
+impl Default for Moments {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Moments {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             m00: 0.0,
@@ -67,20 +74,23 @@ impl Moments {
     }
 
     /// Compute centroid from spatial moments
+    #[must_use] 
     pub fn centroid(&self) -> (f64, f64) {
-        if self.m00 != 0.0 {
-            (self.m10 / self.m00, self.m01 / self.m00)
-        } else {
+        if self.m00 == 0.0 {
             (0.0, 0.0)
+        } else {
+            (self.m10 / self.m00, self.m01 / self.m00)
         }
     }
 
     /// Compute area (for binary images, m00 is the area)
+    #[must_use] 
     pub fn area(&self) -> f64 {
         self.m00
     }
 
     /// Compute orientation angle
+    #[must_use] 
     pub fn orientation(&self) -> f64 {
         if self.mu20 - self.mu02 == 0.0 && self.mu11 == 0.0 {
             0.0
@@ -90,6 +100,7 @@ impl Moments {
     }
 
     /// Compute eccentricity
+    #[must_use] 
     pub fn eccentricity(&self) -> f64 {
         let a = self.mu20 + self.mu02;
         let b = ((self.mu20 - self.mu02).powi(2) + 4.0 * self.mu11.powi(2)).sqrt();
@@ -118,7 +129,7 @@ pub fn compute_moments(image: &Mat) -> Result<Moments> {
     // Compute spatial moments
     for row in 0..image.rows() {
         for col in 0..image.cols() {
-            let intensity = image.at(row, col)?[0] as f64;
+            let intensity = f64::from(image.at(row, col)?[0]);
 
             if intensity > 0.0 {
                 let x = col as f64;
@@ -146,7 +157,7 @@ pub fn compute_moments(image: &Mat) -> Result<Moments> {
 
         for row in 0..image.rows() {
             for col in 0..image.cols() {
-                let intensity = image.at(row, col)?[0] as f64;
+                let intensity = f64::from(image.at(row, col)?[0]);
 
                 if intensity > 0.0 {
                     let x = col as f64 - x_bar;
@@ -181,6 +192,7 @@ pub fn compute_moments(image: &Mat) -> Result<Moments> {
 }
 
 /// Compute Hu's 7 invariant moments
+#[must_use] 
 pub fn hu_moments(moments: &Moments) -> [f64; 7] {
     let nu20 = moments.nu20;
     let nu11 = moments.nu11;
@@ -216,6 +228,7 @@ pub fn hu_moments(moments: &Moments) -> [f64; 7] {
 }
 
 /// Compute contour moments from a set of points
+#[must_use] 
 pub fn contour_moments(contour: &[Point]) -> Moments {
     let mut moments = Moments::new();
 
@@ -229,10 +242,10 @@ pub fn contour_moments(contour: &[Point]) -> Moments {
         let curr = &contour[i];
         let next = &contour[(i + 1) % n];
 
-        let xi = curr.x as f64;
-        let yi = curr.y as f64;
-        let xi1 = next.x as f64;
-        let yi1 = next.y as f64;
+        let xi = f64::from(curr.x);
+        let yi = f64::from(curr.y);
+        let xi1 = f64::from(next.x);
+        let yi1 = f64::from(next.y);
 
         let a = xi * yi1 - xi1 * yi;
 

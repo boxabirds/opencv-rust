@@ -14,6 +14,7 @@ pub enum EnergyType {
 }
 
 impl SeamCarver {
+    #[must_use] 
     pub fn new(energy_type: EnergyType) -> Self {
         Self { energy_type }
     }
@@ -127,8 +128,8 @@ impl SeamCarver {
                 // Horizontal gradient
                 if col > 0 && col < src.cols() - 1 {
                     for ch in 0..src.channels() {
-                        let left = src.at(row, col - 1)?[ch] as f32;
-                        let right = src.at(row, col + 1)?[ch] as f32;
+                        let left = f32::from(src.at(row, col - 1)?[ch]);
+                        let right = f32::from(src.at(row, col + 1)?[ch]);
                         dx += (right - left).abs();
                     }
                 }
@@ -136,8 +137,8 @@ impl SeamCarver {
                 // Vertical gradient
                 if row > 0 && row < src.rows() - 1 {
                     for ch in 0..src.channels() {
-                        let up = src.at(row - 1, col)?[ch] as f32;
-                        let down = src.at(row + 1, col)?[ch] as f32;
+                        let up = f32::from(src.at(row - 1, col)?[ch]);
+                        let down = f32::from(src.at(row + 1, col)?[ch]);
                         dy += (down - up).abs();
                     }
                 }
@@ -155,11 +156,11 @@ impl SeamCarver {
                 let mut laplacian = 0.0f32;
 
                 for ch in 0..src.channels() {
-                    let center = src.at(row, col)?[ch] as f32;
-                    let left = src.at(row, col - 1)?[ch] as f32;
-                    let right = src.at(row, col + 1)?[ch] as f32;
-                    let up = src.at(row - 1, col)?[ch] as f32;
-                    let down = src.at(row + 1, col)?[ch] as f32;
+                    let center = f32::from(src.at(row, col)?[ch]);
+                    let left = f32::from(src.at(row, col - 1)?[ch]);
+                    let right = f32::from(src.at(row, col + 1)?[ch]);
+                    let up = f32::from(src.at(row - 1, col)?[ch]);
+                    let down = f32::from(src.at(row + 1, col)?[ch]);
 
                     laplacian += (left + right + up + down - 4.0 * center).abs();
                 }

@@ -152,16 +152,16 @@ pub fn adaptive_threshold(
                         let c_offset = (col as i32 + kx).max(0).min(cols as i32 - 1) as usize;
 
                         let src_idx = r * cols + c_offset;
-                        sum += src_data[src_idx] as u32;
+                        sum += u32::from(src_data[src_idx]);
                         count += 1;
                     }
                 }
 
                 let local_thresh = match method {
-                    AdaptiveThresholdMethod::Mean => (sum as f64 / count as f64) - c,
+                    AdaptiveThresholdMethod::Mean => (f64::from(sum) / f64::from(count)) - c,
                     AdaptiveThresholdMethod::Gaussian => {
                         // Simplified - use mean for now (would normally use weighted Gaussian)
-                        (sum as f64 / count as f64) - c
+                        (f64::from(sum) / f64::from(count)) - c
                     }
                 };
 
@@ -170,14 +170,14 @@ pub fn adaptive_threshold(
 
                 *dst_pixel = match thresh_type {
                     ThresholdType::Binary => {
-                        if value as f64 > local_thresh {
+                        if f64::from(value) > local_thresh {
                             maxval
                         } else {
                             0
                         }
                     }
                     ThresholdType::BinaryInv => {
-                        if value as f64 > local_thresh {
+                        if f64::from(value) > local_thresh {
                             0
                         } else {
                             maxval

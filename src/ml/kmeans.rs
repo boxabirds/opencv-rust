@@ -75,7 +75,7 @@ pub fn kmeans(
         for (i, center) in new_centers.iter_mut().enumerate() {
             if counts[i] > 0 {
                 for val in center.iter_mut() {
-                    *val /= counts[i] as f64;
+                    *val /= f64::from(counts[i]);
                 }
             }
         }
@@ -176,7 +176,7 @@ fn initialize_from_labels(
     for (i, center) in centers.iter_mut().enumerate() {
         if counts[i] > 0 {
             for val in center.iter_mut() {
-                *val /= counts[i] as f64;
+                *val /= f64::from(counts[i]);
             }
         }
     }

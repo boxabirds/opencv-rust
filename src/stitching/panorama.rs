@@ -17,7 +17,14 @@ pub enum WarpType {
     Plane,
 }
 
+impl Default for PanoramaStitcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PanoramaStitcher {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             confidence_threshold: 1.0,
@@ -26,11 +33,13 @@ impl PanoramaStitcher {
         }
     }
 
+    #[must_use] 
     pub fn with_confidence(mut self, threshold: f32) -> Self {
         self.confidence_threshold = threshold;
         self
     }
 
+    #[must_use] 
     pub fn with_warp_type(mut self, warp_type: WarpType) -> Self {
         self.warper_type = warp_type;
         self
@@ -122,9 +131,9 @@ impl PanoramaStitcher {
         for row in 0..image.rows() {
             for col in 0..image.cols() {
                 let pixel = image.at(row, col)?;
-                let gray_val = (0.299 * pixel[0] as f32
-                              + 0.587 * pixel[1] as f32
-                              + 0.114 * pixel[2] as f32) as u8;
+                let gray_val = (0.299 * f32::from(pixel[0])
+                              + 0.587 * f32::from(pixel[1])
+                              + 0.114 * f32::from(pixel[2])) as u8;
                 gray.at_mut(row, col)?[0] = gray_val;
             }
         }
@@ -224,8 +233,8 @@ impl PanoramaStitcher {
         let count = src.len().min(dst.len());
 
         for i in 0..count {
-            tx += (dst[i].x - src[i].x) as f64;
-            ty += (dst[i].y - src[i].y) as f64;
+            tx += f64::from(dst[i].x - src[i].x);
+            ty += f64::from(dst[i].y - src[i].y);
         }
 
         tx /= count as f64;
@@ -246,8 +255,8 @@ impl PanoramaStitcher {
         let mut warped = Vec::new();
 
         // Determine output size
-        let max_width = images.iter().map(|img| img.cols()).max().unwrap_or(0);
-        let max_height = images.iter().map(|img| img.rows()).max().unwrap_or(0);
+        let max_width = images.iter().map(super::super::core::mat::Mat::cols).max().unwrap_or(0);
+        let max_height = images.iter().map(super::super::core::mat::Mat::rows).max().unwrap_or(0);
 
         let output_width = max_width * 2; // Rough estimate
         let output_height = max_height;
@@ -343,8 +352,8 @@ impl PanoramaStitcher {
         for row in 0..rows {
             for col in 0..cols {
                 for ch in 0..channels {
-                    let val1 = img1.at(row, col)?[ch] as f32;
-                    let val2 = img2.at(row, col)?[ch] as f32;
+                    let val1 = f32::from(img1.at(row, col)?[ch]);
+                    let val2 = f32::from(img2.at(row, col)?[ch]);
                     let blended = (alpha * val1 + (1.0 - alpha) * val2) as u8;
                     result.at_mut(row, col)?[ch] = blended;
                 }

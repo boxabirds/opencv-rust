@@ -22,6 +22,7 @@ pub enum MatDepth {
 }
 
 impl MatDepth {
+    #[must_use] 
     pub fn size(&self) -> usize {
         match self {
             MatDepth::U8 => 1,
@@ -57,7 +58,7 @@ impl Mat {
 
     /// Create a new Mat with given dimensions and channels
     ///
-    /// Convenience alias for new_rows_cols
+    /// Convenience alias for `new_rows_cols`
     pub fn new(rows: usize, cols: usize, channels: usize, depth: MatDepth) -> Result<Self> {
         Self::new_rows_cols(rows, cols, channels, depth)
     }
@@ -213,57 +214,69 @@ impl Mat {
     }
 
     /// Get dimensions
+    #[must_use] 
     pub fn size(&self) -> Size {
         Size::new(self.cols as i32, self.rows as i32)
     }
 
+    #[must_use] 
     pub fn rows(&self) -> usize {
         self.rows
     }
 
+    #[must_use] 
     pub fn cols(&self) -> usize {
         self.cols
     }
 
     /// Get width (same as cols, opencv-rust compatible)
+    #[must_use] 
     pub fn width(&self) -> usize {
         self.cols
     }
 
     /// Get height (same as rows, opencv-rust compatible)
+    #[must_use] 
     pub fn height(&self) -> usize {
         self.rows
     }
 
+    #[must_use] 
     pub fn channels(&self) -> usize {
         self.channels
     }
 
+    #[must_use] 
     pub fn depth(&self) -> MatDepth {
         self.depth
     }
 
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.rows == 0 || self.cols == 0
     }
 
     /// Get element size in bytes
+    #[must_use] 
     pub fn elem_size(&self) -> usize {
         self.channels * self.depth.size()
     }
 
     /// Get element size for a single channel in bytes
+    #[must_use] 
     pub fn elem_size1(&self) -> usize {
         self.depth.size()
     }
 
     /// Get total number of elements
+    #[must_use] 
     pub fn total(&self) -> usize {
         self.rows * self.cols
     }
 
     /// Get the type identifier (combining depth and channels)
-    /// Returns a value compatible with OpenCV's type system
+    /// Returns a value compatible with `OpenCV`'s type system
+    #[must_use] 
     pub fn type_(&self) -> i32 {
         // OpenCV type encoding: ((depth) + ((channels-1) << 3))
         let depth_val = match self.depth {
@@ -276,23 +289,27 @@ impl Mat {
     }
 
     /// Get number of dimensions (always 2 for this implementation)
+    #[must_use] 
     pub fn dims(&self) -> i32 {
         2
     }
 
     /// Check if matrix data is stored continuously
     /// Returns true if there are no gaps between rows
+    #[must_use] 
     pub fn is_continuous(&self) -> bool {
         // In our implementation, data is always stored continuously
         true
     }
 
     /// Get the number of bytes each row occupies
+    #[must_use] 
     pub fn step1(&self) -> usize {
         self.cols * self.elem_size()
     }
 
     /// Get raw data
+    #[must_use] 
     pub fn data(&self) -> &[u8] {
         &self.data
     }
@@ -335,6 +352,7 @@ impl Mat {
     ///
     /// Caller must ensure that row < rows and col < cols
     #[inline(always)]
+    #[must_use] 
     pub unsafe fn at_unchecked(&self, row: usize, col: usize) -> &[u8] {
         let idx = (row * self.cols + col) * self.channels * self.depth.size();
         let end = idx + self.channels * self.depth.size();
@@ -440,6 +458,7 @@ impl Mat {
     }
 
     /// Clone the matrix
+    #[must_use] 
     pub fn clone_mat(&self) -> Mat {
         Self {
             data: self.data.clone(),

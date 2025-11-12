@@ -1,9 +1,9 @@
 //! # OpenCV-Rust
 //!
-//! A pure Rust implementation of core OpenCV functionality.
+//! A pure Rust implementation of core `OpenCV` functionality.
 //!
 //! This library provides computer vision and image processing capabilities
-//! inspired by OpenCV, implemented entirely in Rust for safety and performance.
+//! inspired by `OpenCV`, implemented entirely in Rust for safety and performance.
 //!
 //! ## Features
 //!

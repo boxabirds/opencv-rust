@@ -57,7 +57,7 @@ pub fn inpaint(
                                 let neighbor_pixel = src.at(y as usize, x as usize)?;
 
                                 for ch in 0..src.channels() {
-                                    sums[ch] += neighbor_pixel[ch] as f64;
+                                    sums[ch] += f64::from(neighbor_pixel[ch]);
                                 }
 
                                 count += 1;
@@ -70,7 +70,7 @@ pub fn inpaint(
                     let dst_pixel = dst.at_mut(row, col)?;
 
                     for ch in 0..src.channels() {
-                        dst_pixel[ch] = (sums[ch] / count as f64) as u8;
+                        dst_pixel[ch] = (sums[ch] / f64::from(count)) as u8;
                     }
                 }
             }
@@ -126,7 +126,7 @@ pub fn fast_nl_means_denoising(
                         let weight = (-similarity / (h * h)).exp();
 
                         let neighbor_pixel = src.at(y as usize, x as usize)?;
-                        pixel_sum += weight * neighbor_pixel[0] as f32;
+                        pixel_sum += weight * f32::from(neighbor_pixel[0]);
                         weight_sum += weight;
                     }
                 }
@@ -168,7 +168,7 @@ fn calculate_patch_distance(
                 let p1 = img.at(y1 as usize, x1 as usize)?;
                 let p2 = img.at(y2 as usize, x2 as usize)?;
 
-                let diff = p1[0] as f32 - p2[0] as f32;
+                let diff = f32::from(p1[0]) - f32::from(p2[0]);
                 dist += diff * diff;
                 count += 1;
             }

@@ -116,7 +116,7 @@ fn bgr_to_gray(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
                 };
 
                 // Using standard RGB to grayscale conversion weights
-                let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
+                let gray = (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) as u8;
                 *dst_pixel = gray;
             }
         });
@@ -171,7 +171,7 @@ fn rgba_to_gray(src: &Mat, dst: &mut Mat, is_bgra: bool) -> Result<()> {
                     (src_data[src_idx], src_data[src_idx + 1], src_data[src_idx + 2])
                 };
 
-                let gray = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8;
+                let gray = (0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) as u8;
                 *dst_pixel = gray;
             }
         });
@@ -249,6 +249,7 @@ fn swap_rb_channels(src: &Mat, dst: &mut Mat) -> Result<()> {
 }
 
 /// Convert RGB/BGR to HSV
+#[allow(clippy::many_single_char_names)] // r,g,b,h,s,v are standard in color space math
 fn rgb_to_hsv(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -262,9 +263,9 @@ fn rgb_to_hsv(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
             let (r, g, b) = if is_bgr {
-                (pixel[2] as f32 / 255.0, pixel[1] as f32 / 255.0, pixel[0] as f32 / 255.0)
+                (f32::from(pixel[2]) / 255.0, f32::from(pixel[1]) / 255.0, f32::from(pixel[0]) / 255.0)
             } else {
-                (pixel[0] as f32 / 255.0, pixel[1] as f32 / 255.0, pixel[2] as f32 / 255.0)
+                (f32::from(pixel[0]) / 255.0, f32::from(pixel[1]) / 255.0, f32::from(pixel[2]) / 255.0)
             };
 
             let max = r.max(g).max(b);
@@ -301,6 +302,7 @@ fn rgb_to_hsv(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 }
 
 /// Convert HSV to RGB/BGR
+#[allow(clippy::many_single_char_names)] // r,g,b,h,s,v,x,c,m are standard in color space math
 fn hsv_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -313,9 +315,9 @@ fn hsv_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     for row in 0..src.rows() {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
-            let h = pixel[0] as f32 * 2.0; // Convert back from [0, 180] to [0, 360]
-            let s = pixel[1] as f32 / 255.0;
-            let v = pixel[2] as f32 / 255.0;
+            let h = f32::from(pixel[0]) * 2.0; // Convert back from [0, 180] to [0, 360]
+            let s = f32::from(pixel[1]) / 255.0;
+            let v = f32::from(pixel[2]) / 255.0;
 
             let c = v * s;
             let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
@@ -356,6 +358,7 @@ fn hsv_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 }
 
 /// Convert RGB/BGR to Lab color space
+#[allow(clippy::many_single_char_names)] // r,g,b,x,y,z,l,a,f are standard in color space math
 fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -369,9 +372,9 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
             let (r, g, b) = if is_bgr {
-                (pixel[2] as f32 / 255.0, pixel[1] as f32 / 255.0, pixel[0] as f32 / 255.0)
+                (f32::from(pixel[2]) / 255.0, f32::from(pixel[1]) / 255.0, f32::from(pixel[0]) / 255.0)
             } else {
-                (pixel[0] as f32 / 255.0, pixel[1] as f32 / 255.0, pixel[2] as f32 / 255.0)
+                (f32::from(pixel[0]) / 255.0, f32::from(pixel[1]) / 255.0, f32::from(pixel[2]) / 255.0)
             };
 
             // Convert to XYZ (D65 illuminant)
@@ -384,12 +387,12 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let z = r_linear * 0.0193 + g_linear * 0.1192 + b_linear * 0.9505;
 
             // Normalize for D65
-            let xn = x / 0.950489;
+            let xn = x / 0.950_489;
             let yn = y / 1.0;
             let zn = z / 1.08884;
 
             // Convert to Lab
-            let f = |t: f32| if t > 0.008856 { t.powf(1.0 / 3.0) } else { 7.787 * t + 16.0 / 116.0 };
+            let f = |t: f32| if t > 0.008_856 { t.powf(1.0 / 3.0) } else { 7.787 * t + 16.0 / 116.0 };
             let fx = f(xn);
             let fy = f(yn);
             let fz = f(zn);
@@ -409,6 +412,7 @@ fn rgb_to_lab(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
 }
 
 /// Convert Lab to RGB/BGR
+#[allow(clippy::many_single_char_names)] // l,a,b,x,y,z,r,g are standard in color space math
 fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -421,17 +425,17 @@ fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     for row in 0..src.rows() {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
-            let l = pixel[0] as f32 / 2.55;
-            let a = pixel[1] as f32 - 128.0;
-            let b = pixel[2] as f32 - 128.0;
+            let l = f32::from(pixel[0]) / 2.55;
+            let a = f32::from(pixel[1]) - 128.0;
+            let b = f32::from(pixel[2]) - 128.0;
 
             // Convert to XYZ
             let fy = (l + 16.0) / 116.0;
             let fx = a / 500.0 + fy;
             let fz = fy - b / 200.0;
 
-            let f_inv = |t: f32| if t > 0.206897 { t.powi(3) } else { (t - 16.0 / 116.0) / 7.787 };
-            let xn = f_inv(fx) * 0.950489;
+            let f_inv = |t: f32| if t > 0.206_897 { t.powi(3) } else { (t - 16.0 / 116.0) / 7.787 };
+            let xn = f_inv(fx) * 0.950_489;
             let yn = f_inv(fy) * 1.0;
             let zn = f_inv(fz) * 1.08884;
 
@@ -440,7 +444,7 @@ fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
             let g_linear = xn * -0.9689 + yn * 1.8758 + zn * 0.0415;
             let b_linear = xn * 0.0557 + yn * -0.2040 + zn * 1.0570;
 
-            let gamma = |t: f32| if t > 0.0031308 { 1.055 * t.powf(1.0 / 2.4) - 0.055 } else { 12.92 * t };
+            let gamma = |t: f32| if t > 0.003_130_8 { 1.055 * t.powf(1.0 / 2.4) - 0.055 } else { 12.92 * t };
             let r = (gamma(r_linear) * 255.0).clamp(0.0, 255.0) as u8;
             let g = (gamma(g_linear) * 255.0).clamp(0.0, 255.0) as u8;
             let b_rgb = (gamma(b_linear) * 255.0).clamp(0.0, 255.0) as u8;
@@ -461,7 +465,7 @@ fn lab_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     Ok(())
 }
 
-/// Convert RGB/BGR to YCrCb
+/// Convert RGB/BGR to `YCrCb`
 fn rgb_to_ycrcb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -475,9 +479,9 @@ fn rgb_to_ycrcb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
             let (r, g, b) = if is_bgr {
-                (pixel[2] as f32, pixel[1] as f32, pixel[0] as f32)
+                (f32::from(pixel[2]), f32::from(pixel[1]), f32::from(pixel[0]))
             } else {
-                (pixel[0] as f32, pixel[1] as f32, pixel[2] as f32)
+                (f32::from(pixel[0]), f32::from(pixel[1]), f32::from(pixel[2]))
             };
 
             // ITU-R BT.601 conversion
@@ -495,7 +499,7 @@ fn rgb_to_ycrcb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     Ok(())
 }
 
-/// Convert YCrCb to RGB/BGR
+/// Convert `YCrCb` to RGB/BGR
 fn ycrcb_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     if src.channels() != 3 {
         return Err(Error::InvalidParameter(
@@ -508,9 +512,9 @@ fn ycrcb_to_rgb(src: &Mat, dst: &mut Mat, is_bgr: bool) -> Result<()> {
     for row in 0..src.rows() {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
-            let y = pixel[0] as f32;
-            let cr = pixel[1] as f32 - 128.0;
-            let cb = pixel[2] as f32 - 128.0;
+            let y = f32::from(pixel[0]);
+            let cr = f32::from(pixel[1]) - 128.0;
+            let cb = f32::from(pixel[2]) - 128.0;
 
             // ITU-R BT.601 conversion
             let r = y + 1.403 * cr;

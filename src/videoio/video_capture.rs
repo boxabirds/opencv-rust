@@ -58,6 +58,7 @@ impl VideoCapture {
     }
 
     /// Check if video source is opened
+    #[must_use] 
     pub fn is_opened(&self) -> bool {
         self.is_opened
     }
@@ -103,7 +104,7 @@ impl VideoCapture {
             VideoCaptureProperty::FrameCount => Ok(self.total_frames as f64),
             VideoCaptureProperty::PosFrames => Ok(self.current_frame as f64),
             VideoCaptureProperty::PosMsec => Ok(self.current_frame as f64 * 1000.0 / self.fps),
-            _ => Err(Error::InvalidParameter(format!("Property {:?} not supported", prop))),
+            _ => Err(Error::InvalidParameter(format!("Property {prop:?} not supported"))),
         }
     }
 
@@ -130,7 +131,7 @@ impl VideoCapture {
                 self.fps = value;
                 Ok(())
             }
-            _ => Err(Error::InvalidParameter(format!("Property {:?} cannot be set", prop))),
+            _ => Err(Error::InvalidParameter(format!("Property {prop:?} cannot be set"))),
         }
     }
 
@@ -140,6 +141,7 @@ impl VideoCapture {
     }
 
     /// Get backend name
+    #[must_use] 
     pub fn get_backend_name(&self) -> &str {
         match &self.source {
             VideoSource::File { .. } => "FILE",

@@ -13,6 +13,7 @@ pub struct SIFTF32 {
 }
 
 impl SIFTF32 {
+    #[must_use] 
     pub fn new(n_features: usize) -> Self {
         Self {
             n_features,
@@ -32,10 +33,10 @@ impl SIFTF32 {
         }
 
         // Convert to f32 if needed
-        let image_f32 = if image.depth() != MatDepth::F32 {
-            image.convert_to(MatDepth::F32)?
-        } else {
+        let image_f32 = if image.depth() == MatDepth::F32 {
             image.clone_mat()
+        } else {
+            image.convert_to(MatDepth::F32)?
         };
 
         // Normalize to [0, 1]
@@ -43,7 +44,7 @@ impl SIFTF32 {
         for row in 0..image_f32.rows() {
             for col in 0..image_f32.cols() {
                 let val = if image.depth() == MatDepth::U8 {
-                    image.at(row, col)?[0] as f32 / 255.0
+                    f32::from(image.at(row, col)?[0]) / 255.0
                 } else {
                     image_f32.at_f32(row, col, 0)?
                 };
@@ -248,11 +249,10 @@ impl SIFTF32 {
                     }
                     let r = (row as i32 + dy) as usize;
                     let c = (col as i32 + dx) as usize;
-                    if r < mat.rows() && c < mat.cols() {
-                        if mat.at_f32(r, c, 0)? >= value {
+                    if r < mat.rows() && c < mat.cols()
+                        && mat.at_f32(r, c, 0)? >= value {
                             return Ok(false);
                         }
-                    }
                 }
             }
         }
@@ -270,11 +270,10 @@ impl SIFTF32 {
                     }
                     let r = (row as i32 + dy) as usize;
                     let c = (col as i32 + dx) as usize;
-                    if r < mat.rows() && c < mat.cols() {
-                        if mat.at_f32(r, c, 0)? <= value {
+                    if r < mat.rows() && c < mat.cols()
+                        && mat.at_f32(r, c, 0)? <= value {
                             return Ok(false);
                         }
-                    }
                 }
             }
         }

@@ -27,7 +27,7 @@ pub fn calc_hist(
     for row in 0..image.rows() {
         for col in 0..image.cols() {
             let pixel = image.at(row, col)?;
-            let val = pixel[0] as f32;
+            let val = f32::from(pixel[0]);
 
             if val >= min_val && val < max_val {
                 let bin = ((val - min_val) / bin_width) as usize;
@@ -42,8 +42,8 @@ pub fn calc_hist(
 
 /// Normalize histogram
 pub fn normalize_hist(hist: &mut [f32], alpha: f32, beta: f32) {
-    let min_val = hist.iter().cloned().fold(f32::INFINITY, f32::min);
-    let max_val = hist.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let min_val = hist.iter().copied().fold(f32::INFINITY, f32::min);
+    let max_val = hist.iter().copied().fold(f32::NEG_INFINITY, f32::max);
 
     if max_val - min_val > 0.0 {
         for val in hist.iter_mut() {
@@ -93,7 +93,7 @@ pub fn equalize_hist(src: &Mat, dst: &mut Mat) -> Result<()> {
 
     for i in 0..256 {
         if total_pixels > cdf_min {
-            lut[i] = (((cdf[i].saturating_sub(cdf_min)) as f64 / (total_pixels - cdf_min) as f64) * 255.0) as u8;
+            lut[i] = ((f64::from((cdf[i].saturating_sub(cdf_min))) / f64::from(total_pixels - cdf_min)) * 255.0) as u8;
         } else {
             lut[i] = 0;
         }
@@ -149,7 +149,7 @@ pub fn compare_hist(h1: &[f32], h2: &[f32], method: HistCompMethod) -> Result<f6
             }
 
             if den1 * den2 > 0.0 {
-                (num / (den1 * den2).sqrt()) as f64
+                f64::from(num / (den1 * den2).sqrt())
             } else {
                 0.0
             }
@@ -164,7 +164,7 @@ pub fn compare_hist(h1: &[f32], h2: &[f32], method: HistCompMethod) -> Result<f6
                 }
             }
 
-            sum as f64
+            f64::from(sum)
         }
         HistCompMethod::Intersection => {
             let mut sum = 0.0;
@@ -173,7 +173,7 @@ pub fn compare_hist(h1: &[f32], h2: &[f32], method: HistCompMethod) -> Result<f6
                 sum += h1[i].min(h2[i]);
             }
 
-            sum as f64
+            f64::from(sum)
         }
         HistCompMethod::Bhattacharyya => {
             let sum1: f32 = h1.iter().sum();
@@ -187,7 +187,7 @@ pub fn compare_hist(h1: &[f32], h2: &[f32], method: HistCompMethod) -> Result<f6
                 }
             }
 
-            (-bc.ln()).max(0.0) as f64
+            f64::from((-bc.ln()).max(0.0))
         }
     };
 
@@ -214,12 +214,12 @@ pub fn calc_back_project(
     let bin_width = range / hist.len() as f32;
 
     // Find max histogram value for normalization
-    let max_hist = hist.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let max_hist = hist.iter().copied().fold(f32::NEG_INFINITY, f32::max);
 
     for row in 0..image.rows() {
         for col in 0..image.cols() {
             let pixel = image.at(row, col)?;
-            let val = pixel[0] as f32;
+            let val = f32::from(pixel[0]);
 
             if val >= min_val && val < max_val {
                 let bin = ((val - min_val) / bin_width) as usize;

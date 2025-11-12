@@ -31,7 +31,7 @@ pub fn bilateral_filter(
 
     for i in -radius..=radius {
         for j in -radius..=radius {
-            let dist = (i * i + j * j) as f64;
+            let dist = f64::from(i * i + j * j);
             spatial_kernel[(i + radius) as usize][(j + radius) as usize] =
                 (dist * space_coeff).exp();
         }
@@ -71,7 +71,7 @@ pub fn bilateral_filter(
                         // Calculate color distance
                         let mut color_dist = 0.0f64;
                         for ch in 0..channels {
-                            let diff = center[ch] as f64 - src_data[neighbor_idx + ch] as f64;
+                            let diff = f64::from(center[ch]) - f64::from(src_data[neighbor_idx + ch]);
                             color_dist += diff * diff;
                         }
 
@@ -80,7 +80,7 @@ pub fn bilateral_filter(
                             * (color_dist * color_coeff).exp();
 
                         for ch in 0..channels {
-                            sum[ch] += src_data[neighbor_idx + ch] as f64 * weight;
+                            sum[ch] += f64::from(src_data[neighbor_idx + ch]) * weight;
                         }
                         weight_sum += weight;
                     }
@@ -132,7 +132,7 @@ pub fn guided_filter(
     let mut corr_i = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
     for row in 0..guide.rows() {
         for col in 0..guide.cols() {
-            let val = guide.at(row, col)?[0] as f64;
+            let val = f64::from(guide.at(row, col)?[0]);
             let corr_pixel = corr_i.at_mut(row, col)?;
             corr_pixel[0] = ((val * val) / 255.0) as u8;
         }
@@ -144,8 +144,8 @@ pub fn guided_filter(
     let mut var_i = Mat::new(guide.rows(), guide.cols(), 1, MatDepth::U8)?;
     for row in 0..guide.rows() {
         for col in 0..guide.cols() {
-            let mean_val = mean_i.at(row, col)?[0] as f64;
-            let mean_sq = mean_ii.at(row, col)?[0] as f64;
+            let mean_val = f64::from(mean_i.at(row, col)?[0]);
+            let mean_sq = f64::from(mean_ii.at(row, col)?[0]);
             let variance = mean_sq - (mean_val * mean_val) / 255.0;
 
             let var_pixel = var_i.at_mut(row, col)?;
@@ -156,15 +156,15 @@ pub fn guided_filter(
     // Compute coefficients a and b
     for row in 0..src.rows() {
         for col in 0..src.cols() {
-            let var = var_i.at(row, col)?[0] as f64;
-            let mean_guide = mean_i.at(row, col)?[0] as f64;
+            let var = f64::from(var_i.at(row, col)?[0]);
+            let mean_guide = f64::from(mean_i.at(row, col)?[0]);
 
             let a = var / (var + eps);
-            let mean_src = mean_p.at(row, col)?[0] as f64;
+            let mean_src = f64::from(mean_p.at(row, col)?[0]);
             let b = mean_src - a * mean_guide;
 
             // Apply linear transform
-            let guide_val = guide.at(row, col)?[0] as f64;
+            let guide_val = f64::from(guide.at(row, col)?[0]);
             let result = a * guide_val + b;
 
             let dst_pixel = dst.at_mut(row, col)?;
@@ -295,8 +295,8 @@ pub fn watershed(image: &Mat, markers: &mut Mat) -> Result<()> {
     let mut gradient = Mat::new(gray.rows(), gray.cols(), 1, MatDepth::U8)?;
     for row in 0..gray.rows() {
         for col in 0..gray.cols() {
-            let gx = grad_x.at(row, col)?[0] as f32;
-            let gy = grad_y.at(row, col)?[0] as f32;
+            let gx = f32::from(grad_x.at(row, col)?[0]);
+            let gy = f32::from(grad_y.at(row, col)?[0]);
             let mag = (gx * gx + gy * gy).sqrt();
 
             let grad_pixel = gradient.at_mut(row, col)?;
@@ -412,7 +412,7 @@ pub fn gabor_filter(
                     let y = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
                     let x = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
 
-                    let pixel = src.at(y, x)?[0] as f64;
+                    let pixel = f64::from(src.at(y, x)?[0]);
                     let k_val = kernel[(ky + half) as usize][(kx + half) as usize];
 
                     sum += pixel * k_val;
@@ -443,8 +443,8 @@ fn generate_gabor_kernel(
 
     for y in -half..=half {
         for x in -half..=half {
-            let x_theta = x as f64 * theta.cos() + y as f64 * theta.sin();
-            let y_theta = -x as f64 * theta.sin() + y as f64 * theta.cos();
+            let x_theta = f64::from(x) * theta.cos() + f64::from(y) * theta.sin();
+            let y_theta = f64::from(-x) * theta.sin() + f64::from(y) * theta.cos();
 
             let gaussian = (-(x_theta * x_theta / (2.0 * sigma_x * sigma_x)
                 + y_theta * y_theta / (2.0 * sigma_y * sigma_y)))
@@ -459,7 +459,7 @@ fn generate_gabor_kernel(
     kernel
 }
 
-/// Laplacian of Gaussian (LoG) filter for blob detection
+/// Laplacian of Gaussian (`LoG`) filter for blob detection
 pub fn laplacian_of_gaussian(
     src: &Mat,
     dst: &mut Mat,
@@ -489,7 +489,7 @@ pub fn laplacian_of_gaussian(
                     let y = (row as i32 + ky).max(0).min(src.rows() as i32 - 1) as usize;
                     let x = (col as i32 + kx).max(0).min(src.cols() as i32 - 1) as usize;
 
-                    let pixel = src.at(y, x)?[0] as f64;
+                    let pixel = f64::from(src.at(y, x)?[0]);
                     let k_val = kernel[(ky + half) as usize][(kx + half) as usize];
 
                     sum += pixel * k_val;
@@ -514,8 +514,8 @@ fn generate_log_kernel(ksize: i32, sigma: f64) -> Vec<Vec<f64>> {
 
     for y in -half..=half {
         for x in -half..=half {
-            let x2 = (x * x) as f64;
-            let y2 = (y * y) as f64;
+            let x2 = f64::from(x * x);
+            let y2 = f64::from(y * y);
             let r2 = x2 + y2;
 
             // LoG formula: -1/(π*σ^4) * (1 - r²/(2σ²)) * exp(-r²/(2σ²))
@@ -576,7 +576,7 @@ pub fn non_local_means_denoising(
                             let p2 = src.at(r2, c2)?;
 
                             for ch in 0..src.channels() {
-                                let diff = p1[ch] as f32 - p2[ch] as f32;
+                                let diff = f32::from(p1[ch]) - f32::from(p2[ch]);
                                 patch_dist += diff * diff;
                             }
                             patch_count += 1;
@@ -590,7 +590,7 @@ pub fn non_local_means_denoising(
 
                     let search_pixel = src.at(search_row, search_col)?;
                     for ch in 0..src.channels() {
-                        sum[ch] += search_pixel[ch] as f32 * weight;
+                        sum[ch] += f32::from(search_pixel[ch]) * weight;
                     }
                     weight_sum += weight;
                 }
@@ -637,13 +637,13 @@ pub fn anisotropic_diffusion(
 
         for row in 1..dst.rows() - 1 {
             for col in 1..dst.cols() - 1 {
-                let center = current.at(row, col)?[0] as f32;
+                let center = f32::from(current.at(row, col)?[0]);
 
                 // Compute gradients to neighbors
-                let n = current.at(row - 1, col)?[0] as f32;
-                let s = current.at(row + 1, col)?[0] as f32;
-                let e = current.at(row, col + 1)?[0] as f32;
-                let w = current.at(row, col - 1)?[0] as f32;
+                let n = f32::from(current.at(row - 1, col)?[0]);
+                let s = f32::from(current.at(row + 1, col)?[0]);
+                let e = f32::from(current.at(row, col + 1)?[0]);
+                let w = f32::from(current.at(row, col - 1)?[0]);
 
                 let grad_n = n - center;
                 let grad_s = s - center;

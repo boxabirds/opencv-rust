@@ -2,13 +2,20 @@ use crate::core::{Mat, MatDepth};
 use crate::core::types::Rect;
 use crate::error::{Error, Result};
 
-/// CAMShift (Continuously Adaptive Mean Shift) tracker
+/// `CAMShift` (Continuously Adaptive Mean Shift) tracker
 pub struct CAMShift {
     pub term_criteria_max_iter: usize,
     pub term_criteria_epsilon: f64,
 }
 
+impl Default for CAMShift {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CAMShift {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             term_criteria_max_iter: 100,
@@ -16,8 +23,8 @@ impl CAMShift {
         }
     }
 
-    /// Track using CAMShift algorithm
-    /// prob_image: Back-projection probability map
+    /// Track using `CAMShift` algorithm
+    /// `prob_image`: Back-projection probability map
     /// window: Initial search window
     /// Returns: (converged window, rotation angle, number of iterations)
     pub fn track(
@@ -65,8 +72,8 @@ impl CAMShift {
 
             // Update window
             let new_window = Rect::new(
-                (cx - width as f64 / 2.0) as i32,
-                (cy - height as f64 / 2.0) as i32,
+                (cx - f64::from(width) / 2.0) as i32,
+                (cy - f64::from(height) / 2.0) as i32,
                 width.max(1),
                 height.max(1),
             );
@@ -110,7 +117,7 @@ impl CAMShift {
 
         for y in y_start..y_end {
             for x in x_start..x_end {
-                let val = image.at(y, x)?[0] as f64 / 255.0;
+                let val = f64::from(image.at(y, x)?[0]) / 255.0;
 
                 let x_offset = x as f64 - x_start as f64;
                 let y_offset = y as f64 - y_start as f64;
@@ -165,7 +172,14 @@ pub struct FarnebackOpticalFlow {
     pub poly_sigma: f64,
 }
 
+impl Default for FarnebackOpticalFlow {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FarnebackOpticalFlow {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             num_levels: 5,
@@ -265,7 +279,7 @@ impl FarnebackOpticalFlow {
                 // Compute gradients
                 let ix = self.compute_gradient_x(prev, row, col)?;
                 let iy = self.compute_gradient_y(prev, row, col)?;
-                let it = next.at(row, col)?[0] as f32 - prev.at(row, col)?[0] as f32;
+                let it = f32::from(next.at(row, col)?[0]) - f32::from(prev.at(row, col)?[0]);
 
                 // Lucas-Kanade equation: [ix²  ix·iy] [u] = -[ix·it]
                 //                          [ix·iy iy²] [v]    [iy·it]
@@ -299,8 +313,8 @@ impl FarnebackOpticalFlow {
             return Ok(0.0);
         }
 
-        let left = image.at(row, col - 1)?[0] as f32;
-        let right = image.at(row, col + 1)?[0] as f32;
+        let left = f32::from(image.at(row, col - 1)?[0]);
+        let right = f32::from(image.at(row, col + 1)?[0]);
 
         Ok((right - left) / 2.0)
     }
@@ -310,8 +324,8 @@ impl FarnebackOpticalFlow {
             return Ok(0.0);
         }
 
-        let up = image.at(row - 1, col)?[0] as f32;
-        let down = image.at(row + 1, col)?[0] as f32;
+        let up = f32::from(image.at(row - 1, col)?[0]);
+        let down = f32::from(image.at(row + 1, col)?[0]);
 
         Ok((down - up) / 2.0)
     }

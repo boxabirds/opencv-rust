@@ -153,7 +153,7 @@ fn create_gaussian_kernel(ksize: Size, sigma: f64) -> Result<Vec<f32>> {
     }
 
     let sigma = if sigma <= 0.0 {
-        0.3 * ((size as f64 - 1.0) * 0.5 - 1.0) + 0.8
+        0.3 * ((f64::from(size) - 1.0) * 0.5 - 1.0) + 0.8
     } else {
         sigma
     };
@@ -163,7 +163,7 @@ fn create_gaussian_kernel(ksize: Size, sigma: f64) -> Result<Vec<f32>> {
     let mut sum = 0.0;
 
     for i in -half..=half {
-        let x = i as f64;
+        let x = f64::from(i);
         let value = (-x * x / (2.0 * sigma * sigma)).exp();
         kernel.push(value as f32);
         sum += value;
@@ -214,22 +214,22 @@ fn apply_separable_filter(
 
                     match channels {
                         1 => {
-                            sums[0] += pixel[0] as f32 * k;
+                            sums[0] += f32::from(pixel[0]) * k;
                         }
                         3 => {
-                            sums[0] += pixel[0] as f32 * k;
-                            sums[1] += pixel[1] as f32 * k;
-                            sums[2] += pixel[2] as f32 * k;
+                            sums[0] += f32::from(pixel[0]) * k;
+                            sums[1] += f32::from(pixel[1]) * k;
+                            sums[2] += f32::from(pixel[2]) * k;
                         }
                         4 => {
-                            sums[0] += pixel[0] as f32 * k;
-                            sums[1] += pixel[1] as f32 * k;
-                            sums[2] += pixel[2] as f32 * k;
-                            sums[3] += pixel[3] as f32 * k;
+                            sums[0] += f32::from(pixel[0]) * k;
+                            sums[1] += f32::from(pixel[1]) * k;
+                            sums[2] += f32::from(pixel[2]) * k;
+                            sums[3] += f32::from(pixel[3]) * k;
                         }
                         _ => {
                             for ch in 0..channels {
-                                sums[ch] += pixel[ch] as f32 * k;
+                                sums[ch] += f32::from(pixel[ch]) * k;
                             }
                         }
                     }
@@ -288,22 +288,22 @@ fn apply_separable_filter(
 
                     match channels {
                         1 => {
-                            sums[0] += pixel[0] as f32 * k;
+                            sums[0] += f32::from(pixel[0]) * k;
                         }
                         3 => {
-                            sums[0] += pixel[0] as f32 * k;
-                            sums[1] += pixel[1] as f32 * k;
-                            sums[2] += pixel[2] as f32 * k;
+                            sums[0] += f32::from(pixel[0]) * k;
+                            sums[1] += f32::from(pixel[1]) * k;
+                            sums[2] += f32::from(pixel[2]) * k;
                         }
                         4 => {
-                            sums[0] += pixel[0] as f32 * k;
-                            sums[1] += pixel[1] as f32 * k;
-                            sums[2] += pixel[2] as f32 * k;
-                            sums[3] += pixel[3] as f32 * k;
+                            sums[0] += f32::from(pixel[0]) * k;
+                            sums[1] += f32::from(pixel[1]) * k;
+                            sums[2] += f32::from(pixel[2]) * k;
+                            sums[3] += f32::from(pixel[3]) * k;
                         }
                         _ => {
                             for ch in 0..channels {
-                                sums[ch] += pixel[ch] as f32 * k;
+                                sums[ch] += f32::from(pixel[ch]) * k;
                             }
                         }
                     }

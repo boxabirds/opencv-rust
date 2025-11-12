@@ -34,6 +34,7 @@ pub struct SVM {
 }
 
 impl SVM {
+    #[must_use] 
     pub fn new(svm_type: SVMType, kernel_type: SVMKernelType) -> Self {
         Self {
             svm_type,
@@ -90,8 +91,8 @@ impl SVM {
 
             // Average centroids
             for j in 0..dim {
-                centroid_pos[j] /= count_pos as f64;
-                centroid_neg[j] /= count_neg as f64;
+                centroid_pos[j] /= f64::from(count_pos);
+                centroid_neg[j] /= f64::from(count_neg);
             }
 
             // Weight vector points from negative to positive class

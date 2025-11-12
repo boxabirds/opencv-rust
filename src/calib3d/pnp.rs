@@ -44,7 +44,7 @@ pub enum PnPMethod {
     DLS,        // Direct Least Squares
 }
 
-/// Iterative PnP using Levenberg-Marquardt
+/// Iterative `PnP` using Levenberg-Marquardt
 fn solve_pnp_iterative(
     object_points: &[Point3f],
     image_points: &[Point],
@@ -98,8 +98,8 @@ fn solve_p3p(
     // Normalize image points
     let mut bearing_vectors = Vec::new();
     for pt in image_points {
-        let x = (pt.x as f64 - camera_matrix.cx) / camera_matrix.fx;
-        let y = (pt.y as f64 - camera_matrix.cy) / camera_matrix.fy;
+        let x = (f64::from(pt.x) - camera_matrix.cx) / camera_matrix.fx;
+        let y = (f64::from(pt.y) - camera_matrix.cy) / camera_matrix.fy;
         let norm = (x * x + y * y + 1.0).sqrt();
         bearing_vectors.push([x / norm, y / norm, 1.0 / norm]);
     }
@@ -145,7 +145,7 @@ fn solve_p3p(
     Ok((rvec, tvec))
 }
 
-/// EPnP (Efficient Perspective-n-Point)
+/// `EPnP` (Efficient Perspective-n-Point)
 fn solve_epnp(
     object_points: &[Point3f],
     image_points: &[Point],
@@ -169,8 +169,8 @@ fn solve_epnp(
     let mut m_matrix = vec![vec![0.0; 12]; 2 * n];
 
     for (i, (img_pt, bary)) in image_points.iter().zip(barycentric_coords.iter()).enumerate() {
-        let u = (img_pt.x as f64 - camera_matrix.cx) / camera_matrix.fx;
-        let v = (img_pt.y as f64 - camera_matrix.cy) / camera_matrix.fy;
+        let u = (f64::from(img_pt.x) - camera_matrix.cx) / camera_matrix.fx;
+        let v = (f64::from(img_pt.y) - camera_matrix.cy) / camera_matrix.fy;
 
         for j in 0..4 {
             m_matrix[2 * i][3 * j] = bary[j];
@@ -182,7 +182,7 @@ fn solve_epnp(
     }
 
     // Solve using SVD (simplified - use identity)
-    let camera_control_points = control_points.clone();
+    let camera_control_points = control_points;
 
     // Compute transformation
     let (rvec, tvec) = compute_transformation_from_points(
@@ -193,7 +193,7 @@ fn solve_epnp(
     Ok((rvec, tvec))
 }
 
-/// Direct Least Squares PnP
+/// Direct Least Squares `PnP`
 fn solve_pnp_dls(
     object_points: &[Point3f],
     image_points: &[Point],
@@ -205,12 +205,12 @@ fn solve_pnp_dls(
     let mut b_vector = vec![0.0; 2 * n];
 
     for (i, (obj_pt, img_pt)) in object_points.iter().zip(image_points.iter()).enumerate() {
-        let u = img_pt.x as f64;
-        let v = img_pt.y as f64;
+        let u = f64::from(img_pt.x);
+        let v = f64::from(img_pt.y);
 
-        let x = obj_pt.x as f64;
-        let y = obj_pt.y as f64;
-        let z = obj_pt.z as f64;
+        let x = f64::from(obj_pt.x);
+        let y = f64::from(obj_pt.y);
+        let z = f64::from(obj_pt.z);
 
         // First row (u equation)
         a_matrix[2 * i][0] = camera_matrix.fx * x;
@@ -248,7 +248,7 @@ fn solve_pnp_dls(
 
 fn estimate_initial_translation(object_points: &[Point3f]) -> [f64; 3] {
     let centroid = compute_centroid(object_points);
-    [0.0, 0.0, (centroid.z * 2.0) as f64]
+    [0.0, 0.0, f64::from(centroid.z * 2.0)]
 }
 
 fn compute_centroid(points: &[Point3f]) -> Point3f {
@@ -282,8 +282,8 @@ fn compute_jacobian_and_residuals(
         let projected = project_point_pnp(obj_pt, rvec, tvec, camera_matrix);
 
         // Residuals
-        residuals[2 * i] = projected.x as f64 - img_pt.x as f64;
-        residuals[2 * i + 1] = projected.y as f64 - img_pt.y as f64;
+        residuals[2 * i] = f64::from(projected.x) - f64::from(img_pt.x);
+        residuals[2 * i + 1] = f64::from(projected.y) - f64::from(img_pt.y);
 
         // Numerical Jacobian (simplified)
         let eps = 1e-6;
@@ -299,8 +299,8 @@ fn compute_jacobian_and_residuals(
 
             let projected_plus = project_point_pnp(obj_pt, &rvec_plus, &tvec_plus, camera_matrix);
 
-            jacobian[2 * i][j] = (projected_plus.x as f64 - projected.x as f64) / eps;
-            jacobian[2 * i + 1][j] = (projected_plus.y as f64 - projected.y as f64) / eps;
+            jacobian[2 * i][j] = (f64::from(projected_plus.x) - f64::from(projected.x)) / eps;
+            jacobian[2 * i + 1][j] = (f64::from(projected_plus.y) - f64::from(projected.y)) / eps;
         }
     }
 
@@ -317,9 +317,9 @@ fn project_point_pnp(
 
     let r_mat = rodrigues(rvec);
 
-    let x = r_mat[0][0] * point.x as f64 + r_mat[0][1] * point.y as f64 + r_mat[0][2] * point.z as f64 + tvec[0];
-    let y = r_mat[1][0] * point.x as f64 + r_mat[1][1] * point.y as f64 + r_mat[1][2] * point.z as f64 + tvec[1];
-    let z = r_mat[2][0] * point.x as f64 + r_mat[2][1] * point.y as f64 + r_mat[2][2] * point.z as f64 + tvec[2];
+    let x = r_mat[0][0] * f64::from(point.x) + r_mat[0][1] * f64::from(point.y) + r_mat[0][2] * f64::from(point.z) + tvec[0];
+    let y = r_mat[1][0] * f64::from(point.x) + r_mat[1][1] * f64::from(point.y) + r_mat[1][2] * f64::from(point.z) + tvec[1];
+    let z = r_mat[2][0] * f64::from(point.x) + r_mat[2][1] * f64::from(point.y) + r_mat[2][2] * f64::from(point.z) + tvec[2];
 
     let u = camera.fx * x / z + camera.cx;
     let v = camera.fy * y / z + camera.cy;
@@ -373,7 +373,7 @@ fn distance_3d(p1: &Point3f, p2: &Point3f) -> f64 {
     let dx = p1.x - p2.x;
     let dy = p1.y - p2.y;
     let dz = p1.z - p2.z;
-    ((dx * dx + dy * dy + dz * dz) as f64).sqrt()
+    f64::from(dx * dx + dy * dy + dz * dz).sqrt()
 }
 
 fn dot_product(v1: &[f64; 3], v2: &[f64; 3]) -> f64 {
@@ -384,12 +384,12 @@ fn compute_control_points(points: &[Point3f], centroid: &Point3f) -> [[f64; 3]; 
     // Control points: centroid + 3 orthogonal directions
     let mut control = [[0.0; 3]; 4];
 
-    control[0] = [centroid.x as f64, centroid.y as f64, centroid.z as f64];
+    control[0] = [f64::from(centroid.x), f64::from(centroid.y), f64::from(centroid.z)];
 
     // Simplified - use coordinate axes
-    control[1] = [centroid.x as f64 + 1.0, centroid.y as f64, centroid.z as f64];
-    control[2] = [centroid.x as f64, centroid.y as f64 + 1.0, centroid.z as f64];
-    control[3] = [centroid.x as f64, centroid.y as f64, centroid.z as f64 + 1.0];
+    control[1] = [f64::from(centroid.x) + 1.0, f64::from(centroid.y), f64::from(centroid.z)];
+    control[2] = [f64::from(centroid.x), f64::from(centroid.y) + 1.0, f64::from(centroid.z)];
+    control[3] = [f64::from(centroid.x), f64::from(centroid.y), f64::from(centroid.z) + 1.0];
 
     control
 }

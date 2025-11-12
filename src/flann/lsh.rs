@@ -13,6 +13,7 @@ pub struct LSHIndex {
 
 impl LSHIndex {
     /// Create new LSH index
+    #[must_use] 
     pub fn new(dimension: usize, num_tables: usize, num_bits: usize) -> Self {
         Self {
             data: Vec::new(),
@@ -52,7 +53,7 @@ impl LSHIndex {
             for (point_offset, point) in data.iter().enumerate() {
                 let hash = self.hash_point(point, table_idx);
                 self.hash_tables[table_idx].entry(hash)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(start_idx + point_offset);
             }
         }
@@ -184,6 +185,7 @@ impl LSHIndex {
     }
 
     /// Get number of indexed points
+    #[must_use] 
     pub fn size(&self) -> usize {
         self.data.len()
     }

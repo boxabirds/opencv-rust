@@ -13,6 +13,7 @@ pub struct HOGDescriptor {
 }
 
 impl HOGDescriptor {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             win_size: Size::new(64, 128),
@@ -46,8 +47,8 @@ impl HOGDescriptor {
 
         for row in 0..img.rows() {
             for col in 0..img.cols() {
-                let gx = grad_x.at(row, col)?[0] as f32;
-                let gy = grad_y.at(row, col)?[0] as f32;
+                let gx = f32::from(grad_x.at(row, col)?[0]);
+                let gy = f32::from(grad_y.at(row, col)?[0]);
 
                 magnitudes[row][col] = (gx * gx + gy * gy).sqrt();
                 orientations[row][col] = gy.atan2(gx);
@@ -167,7 +168,7 @@ impl HOGDescriptor {
                         // Simple detection: check if descriptor energy is above threshold
                         let energy: f32 = descriptor.iter().sum();
 
-                        if energy as f64 > hit_threshold {
+                        if f64::from(energy) > hit_threshold {
                             detections.push(window);
                         }
                     }

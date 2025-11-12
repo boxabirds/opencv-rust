@@ -11,6 +11,7 @@ pub enum ShapeMatchMethod {
 }
 
 /// Compare two shapes using Hu moments
+#[must_use] 
 pub fn match_shapes(
     moments1: &Moments,
     moments2: &Moments,
@@ -68,6 +69,7 @@ fn sign(x: f64) -> f64 {
 }
 
 /// Hausdorff distance between two point sets
+#[must_use] 
 pub fn hausdorff_distance(contour1: &[Point], contour2: &[Point]) -> f64 {
     if contour1.is_empty() || contour2.is_empty() {
         return f64::INFINITY;
@@ -86,8 +88,8 @@ fn directed_hausdorff(from: &[Point], to: &[Point]) -> f64 {
         let mut min_dist = f64::INFINITY;
 
         for p2 in to {
-            let dx = (p1.x - p2.x) as f64;
-            let dy = (p1.y - p2.y) as f64;
+            let dx = f64::from(p1.x - p2.x);
+            let dy = f64::from(p1.y - p2.y);
             let dist = (dx * dx + dy * dy).sqrt();
 
             min_dist = min_dist.min(dist);
@@ -145,8 +147,8 @@ pub fn frechet_distance(curve1: &[Point], curve2: &[Point]) -> Result<f64> {
 }
 
 fn point_distance(p1: &Point, p2: &Point) -> f64 {
-    let dx = (p1.x - p2.x) as f64;
-    let dy = (p1.y - p2.y) as f64;
+    let dx = f64::from(p1.x - p2.x);
+    let dy = f64::from(p1.y - p2.y);
     (dx * dx + dy * dy).sqrt()
 }
 
@@ -158,7 +160,14 @@ pub struct ShapeContext {
     pub r_outer: f64,
 }
 
+impl Default for ShapeContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShapeContext {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             bins_r: 5,
@@ -169,6 +178,7 @@ impl ShapeContext {
     }
 
     /// Compute shape context descriptor for a point
+    #[must_use] 
     pub fn compute(&self, contour: &[Point], point_idx: usize) -> Vec<usize> {
         if point_idx >= contour.len() {
             return vec![0; self.bins_r * self.bins_theta];
@@ -190,8 +200,8 @@ impl ShapeContext {
                 continue;
             }
 
-            let dx = (p.x - point.x) as f64;
-            let dy = (p.y - point.y) as f64;
+            let dx = f64::from(p.x - point.x);
+            let dy = f64::from(p.y - point.y);
 
             let dist = (dx * dx + dy * dy).sqrt() / mean_dist;
             let angle = dy.atan2(dx);
@@ -220,6 +230,7 @@ impl ShapeContext {
     }
 
     /// Compute chi-square distance between two shape context histograms
+    #[must_use] 
     pub fn chi_square_distance(&self, hist1: &[usize], hist2: &[usize]) -> f64 {
         if hist1.len() != hist2.len() {
             return f64::INFINITY;
@@ -228,7 +239,7 @@ impl ShapeContext {
         let mut sum = 0.0;
 
         for (&h1, &h2) in hist1.iter().zip(hist2.iter()) {
-            let num = (h1 as i32 - h2 as i32).pow(2) as f64;
+            let num = f64::from((h1 as i32 - h2 as i32).pow(2));
             let denom = (h1 + h2) as f64;
 
             if denom > 0.0 {
@@ -241,6 +252,7 @@ impl ShapeContext {
 }
 
 /// Chamfer distance between two binary images (simplified version)
+#[must_use] 
 pub fn chamfer_distance(contour1: &[Point], contour2: &[Point]) -> f64 {
     if contour1.is_empty() || contour2.is_empty() {
         return f64::INFINITY;

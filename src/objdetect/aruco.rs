@@ -2,7 +2,7 @@ use crate::core::{Mat, MatDepth};
 use crate::core::types::{Point, Point2f};
 use crate::error::{Error, Result};
 
-/// ArUco marker dictionary types
+/// `ArUco` marker dictionary types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArucoDictionary {
     Dict4X4_50,
@@ -20,6 +20,7 @@ pub enum ArucoDictionary {
 }
 
 impl ArucoDictionary {
+    #[must_use] 
     pub fn marker_size(&self) -> usize {
         match self {
             ArucoDictionary::Dict4X4_50
@@ -37,6 +38,7 @@ impl ArucoDictionary {
         }
     }
 
+    #[must_use] 
     pub fn dict_size(&self) -> usize {
         match self {
             ArucoDictionary::Dict4X4_50
@@ -55,14 +57,14 @@ impl ArucoDictionary {
     }
 }
 
-/// Detected ArUco marker
+/// Detected `ArUco` marker
 #[derive(Debug, Clone)]
 pub struct ArucoMarker {
     pub id: i32,
     pub corners: Vec<Point2f>,
 }
 
-/// ArUco detector parameters
+/// `ArUco` detector parameters
 #[derive(Debug, Clone)]
 pub struct ArucoDetectorParameters {
     pub adaptive_thresh_win_size_min: i32,
@@ -96,7 +98,7 @@ impl Default for ArucoDetectorParameters {
     }
 }
 
-/// ArUco detector
+/// `ArUco` detector
 pub struct ArucoDetector {
     dictionary: ArucoDictionary,
     parameters: ArucoDetectorParameters,
@@ -104,6 +106,7 @@ pub struct ArucoDetector {
 
 impl ArucoDetector {
     /// Create detector with specified dictionary
+    #[must_use] 
     pub fn new(dictionary: ArucoDictionary) -> Self {
         Self {
             dictionary,
@@ -112,6 +115,7 @@ impl ArucoDetector {
     }
 
     /// Create detector with custom parameters
+    #[must_use] 
     pub fn with_params(dictionary: ArucoDictionary, parameters: ArucoDetectorParameters) -> Self {
         Self {
             dictionary,
@@ -119,7 +123,7 @@ impl ArucoDetector {
         }
     }
 
-    /// Detect ArUco markers in image
+    /// Detect `ArUco` markers in image
     pub fn detect_markers(&self, image: &Mat) -> Result<Vec<ArucoMarker>> {
         if image.channels() != 1 {
             return Err(Error::InvalidParameter(
@@ -209,8 +213,8 @@ impl ArucoDetector {
             let p1 = &contour[i];
             let p2 = &contour[(i + 1) % contour.len()];
 
-            let dx = (p2.x - p1.x) as f64;
-            let dy = (p2.y - p1.y) as f64;
+            let dx = f64::from(p2.x - p1.x);
+            let dy = f64::from(p2.y - p1.y);
             perimeter += (dx * dx + dy * dy).sqrt();
         }
 
@@ -258,7 +262,7 @@ impl ArucoDetector {
         }))
     }
 
-    /// Generate ArUco marker image
+    /// Generate `ArUco` marker image
     pub fn generate_marker(&self, marker_id: i32, size_pixels: usize) -> Result<Mat> {
         if marker_id < 0 || marker_id >= self.dictionary.dict_size() as i32 {
             return Err(Error::InvalidParameter("Invalid marker ID".to_string()));

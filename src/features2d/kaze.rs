@@ -24,6 +24,7 @@ pub enum DiffusivityType {
 }
 
 impl KAZE {
+    #[must_use] 
     pub fn new(extended: bool, upright: bool) -> Self {
         Self {
             extended,
@@ -35,6 +36,7 @@ impl KAZE {
         }
     }
 
+    #[must_use] 
     pub fn with_threshold(mut self, threshold: f64) -> Self {
         self.threshold = threshold;
         self
@@ -68,7 +70,7 @@ impl KAZE {
         let mut base_image = Mat::new(image.rows(), image.cols(), 1, MatDepth::F32)?;
         for row in 0..image.rows() {
             for col in 0..image.cols() {
-                let val = (image.at(row, col)?[0] as f32) / 255.0;
+                let val = f32::from(image.at(row, col)?[0]) / 255.0;
                 base_image.set_f32(row, col, 0, val)?;
             }
         }
@@ -288,8 +290,8 @@ impl KAZE {
 
                     let det_hessian = lxx * lyy - lxy * lxy;
 
-                    if det_hessian > self.threshold as f32 {
-                        if self.is_local_maximum(det_hessian, step, prev, next, row, col)? {
+                    if det_hessian > self.threshold as f32
+                        && self.is_local_maximum(det_hessian, step, prev, next, row, col)? {
                             let scale = 1 << step.octave;
                             let angle = if self.upright {
                                 0.0
@@ -306,7 +308,6 @@ impl KAZE {
                             };
                             keypoints.push(kp);
                         }
-                    }
                 }
             }
         }
@@ -374,8 +375,7 @@ impl KAZE {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
 
         Ok((max_bin as f32 * 10.0 - 180.0) * PI as f32 / 180.0)
     }
@@ -389,7 +389,7 @@ impl KAZE {
             // Find appropriate scale level
             let mut step_idx = 0;
             for (i, step) in evolution.iter().enumerate() {
-                if (step.sigma - kp.size as f64).abs() < 0.1 {
+                if (step.sigma - f64::from(kp.size)).abs() < 0.1 {
                     step_idx = i;
                     break;
                 }
@@ -427,8 +427,8 @@ impl KAZE {
 
                     for sub_y in 0..subregion_size {
                         for sub_x in 0..subregion_size {
-                            let y_offset = (grid_y * subregion_size + sub_y) as i32 - pattern_size as i32;
-                            let x_offset = (grid_x * subregion_size + sub_x) as i32 - pattern_size as i32;
+                            let y_offset = (grid_y * subregion_size + sub_y) - pattern_size as i32;
+                            let x_offset = (grid_x * subregion_size + sub_x) - pattern_size as i32;
 
                             // Rotate
                             let y_rot = (y_offset as f32 * cos_angle - x_offset as f32 * sin_angle) as i32;

@@ -8,6 +8,7 @@ pub struct SuperResolutionBicubic {
 }
 
 impl SuperResolutionBicubic {
+    #[must_use] 
     pub fn new(scale_factor: f32) -> Self {
         Self {
             scale_factor,
@@ -15,6 +16,7 @@ impl SuperResolutionBicubic {
         }
     }
 
+    #[must_use] 
     pub fn with_sharpen(mut self, strength: f32) -> Self {
         self.sharpen_strength = strength;
         self
@@ -68,7 +70,7 @@ impl SuperResolutionBicubic {
                 let row = (y0 + j).clamp(0, src.rows() as i32 - 1) as usize;
                 let col = (x0 + i).clamp(0, src.cols() as i32 - 1) as usize;
 
-                let pixel = src.at(row, col)?[ch] as f32;
+                let pixel = f32::from(src.at(row, col)?[ch]);
                 let weight_x = self.cubic_weight(fx - i as f32);
                 let weight_y = self.cubic_weight(fy - j as f32);
 
@@ -99,13 +101,13 @@ impl SuperResolutionBicubic {
         for row in 1..src.rows() - 1 {
             for col in 1..src.cols() - 1 {
                 for ch in 0..src.channels() {
-                    let center = src.at(row, col)?[ch] as f32;
+                    let center = f32::from(src.at(row, col)?[ch]);
 
                     // Laplacian
-                    let left = src.at(row, col - 1)?[ch] as f32;
-                    let right = src.at(row, col + 1)?[ch] as f32;
-                    let up = src.at(row - 1, col)?[ch] as f32;
-                    let down = src.at(row + 1, col)?[ch] as f32;
+                    let left = f32::from(src.at(row, col - 1)?[ch]);
+                    let right = f32::from(src.at(row, col + 1)?[ch]);
+                    let up = f32::from(src.at(row - 1, col)?[ch]);
+                    let down = f32::from(src.at(row + 1, col)?[ch]);
 
                     let laplacian = left + right + up + down - 4.0 * center;
 
@@ -127,6 +129,7 @@ pub struct SuperResolutionExample {
 }
 
 impl SuperResolutionExample {
+    #[must_use] 
     pub fn new(scale_factor: usize) -> Self {
         Self {
             scale_factor,
@@ -167,7 +170,7 @@ impl SuperResolutionExample {
                 let x = (col as i32 + dx).clamp(0, src.cols() as i32 - 1) as usize;
 
                 let weight = (-(dx * dx + dy * dy) as f32 / 8.0).exp();
-                sum += src.at(y, x)?[ch] as f32 * weight;
+                sum += f32::from(src.at(y, x)?[ch]) * weight;
                 count += 1;
             }
         }
@@ -184,6 +187,7 @@ pub struct SuperResolutionBP {
 }
 
 impl SuperResolutionBP {
+    #[must_use] 
     pub fn new(scale_factor: usize) -> Self {
         Self {
             scale_factor,
@@ -192,6 +196,7 @@ impl SuperResolutionBP {
         }
     }
 
+    #[must_use] 
     pub fn with_iterations(mut self, iterations: usize) -> Self {
         self.iterations = iterations;
         self
@@ -219,8 +224,8 @@ impl SuperResolutionBP {
             for row in 0..hr.rows() {
                 for col in 0..hr.cols() {
                     for ch in 0..hr.channels() {
-                        let current = hr.at(row, col)?[ch] as f32;
-                        let correction = error_hr.at(row, col)?[ch] as f32;
+                        let current = f32::from(hr.at(row, col)?[ch]);
+                        let correction = f32::from(error_hr.at(row, col)?[ch]);
                         let updated = current + self.regularization * correction;
                         hr.at_mut(row, col)?[ch] = updated.clamp(0.0, 255.0) as u8;
                     }
@@ -275,10 +280,10 @@ impl SuperResolutionBP {
         for row in 0..original.rows() {
             for col in 0..original.cols() {
                 for ch in 0..original.channels() {
-                    let orig = original.at(row, col)?[ch] as i32;
-                    let sim = simulated.at(row, col)?[ch] as i32;
+                    let orig = i32::from(original.at(row, col)?[ch]);
+                    let sim = i32::from(simulated.at(row, col)?[ch]);
                     let err = (orig - sim).clamp(-255, 255) as i16;
-                    error.at_mut(row, col)?[ch] = ((err + 255) / 2) as u8;
+                    error.at_mut(row, col)?[ch] = i16::midpoint(err, 255) as u8;
                 }
             }
         }

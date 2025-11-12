@@ -87,7 +87,7 @@ pub fn multiply(src1: &Mat, src2: &Mat, dst: &mut Mat, scale: f64) -> Result<()>
             let pd = dst.at_mut(row, col)?;
 
             for ch in 0..src1.channels() {
-                let val = (p1[ch] as f64 * p2[ch] as f64 * scale).clamp(0.0, 255.0);
+                let val = (f64::from(p1[ch]) * f64::from(p2[ch]) * scale).clamp(0.0, 255.0);
                 pd[ch] = val as u8;
             }
         }
@@ -235,7 +235,7 @@ pub fn mean(src: &Mat) -> Result<Scalar> {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
             for ch in 0..src.channels().min(4) {
-                sums[ch] += pixel[ch] as f64;
+                sums[ch] += f64::from(pixel[ch]);
             }
             count += 1;
         }
@@ -243,7 +243,7 @@ pub fn mean(src: &Mat) -> Result<Scalar> {
 
     let mut result = [0.0; 4];
     for (i, sum) in sums.iter().enumerate() {
-        result[i] = sum / count as f64;
+        result[i] = sum / f64::from(count);
     }
 
     Ok(Scalar { val: result })
@@ -265,7 +265,7 @@ pub fn min_max_loc(src: &Mat) -> Result<(f64, f64, (usize, usize), (usize, usize
     for row in 0..src.rows() {
         for col in 0..src.cols() {
             let pixel = src.at(row, col)?;
-            let val = pixel[0] as f64;
+            let val = f64::from(pixel[0]);
 
             if val < min_val {
                 min_val = val;
@@ -298,7 +298,7 @@ pub fn abs_diff(src1: &Mat, src2: &Mat, dst: &mut Mat) -> Result<()> {
             let pd = dst.at_mut(row, col)?;
 
             for ch in 0..src1.channels() {
-                pd[ch] = (p1[ch] as i16 - p2[ch] as i16).abs() as u8;
+                pd[ch] = (i16::from(p1[ch]) - i16::from(p2[ch])).abs() as u8;
             }
         }
     }

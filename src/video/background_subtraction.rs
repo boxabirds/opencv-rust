@@ -20,13 +20,21 @@ pub struct BackgroundSubtractorMOG2 {
     frame_count: usize,
 }
 
+impl Default for BackgroundSubtractorMOG2 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BackgroundSubtractorMOG2 {
     /// Create MOG2 background subtractor with default parameters
+    #[must_use] 
     pub fn new() -> Self {
         Self::with_params(500, 16.0, true)
     }
 
     /// Create MOG2 background subtractor with custom parameters
+    #[must_use] 
     pub fn with_params(history: usize, var_threshold: f64, detect_shadows: bool) -> Self {
         Self {
             history,
@@ -76,7 +84,7 @@ impl BackgroundSubtractorMOG2 {
         for row in 0..rows {
             for col in 0..cols {
                 let pixel = image.at(row, col)?;
-                let intensity = (pixel[0] as f32 + pixel[1] as f32 + pixel[2] as f32) / 3.0;
+                let intensity = (f32::from(pixel[0]) + f32::from(pixel[1]) + f32::from(pixel[2])) / 3.0;
 
                 let mut matched = false;
                 let mut match_idx = 0;
@@ -84,7 +92,7 @@ impl BackgroundSubtractorMOG2 {
                 // Check if pixel matches any Gaussian
                 for k in 0..self.num_gaussians {
                     let diff = (intensity - self.mean[row][col][k]).abs();
-                    let threshold = (self.var_threshold * self.variance[row][col][k].sqrt() as f64) as f32;
+                    let threshold = (self.var_threshold * f64::from(self.variance[row][col][k].sqrt())) as f32;
 
                     if diff < threshold {
                         matched = true;
@@ -98,14 +106,14 @@ impl BackgroundSubtractorMOG2 {
                 if matched {
                     // Update matched Gaussian
                     let k = match_idx;
-                    let rho = alpha * self.weight[row][col][k] as f64;
+                    let rho = alpha * f64::from(self.weight[row][col][k]);
 
                     self.mean[row][col][k] =
-                        ((1.0 - rho) * self.mean[row][col][k] as f64 + rho * intensity as f64) as f32;
+                        ((1.0 - rho) * f64::from(self.mean[row][col][k]) + rho * f64::from(intensity)) as f32;
 
                     let diff = intensity - self.mean[row][col][k];
                     self.variance[row][col][k] =
-                        ((1.0 - rho) * self.variance[row][col][k] as f64 + rho * diff as f64 * diff as f64) as f32;
+                        ((1.0 - rho) * f64::from(self.variance[row][col][k]) + rho * f64::from(diff) * f64::from(diff)) as f32;
 
                     self.variance[row][col][k] = self.variance[row][col][k]
                         .max(self.var_min as f32)
@@ -134,10 +142,10 @@ impl BackgroundSubtractorMOG2 {
                 for k in 0..self.num_gaussians {
                     if k == match_idx && matched {
                         self.weight[row][col][k] =
-                            ((1.0 - alpha) * self.weight[row][col][k] as f64 + alpha) as f32;
+                            ((1.0 - alpha) * f64::from(self.weight[row][col][k]) + alpha) as f32;
                     } else {
                         self.weight[row][col][k] =
-                            ((1.0 - alpha) * self.weight[row][col][k] as f64) as f32;
+                            ((1.0 - alpha) * f64::from(self.weight[row][col][k])) as f32;
                     }
                 }
 
@@ -219,13 +227,21 @@ pub struct BackgroundSubtractorKNN {
     frame_count: usize,
 }
 
+impl Default for BackgroundSubtractorKNN {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BackgroundSubtractorKNN {
     /// Create KNN background subtractor with default parameters
+    #[must_use] 
     pub fn new() -> Self {
         Self::with_params(500, 400.0, true)
     }
 
     /// Create KNN background subtractor with custom parameters
+    #[must_use] 
     pub fn with_params(history: usize, dist2_threshold: f64, detect_shadows: bool) -> Self {
         Self {
             history,
@@ -265,7 +281,7 @@ impl BackgroundSubtractorKNN {
         for row in 0..rows {
             for col in 0..cols {
                 let pixel = image.at(row, col)?;
-                let intensity = (pixel[0] as f32 + pixel[1] as f32 + pixel[2] as f32) / 3.0;
+                let intensity = (f32::from(pixel[0]) + f32::from(pixel[1]) + f32::from(pixel[2])) / 3.0;
 
                 // Find k-nearest samples
                 let mut distances: Vec<f32> = Vec::new();

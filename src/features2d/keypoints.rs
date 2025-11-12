@@ -5,7 +5,7 @@ use crate::error::{Error, Result};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
-/// KeyPoint structure representing a feature point
+/// `KeyPoint` structure representing a feature point
 #[derive(Debug, Clone)]
 pub struct KeyPoint {
     pub pt: Point,
@@ -16,6 +16,7 @@ pub struct KeyPoint {
 }
 
 impl KeyPoint {
+    #[must_use] 
     pub fn new(pt: Point, size: f32) -> Self {
         Self {
             pt,
@@ -62,8 +63,8 @@ pub fn harris_corners(
 
     for row in 0..src.rows() {
         for col in 0..src.cols() {
-            let gx = grad_x.at(row, col)?[0] as f64;
-            let gy = grad_y.at(row, col)?[0] as f64;
+            let gx = f64::from(grad_x.at(row, col)?[0]);
+            let gy = f64::from(grad_y.at(row, col)?[0]);
 
             ixx[row][col] = gx * gx;
             iyy[row][col] = gy * gy;
@@ -134,8 +135,8 @@ pub fn good_features_to_track(
         let mut too_close = false;
 
         for existing in &filtered {
-            let dx = (corner.pt.x - existing.pt.x) as f64;
-            let dy = (corner.pt.y - existing.pt.y) as f64;
+            let dx = f64::from(corner.pt.x - existing.pt.x);
+            let dy = f64::from(corner.pt.y - existing.pt.y);
             let dist = (dx * dx + dy * dy).sqrt();
 
             if dist < min_distance {
@@ -187,7 +188,7 @@ pub fn fast(
 
             for col in 3..(cols - 3) {
                 let center_idx = row * cols + col;
-                let center_val = src_data[center_idx] as i32;
+                let center_val = i32::from(src_data[center_idx]);
                 let threshold_upper = center_val + threshold;
                 let threshold_lower = center_val - threshold;
 
@@ -197,7 +198,7 @@ pub fn fast(
                     let y = (row as i32 + dy) as usize;
                     let x = (col as i32 + dx) as usize;
                     let idx = y * cols + x;
-                    circle_values[i] = src_data[idx] as i32;
+                    circle_values[i] = i32::from(src_data[idx]);
                 }
 
                 // Count consecutive pixels using circular indexing (no clone needed)

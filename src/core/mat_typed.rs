@@ -13,8 +13,7 @@ impl Mat {
 
         if row >= self.rows() || col >= self.cols() || channel >= self.channels() {
             return Err(Error::OutOfRange(format!(
-                "Index ({}, {}, {}) out of range",
-                row, col, channel
+                "Index ({row}, {col}, {channel}) out of range"
             )));
         }
 
@@ -36,8 +35,7 @@ impl Mat {
 
         if row >= self.rows() || col >= self.cols() || channel >= self.channels() {
             return Err(Error::OutOfRange(format!(
-                "Index ({}, {}, {}) out of range",
-                row, col, channel
+                "Index ({row}, {col}, {channel}) out of range"
             )));
         }
 
@@ -60,8 +58,7 @@ impl Mat {
 
         if row >= self.rows() || col >= self.cols() || channel >= self.channels() {
             return Err(Error::OutOfRange(format!(
-                "Index ({}, {}, {}) out of range",
-                row, col, channel
+                "Index ({row}, {col}, {channel}) out of range"
             )));
         }
 
@@ -86,8 +83,7 @@ impl Mat {
 
         if row >= self.rows() || col >= self.cols() || channel >= self.channels() {
             return Err(Error::OutOfRange(format!(
-                "Index ({}, {}, {}) out of range",
-                row, col, channel
+                "Index ({row}, {col}, {channel}) out of range"
             )));
         }
 
@@ -110,8 +106,7 @@ impl Mat {
 
         if row >= self.rows() || col >= self.cols() || channel >= self.channels() {
             return Err(Error::OutOfRange(format!(
-                "Index ({}, {}, {}) out of range",
-                row, col, channel
+                "Index ({row}, {col}, {channel}) out of range"
             )));
         }
 
@@ -133,8 +128,7 @@ impl Mat {
 
         if row >= self.rows() || col >= self.cols() || channel >= self.channels() {
             return Err(Error::OutOfRange(format!(
-                "Index ({}, {}, {}) out of range",
-                row, col, channel
+                "Index ({row}, {col}, {channel}) out of range"
             )));
         }
 
@@ -165,13 +159,13 @@ impl Mat {
                     // Read value and normalize to 0.0-1.0 range if integer type
                     let normalized_value = match self.depth() {
                         MatDepth::U8 => {
-                            (self.at(row, col)?[ch] as f64) / 255.0
+                            f64::from(self.at(row, col)?[ch]) / 255.0
                         }
                         MatDepth::U16 => {
-                            (self.at_u16(row, col, ch)? as f64) / 65535.0
+                            f64::from(self.at_u16(row, col, ch)?) / 65535.0
                         }
                         MatDepth::F32 => {
-                            self.at_f32(row, col, ch)? as f64
+                            f64::from(self.at_f32(row, col, ch)?)
                         }
                         MatDepth::F64 => {
                             self.at_f64(row, col, ch)?

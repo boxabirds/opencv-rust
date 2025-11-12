@@ -20,6 +20,7 @@ pub enum Algorithm {
 
 impl KNearest {
     /// Create new KNN classifier
+    #[must_use] 
     pub fn classifier(k: usize) -> Self {
         Self {
             k,
@@ -31,6 +32,7 @@ impl KNearest {
     }
 
     /// Create new KNN regressor
+    #[must_use] 
     pub fn regressor(k: usize) -> Self {
         Self {
             k,
@@ -42,12 +44,14 @@ impl KNearest {
     }
 
     /// Set algorithm
+    #[must_use] 
     pub fn with_algorithm(mut self, algorithm: Algorithm) -> Self {
         self.algorithm = algorithm;
         self
     }
 
     /// Set k value
+    #[must_use] 
     pub fn with_k(mut self, k: usize) -> Self {
         self.k = k;
         self
@@ -101,7 +105,7 @@ impl KNearest {
                 .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
                 .unwrap();
 
-            Ok(class as f64)
+            Ok(f64::from(class))
         } else {
             // Weighted average for regression
             let mut weighted_sum = 0.0;
@@ -213,7 +217,7 @@ impl KNearest {
                 .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
                 .unwrap();
 
-            Ok(class as f64)
+            Ok(f64::from(class))
         } else {
             let mut weighted_sum = 0.0;
             let mut weight_sum = 0.0;
@@ -254,7 +258,7 @@ impl KNearest {
             }
 
             let (&class, _) = votes.iter().max_by_key(|(_, &count)| count).unwrap();
-            Ok(class as f64)
+            Ok(f64::from(class))
         } else {
             let sum: f64 = neighbors.iter().map(|(label, _)| label).sum();
             Ok(sum / neighbors.len() as f64)

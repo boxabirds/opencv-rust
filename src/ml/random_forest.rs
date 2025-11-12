@@ -16,9 +16,9 @@ pub struct RandomForest {
 pub enum MaxFeatures {
     /// Use all features
     All,
-    /// Use sqrt(n_features)
+    /// Use `sqrt(n_features)`
     Sqrt,
-    /// Use log2(n_features)
+    /// Use `log2(n_features)`
     Log2,
     /// Use specific number of features
     N(usize),
@@ -26,6 +26,7 @@ pub enum MaxFeatures {
 
 impl RandomForest {
     /// Create new random forest classifier
+    #[must_use] 
     pub fn classifier(n_trees: usize) -> Self {
         Self {
             trees: Vec::new(),
@@ -38,6 +39,7 @@ impl RandomForest {
     }
 
     /// Create new random forest regressor
+    #[must_use] 
     pub fn regressor(n_trees: usize) -> Self {
         Self {
             trees: Vec::new(),
@@ -50,18 +52,21 @@ impl RandomForest {
     }
 
     /// Set maximum depth of trees
+    #[must_use] 
     pub fn with_max_depth(mut self, depth: usize) -> Self {
         self.max_depth = depth;
         self
     }
 
     /// Set minimum samples for splitting
+    #[must_use] 
     pub fn with_min_samples_split(mut self, samples: usize) -> Self {
         self.min_samples_split = samples;
         self
     }
 
     /// Set maximum features to consider
+    #[must_use] 
     pub fn with_max_features(mut self, max_features: MaxFeatures) -> Self {
         self.max_features = max_features;
         self
@@ -152,7 +157,7 @@ impl RandomForest {
         }
 
         indices.truncate(max_features);
-        indices.sort();
+        indices.sort_unstable();
         indices
     }
 
@@ -172,7 +177,7 @@ impl RandomForest {
             }
 
             let (&class, _) = votes.iter().max_by_key(|(_, &count)| count).unwrap();
-            Ok(class as f64)
+            Ok(f64::from(class))
         } else {
             // Average predictions
             let sum: f64 = self
@@ -214,11 +219,13 @@ impl RandomForest {
     }
 
     /// Get number of trees
+    #[must_use] 
     pub fn n_trees(&self) -> usize {
         self.trees.len()
     }
 
     /// Get feature importances (simplified - based on tree depth)
+    #[must_use] 
     pub fn feature_importances(&self, n_features: usize) -> Vec<f64> {
         vec![1.0 / n_features as f64; n_features]
     }
@@ -226,8 +233,8 @@ impl RandomForest {
 
 // Simple pseudo-random number generator
 fn simple_rand(seed: usize) -> usize {
-    let mut x = seed.wrapping_mul(1664525).wrapping_add(1013904223);
-    x = x.wrapping_mul(1664525).wrapping_add(1013904223);
+    let mut x = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+    x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     x
 }
 

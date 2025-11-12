@@ -8,6 +8,7 @@ pub struct CascadeClassifier {
 }
 
 impl CascadeClassifier {
+    #[must_use] 
     pub fn new() -> Self {
         Self { loaded: false }
     }
@@ -66,8 +67,8 @@ impl CascadeClassifier {
                 }
             }
 
-            current_size.0 = (current_size.0 as f64 * scale_factor) as i32;
-            current_size.1 = (current_size.1 as f64 * scale_factor) as i32;
+            current_size.0 = (f64::from(current_size.0) * scale_factor) as i32;
+            current_size.1 = (f64::from(current_size.1) * scale_factor) as i32;
         }
 
         // Group detections
@@ -96,7 +97,7 @@ impl CascadeClassifier {
         }
 
         // Calculate simple feature: difference between left and right half
-        let mid_x = (x1 + x2) / 2;
+        let mid_x = usize::midpoint(x1, x2);
 
         let left_sum = integral_rect_sum(integral, x1, y1, mid_x, y2);
         let right_sum = integral_rect_sum(integral, mid_x, y1, x2, y2);
@@ -121,7 +122,7 @@ fn compute_integral_image(img: &Mat) -> Result<Vec<Vec<u64>>> {
     for row in 0..img.rows() {
         for col in 0..img.cols() {
             let pixel = img.at(row, col)?;
-            let val = pixel[0] as u64;
+            let val = u64::from(pixel[0]);
 
             integral[row + 1][col + 1] = val
                 + integral[row][col + 1]

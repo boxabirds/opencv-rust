@@ -41,10 +41,10 @@ fn find_homography_dlt(src_points: &[Point], dst_points: &[Point]) -> Result<[[f
     let mut a_matrix = vec![vec![0.0; 9]; 2 * n];
 
     for (i, (src, dst)) in src_points.iter().zip(dst_points.iter()).enumerate() {
-        let x = src.x as f64;
-        let y = src.y as f64;
-        let xp = dst.x as f64;
-        let yp = dst.y as f64;
+        let x = f64::from(src.x);
+        let y = f64::from(src.y);
+        let xp = f64::from(dst.x);
+        let yp = f64::from(dst.y);
 
         // First row
         a_matrix[2 * i] = vec![
@@ -130,7 +130,7 @@ fn find_homography_ransac(
             best_homography = h;
 
             // Update iteration count based on current inlier ratio
-            let inlier_ratio = inliers as f64 / n as f64;
+            let inlier_ratio = f64::from(inliers) / n as f64;
             max_iterations = compute_ransac_iterations(confidence, inlier_ratio, sample_size).min(max_iterations);
         }
     }
@@ -202,9 +202,10 @@ fn find_homography_lmeds(src_points: &[Point], dst_points: &[Point]) -> Result<[
 }
 
 /// Apply homography transformation to a point
+#[must_use] 
 pub fn apply_homography(h: &[[f64; 3]; 3], point: &Point) -> Point {
-    let x = point.x as f64;
-    let y = point.y as f64;
+    let x = f64::from(point.x);
+    let y = f64::from(point.y);
 
     let xp = h[0][0] * x + h[0][1] * y + h[0][2];
     let yp = h[1][0] * x + h[1][1] * y + h[1][2];
@@ -301,7 +302,7 @@ fn compute_ransac_iterations(confidence: f64, inlier_ratio: f64, sample_size: us
 fn distance_points(p1: &Point, p2: &Point) -> f64 {
     let dx = p1.x - p2.x;
     let dy = p1.y - p2.y;
-    ((dx * dx + dy * dy) as f64).sqrt()
+    f64::from(dx * dx + dy * dy).sqrt()
 }
 
 fn invert_homography(h: &[[f64; 3]; 3]) -> Result<[[f64; 3]; 3]> {
@@ -357,7 +358,7 @@ static mut RAND_STATE: u64 = 12345;
 
 fn rand_f64() -> f64 {
     unsafe {
-        RAND_STATE = RAND_STATE.wrapping_mul(1664525).wrapping_add(1013904223);
+        RAND_STATE = RAND_STATE.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
         (RAND_STATE >> 16) as f64 / 65536.0
     }
 }
