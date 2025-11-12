@@ -79,14 +79,47 @@ jobs:
       - name: Install Chrome
         uses: browser-actions/setup-chrome@latest
 
+      - name: Install jq (JSON parser)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Install chromedriver
         run: |
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%.*}")
-          wget "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip"
-          unzip chromedriver_linux64.zip
-          chmod +x chromedriver
-          sudo mv chromedriver /usr/local/bin/
+          # Get Chrome major version
+          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+' | head -1)
+          echo "Chrome version: $CHROME_VERSION"
+
+          # For Chrome 115+, use Chrome for Testing endpoints
+          if [ "$CHROME_VERSION" -ge 115 ]; then
+            # Get latest stable ChromeDriver version for this Chrome version
+            DRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/latest-versions-per-milestone-with-downloads.json" | \
+              jq -r ".milestones.\"$CHROME_VERSION\".downloads.chromedriver[] | select(.platform==\"linux64\") | .url" | head -1)
+
+            if [ -z "$DRIVER_VERSION" ]; then
+              echo "Failed to find ChromeDriver for Chrome $CHROME_VERSION, trying known-good-versions"
+              DRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" | \
+                jq -r ".versions[] | select(.version | startswith(\"$CHROME_VERSION.\")) | .downloads.chromedriver[] | select(.platform==\"linux64\") | .url" | head -1)
+            fi
+
+            echo "Downloading ChromeDriver from: $DRIVER_VERSION"
+            wget -q "$DRIVER_VERSION" -O chromedriver-linux64.zip
+          else
+            # Old Chrome versions (< 115) - use legacy endpoint
+            DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+            wget -q "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip" -O chromedriver-linux64.zip
+          fi
+
+          unzip -q chromedriver-linux64.zip
+
+          # Chrome for Testing uses a different directory structure
+          if [ -f "chromedriver-linux64/chromedriver" ]; then
+            chmod +x chromedriver-linux64/chromedriver
+            sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
+          else
+            chmod +x chromedriver
+            sudo mv chromedriver /usr/local/bin/
+          fi
+
+          chromedriver --version
 
       - name: Cache cargo registry
         uses: actions/cache@v4
