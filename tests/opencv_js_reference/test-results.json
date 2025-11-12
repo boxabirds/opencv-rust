@@ -1,0 +1,237 @@
+{
+  "config": {
+    "configFile": "/home/user/opencv-rust/tests/opencv_js_reference/playwright.config.js",
+    "rootDir": "/home/user/opencv-rust/tests/opencv_js_reference",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/user/opencv-rust/tests/opencv_js_reference/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-webgpu",
+        "name": "chromium-webgpu",
+        "testDir": "/home/user/opencv-rust/tests/opencv_js_reference",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.spec.js"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 8,
+    "webServer": {
+      "command": "python3 -m http.server 8080",
+      "port": 8080,
+      "timeout": 120000,
+      "reuseExistingServer": true,
+      "cwd": "../../"
+    }
+  },
+  "suites": [
+    {
+      "title": "test_debug.spec.js",
+      "file": "test_debug.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Test Harness Debug",
+          "file": "test_debug.spec.js",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "capture initialization console output",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-webgpu",
+                  "projectName": "chromium-webgpu",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10298,
+                      "error": {
+                        "message": "Error: page.evaluate: Target crashed ",
+                        "stack": "Error: page.evaluate: Target crashed \n    at /home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js:36:30",
+                        "location": {
+                          "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js",
+                          "column": 30,
+                          "line": 36
+                        },
+                        "snippet": "  34 |\n  35 |     // Check current state\n> 36 |     const state = await page.evaluate(() => {\n     |                              ^\n  37 |       return {\n  38 |         testHarnessReady: window.testHarnessReady || false,\n  39 |         opencv_js_ready: window.opencv_js_ready || false,"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js",
+                            "column": 30,
+                            "line": 36
+                          },
+                          "message": "Error: page.evaluate: Target crashed \n\n  34 |\n  35 |     // Check current state\n> 36 |     const state = await page.evaluate(() => {\n     |                              ^\n  37 |       return {\n  38 |         testHarnessReady: window.testHarnessReady || false,\n  39 |         opencv_js_ready: window.opencv_js_ready || false,\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js:36:30"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n=== Navigating to test harness ===\n"
+                        },
+                        {
+                          "text": "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED\n"
+                        },
+                        {
+                          "text": "[log] [Test Harness] Starting initialization...\n"
+                        },
+                        {
+                          "text": "[log] [Test Harness] Loading OpenCV.js...\n"
+                        },
+                        {
+                          "text": "[log] [Test Harness] Waiting for OpenCV.js from CDN...\n"
+                        },
+                        {
+                          "text": "Response status: 200\n"
+                        },
+                        {
+                          "text": "\n=== Waiting 10 seconds for initialization ===\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-12T22:18:38.472Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js",
+                        "column": 30,
+                        "line": 36
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "82274835a6f5a6bc9ab3-e40cf8dc06436834154f",
+              "file": "test_debug.spec.js",
+              "line": 8,
+              "column": 3
+            },
+            {
+              "title": "minimal initialization check",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-webgpu",
+                  "projectName": "chromium-webgpu",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 253,
+                      "error": {
+                        "message": "Error: page.goto: Page crashed\nCall log:\n\u001b[2m  - navigating to \"http://localhost:8080/tests/opencv_js_reference/test-harness.html\", waiting until \"load\"\u001b[22m\n",
+                        "stack": "Error: page.goto: Page crashed\nCall log:\n\u001b[2m  - navigating to \"http://localhost:8080/tests/opencv_js_reference/test-harness.html\", waiting until \"load\"\u001b[22m\n\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js:75:33",
+                        "location": {
+                          "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js",
+                          "column": 33,
+                          "line": 75
+                        },
+                        "snippet": "  73 |   test('minimal initialization check', async ({ page }) => {\n  74 |     // Even simpler test - just check if page loads\n> 75 |     const response = await page.goto('/tests/opencv_js_reference/test-harness.html');\n     |                                 ^\n  76 |     expect(response.status()).toBe(200);\n  77 |\n  78 |     // Check if HTML rendered"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js",
+                            "column": 33,
+                            "line": 75
+                          },
+                          "message": "Error: page.goto: Page crashed\nCall log:\n\u001b[2m  - navigating to \"http://localhost:8080/tests/opencv_js_reference/test-harness.html\", waiting until \"load\"\u001b[22m\n\n\n  73 |   test('minimal initialization check', async ({ page }) => {\n  74 |     // Even simpler test - just check if page loads\n> 75 |     const response = await page.goto('/tests/opencv_js_reference/test-harness.html');\n     |                                 ^\n  76 |     expect(response.status()).toBe(200);\n  77 |\n  78 |     // Check if HTML rendered\n    at /home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js:75:33"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-12T22:18:51.008Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/home/user/opencv-rust/tests/opencv_js_reference/test_debug.spec.js",
+                        "column": 33,
+                        "line": 75
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "82274835a6f5a6bc9ab3-dc634a8c84ac5c3db9e2",
+              "file": "test_debug.spec.js",
+              "line": 73,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-11-12T22:18:35.685Z",
+    "duration": 15956.559,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

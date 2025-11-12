@@ -34,8 +34,8 @@
     <!-- Canvas for image operations -->
     <canvas id="canvas" style="display: none;"></canvas>
 
-    <!-- Load OpenCV.js from CDN -->
-    <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
+    <!-- Load OpenCV.js from local cache (avoids CDN/network issues) -->
+    <script async src="/cache/opencv.js"></script>
 
     <!-- Main test harness script -->
     <script type="module">
@@ -84,28 +84,39 @@
         // Load our WASM module
         async function loadOpenCVRust() {
             try {
-                // Import our WASM module
-                const module = await import('../../pkg/opencv_rust.js');
+                console.log('[Test Harness] Attempting to import /pkg/opencv_rust.js...');
+
+                // Import our WASM module (absolute path from web root)
+                const module = await import('/pkg/opencv_rust.js');
+                console.log('[Test Harness] Module imported, initializing WASM...');
 
                 // Initialize WASM
                 await module.default();
+                console.log('[Test Harness] WASM initialized');
 
                 // Try to initialize GPU (may fail in headless mode, that's OK)
                 try {
                     if (module.init_gpu) {
+                        console.log('[Test Harness] Attempting GPU initialization...');
                         await module.init_gpu();
                         addDetails('✓ GPU initialized');
+                        console.log('[Test Harness] GPU initialized successfully');
+                    } else {
+                        console.log('[Test Harness] No init_gpu function found');
                     }
                 } catch (e) {
+                    console.warn('[Test Harness] GPU init failed:', e);
                     addDetails('⚠ GPU init failed (will use CPU): ' + e.message);
                 }
 
                 // Store module globally
                 window.opencvRust = module;
                 window.opencv_rust_ready = true;
+                console.log('[Test Harness] WASM module stored globally');
 
                 return module;
             } catch (error) {
+                console.error('[Test Harness] WASM load error:', error);
                 throw new Error(`Failed to load opencv-rust: ${error.message}`);
             }
         }
@@ -168,23 +179,34 @@
         // Main initialization
         async function initialize() {
             try {
+                console.log('[Test Harness] Starting initialization...');
+
                 updateStatus('Loading OpenCV.js...', 'loading');
+                console.log('[Test Harness] Waiting for OpenCV.js from CDN...');
+
                 await waitForOpenCVJs();
                 window.opencv_js_ready = true;
+                console.log('[Test Harness] OpenCV.js loaded successfully');
                 addDetails('✓ OpenCV.js loaded (version: ' + cv.getBuildInformation().split('\n')[0] + ')');
 
                 updateStatus('Loading opencv-rust WASM...', 'loading');
+                console.log('[Test Harness] Loading WASM from /pkg/opencv_rust.js...');
+
                 await loadOpenCVRust();
+                console.log('[Test Harness] WASM loaded successfully');
                 addDetails('✓ opencv-rust WASM loaded');
 
                 // All ready
                 window.testHarnessReady = true;
                 updateStatus('✓ Test harness ready', 'ready');
                 addDetails('Ready for tests!');
+                console.log('[Test Harness] Initialization complete!');
 
             } catch (error) {
                 updateStatus('✗ Initialization failed: ' + error.message, 'error');
-                console.error('Initialization error:', error);
+                console.error('[Test Harness] Initialization error:', error);
+                console.error('[Test Harness] Error stack:', error.stack);
+                window.testHarnessError = error;
                 throw error;
             }
         }

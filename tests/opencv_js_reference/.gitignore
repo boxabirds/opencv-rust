@@ -1,0 +1,12 @@
+# Playwright test artifacts
+playwright-report/
+test-results/
+test-results.json
+*.png
+!test-harness-debug.png
+
+# Node modules
+node_modules/
+
+# Test screenshots (except intentional ones)
+screenshots/
