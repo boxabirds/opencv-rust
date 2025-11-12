@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCV.js Parity Test Harness</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+        .loading { color: #f5923e; }
+        .ready { color: #5cb85c; }
+        .error { color: #d9534f; }
+        canvas {
+            border: 1px solid #444;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenCV.js Parity Test Harness</h1>
+    <div id="status" class="loading">Loading libraries...</div>
+    <div id="details"></div>
+
+    <!-- Canvas for image operations -->
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <!-- Load OpenCV.js from CDN -->
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
+
+    <!-- Main test harness script -->
+    <script type="module">
+        // Global state
+        window.testHarnessReady = false;
+        window.opencv_js_ready = false;
+        window.opencv_rust_ready = false;
+        window.testImages = {};
+
+        const statusEl = document.getElementById('status');
+        const detailsEl = document.getElementById('details');
+
+        function updateStatus(message, className = 'loading') {
+            statusEl.textContent = message;
+            statusEl.className = className;
+            console.log(`[Test Harness] ${message}`);
+        }
+
+        function addDetails(message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            detailsEl.appendChild(p);
+        }
+
+        // Wait for OpenCV.js to load
+        function waitForOpenCVJs() {
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('OpenCV.js load timeout'));
+                }, 30000);
+
+                if (typeof cv !== 'undefined' && cv.Mat) {
+                    clearTimeout(timeout);
+                    resolve();
+                    return;
+                }
+
+                // OpenCV.js sets this callback when ready
+                window.onOpenCVReady = () => {
+                    clearTimeout(timeout);
+                    resolve();
+                };
+            });
+        }
+
+        // Load our WASM module
+        async function loadOpenCVRust() {
+            try {
+                // Import our WASM module
+                const module = await import('../../pkg/opencv_rust.js');
+
+                // Initialize WASM
+                await module.default();
+
+                // Try to initialize GPU (may fail in headless mode, that's OK)
+                try {
+                    if (module.init_gpu) {
+                        await module.init_gpu();
+                        addDetails('✓ GPU initialized');
+                    }
+                } catch (e) {
+                    addDetails('⚠ GPU init failed (will use CPU): ' + e.message);
+                }
+
+                // Store module globally
+                window.opencvRust = module;
+                window.opencv_rust_ready = true;
+
+                return module;
+            } catch (error) {
+                throw new Error(`Failed to load opencv-rust: ${error.message}`);
+            }
+        }
+
+        // Load test image
+        window.loadTestImage = async function(imagePath) {
+            const fullPath = `/tests/fixtures/${imagePath}`;
+
+            // Check cache
+            if (window.testImages[imagePath]) {
+                return window.testImages[imagePath];
+            }
+
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+
+                img.onload = () => {
+                    // Draw to canvas to get ImageData
+                    const canvas = document.getElementById('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+
+                    // Cache it
+                    window.testImages[imagePath] = imageData;
+
+                    resolve(imageData);
+                };
+
+                img.onerror = () => {
+                    reject(new Error(`Failed to load image: ${fullPath}`));
+                };
+
+                img.src = fullPath;
+            });
+        };
+
+        // Convert OpenCV.js Mat to ImageData
+        window.matToImageData = function(mat) {
+            const canvas = document.getElementById('canvas');
+            cv.imshow(canvas, mat);
+            const ctx = canvas.getContext('2d');
+            return ctx.getImageData(0, 0, mat.cols, mat.rows);
+        };
+
+        // Convert ImageData to OpenCV.js Mat
+        window.imageDataToMat = function(imageData) {
+            const canvas = document.getElementById('canvas');
+            canvas.width = imageData.width;
+            canvas.height = imageData.height;
+            const ctx = canvas.getContext('2d');
+            ctx.putImageData(imageData, 0, 0);
+            return cv.imread(canvas);
+        };
+
+        // Main initialization
+        async function initialize() {
+            try {
+                updateStatus('Loading OpenCV.js...', 'loading');
+                await waitForOpenCVJs();
+                window.opencv_js_ready = true;
+                addDetails('✓ OpenCV.js loaded (version: ' + cv.getBuildInformation().split('\n')[0] + ')');
+
+                updateStatus('Loading opencv-rust WASM...', 'loading');
+                await loadOpenCVRust();
+                addDetails('✓ opencv-rust WASM loaded');
+
+                // All ready
+                window.testHarnessReady = true;
+                updateStatus('✓ Test harness ready', 'ready');
+                addDetails('Ready for tests!');
+
+            } catch (error) {
+                updateStatus('✗ Initialization failed: ' + error.message, 'error');
+                console.error('Initialization error:', error);
+                throw error;
+            }
+        }
+
+        // Start initialization
+        initialize().catch(err => {
+            console.error('Fatal error:', err);
+        });
+
+        // Export test utilities globally for Playwright tests
+        window.testUtils = {
+            ready: () => window.testHarnessReady,
+            opencvJsReady: () => window.opencv_js_ready,
+            opencvRustReady: () => window.opencv_rust_ready,
+            loadTestImage: window.loadTestImage,
+            matToImageData: window.matToImageData,
+            imageDataToMat: window.imageDataToMat,
+        };
+    </script>
+</body>
+</html>
