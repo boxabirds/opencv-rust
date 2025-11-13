@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>cvtColor Debug</title>
+</head>
+<body>
+    <h1>cvtColor Debug</h1>
+    <div id="status">Loading...</div>
+    <div id="result"></div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        async function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        async function runTest() {
+            const status = document.getElementById('status');
+            const result = document.getElementById('result');
+
+            // Wait for OpenCV.js
+            status.textContent = 'Loading OpenCV.js...';
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load WASM
+            status.textContent = 'Loading WASM...';
+            const wasmModule = await import('/pkg/opencv_rust.js');
+            await wasmModule.default();
+            await wasmModule.initGpu();
+
+            // Check if cvtColorGray exists
+            result.innerHTML += `<p>cvtColorGray exists: ${typeof wasmModule.cvtColorGray}</p>`;
+            result.innerHTML += `<p>cvtColor exists: ${typeof wasmModule.cvtColor}</p>`;
+            result.innerHTML += `<p>rgbToGray exists: ${typeof wasmModule.rgbToGray}</p>`;
+
+            // Load test image
+            status.textContent = 'Loading test image...';
+            const testImage = await loadImage('lenna.png');
+
+            const canvas = document.createElement('canvas');
+            canvas.width = testImage.width;
+            canvas.height = testImage.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(testImage, 0, 0);
+            const imageData = ctx.getImageData(0, 0, testImage.width, testImage.height);
+
+            // Create WASM Mat
+            const wasmSrc = wasmModule.WasmMat.fromImageData(
+                new Uint8Array(imageData.data),
+                testImage.width, testImage.height, 4
+            );
+
+            // Try cvtColorGray
+            try {
+                status.textContent = 'Calling cvtColorGray...';
+                const wasmDst = await wasmModule.cvtColorGray(wasmSrc);
+                const wasmData = wasmDst.getData();
+                result.innerHTML += `<p>✓ cvtColorGray succeeded! Output size: ${wasmData.length}</p>`;
+                wasmDst.free();
+            } catch (e) {
+                result.innerHTML += `<p>✗ cvtColorGray failed: ${e}</p>`;
+                console.error(e);
+            }
+
+            // Try rgbToGray
+            try {
+                status.textContent = 'Calling rgbToGray...';
+                const wasmDst = await wasmModule.rgbToGray(wasmSrc);
+                const wasmData = wasmDst.getData();
+                result.innerHTML += `<p>✓ rgbToGray succeeded! Output size: ${wasmData.length}</p>`;
+                wasmDst.free();
+            } catch (e) {
+                result.innerHTML += `<p>✗ rgbToGray failed: ${e}</p>`;
+                console.error(e);
+            }
+
+            wasmSrc.free();
+            status.textContent = 'Complete!';
+        }
+
+        runTest().catch(err => {
+            document.getElementById('status').textContent = 'Error: ' + err.message;
+            document.getElementById('result').textContent += '\n' + err.stack;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

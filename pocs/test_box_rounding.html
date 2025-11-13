@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Box Blur Rounding Test</title>
+</head>
+<body>
+    <h1>Box Blur Rounding Test</h1>
+    <div id="results"></div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        async function runTest() {
+            const results = document.getElementById('results');
+
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Create 5x5 image with known values to test rounding
+            // We'll create a pixel where the average should be 0.48 and 0.52
+            const testData = new Uint8Array([
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 1, 0, 0,  // Center pixel = 1, surrounded by 0s
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0
+            ]);
+
+            const mat = cv.matFromArray(5, 5, cv.CV_8UC1, Array.from(testData));
+            const dst = new cv.Mat();
+
+            // 5x5 box blur - center pixel average = 1/25 = 0.04
+            cv.blur(mat, dst, new cv.Size(5, 5));
+
+            const centerValue = dst.ucharAt(2, 2);
+            results.innerHTML += `<p>Test 1: sum=1, average=1/25=0.04<br>`;
+            results.innerHTML += `Expected if truncated: 0<br>`;
+            results.innerHTML += `Expected if rounded: 0<br>`;
+            results.innerHTML += `OpenCV result: ${centerValue}</p>`;
+
+            // Test 2: sum = 13 (should round to 1 if rounding, 0 if truncating)
+            const testData2 = new Uint8Array([
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0
+            ]);
+
+            const mat2 = cv.matFromArray(5, 5, cv.CV_8UC1, Array.from(testData2));
+            const dst2 = new cv.Mat();
+
+            cv.blur(mat2, dst2, new cv.Size(5, 5));
+
+            const centerValue2 = dst2.ucharAt(2, 2);
+            const sum2 = 13;
+            const avg2 = sum2 / 25;
+            results.innerHTML += `<p>Test 2: sum=${sum2}, average=${sum2}/25=${avg2.toFixed(2)}<br>`;
+            results.innerHTML += `Expected if truncated: 0<br>`;
+            results.innerHTML += `Expected if rounded: 1<br>`;
+            results.innerHTML += `OpenCV result: ${centerValue2}</p>`;
+
+            // Test 3: sum = 12 (avg = 0.48, should be 0 for both)
+            const testData3 = new Uint8Array([
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0
+            ]);
+
+            const mat3 = cv.matFromArray(5, 5, cv.CV_8UC1, Array.from(testData3));
+            const dst3 = new cv.Mat();
+
+            cv.blur(mat3, dst3, new cv.Size(5, 5));
+
+            const centerValue3 = dst3.ucharAt(2, 2);
+            const sum3 = 12;
+            const avg3 = sum3 / 25;
+            results.innerHTML += `<p>Test 3: sum=${sum3}, average=${sum3}/25=${avg3.toFixed(2)}<br>`;
+            results.innerHTML += `Expected if truncated: 0<br>`;
+            results.innerHTML += `Expected if rounded: 0<br>`;
+            results.innerHTML += `OpenCV result: ${centerValue3}</p>`;
+
+            mat.delete();
+            dst.delete();
+            mat2.delete();
+            dst2.delete();
+            mat3.delete();
+            dst3.delete();
+        }
+
+        runTest().catch(err => {
+            document.getElementById('results').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

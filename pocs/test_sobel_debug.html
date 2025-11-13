@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sobel Debug</title>
+</head>
+<body>
+    <h1>Sobel Debug</h1>
+    <div id="results"></div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        async function runTest() {
+            const results = document.getElementById('results');
+
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Test 1: Border behavior - check corner pixel
+            const testData = new Uint8Array(25).fill(100);
+            testData[12] = 200; // Center pixel
+
+            const mat = cv.matFromArray(5, 5, cv.CV_8UC1, Array.from(testData));
+            const dst = new cv.Mat();
+
+            cv.Sobel(mat, dst, cv.CV_8U, 1, 0, 3);
+
+            results.innerHTML += `<h3>Test 1: Border pixels</h3>`;
+            results.innerHTML += `<p>Top-left corner (0,0): ${dst.ucharAt(0, 0)}</p>`;
+            results.innerHTML += `<p>Top edge (2,0): ${dst.ucharAt(0, 2)}</p>`;
+            results.innerHTML += `<p>Left edge (0,2): ${dst.ucharAt(2, 0)}</p>`;
+            results.innerHTML += `<p>Center (2,2): ${dst.ucharAt(2, 2)}</p>`;
+
+            // Test 2: Rounding behavior
+            // Create pattern where gradient sum = 5.5 (should round to 6 if rounding, 5 if truncating)
+            const testData2 = new Uint8Array([
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 2
+            ]);
+
+            const mat2 = cv.matFromArray(3, 3, cv.CV_8UC1, Array.from(testData2));
+            const dst2 = new cv.Mat();
+            cv.Sobel(mat2, dst2, cv.CV_8U, 1, 0, 3);
+
+            // Sobel X kernel: [-1,0,1; -2,0,2; -1,0,1]
+            // At center: sum = (-1)*0 + 0*0 + 1*1 + (-2)*0 + 0*0 + 2*1 + (-1)*0 + 0*0 + 1*2 = 1 + 2 + 2 = 5
+            const centerValue = dst2.ucharAt(1, 1);
+            results.innerHTML += `<h3>Test 2: Calculation</h3>`;
+            results.innerHTML += `<p>Center value: ${centerValue} (expected: 5)</p>`;
+
+            mat.delete();
+            dst.delete();
+            mat2.delete();
+            dst2.delete();
+        }
+
+        runTest().catch(err => {
+            document.getElementById('results').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Median Blur Debug</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        .images { display: flex; gap: 20px; }
+        .image-container { text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Median Blur Debug</h1>
+    <div id="status">Loading...</div>
+    <div id="stats"></div>
+    <div class="images" id="images"></div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        let wasmModule = null;
+        let testImage = null;
+
+        async function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        async function runTest() {
+            const status = document.getElementById('status');
+            const stats = document.getElementById('stats');
+            const imagesDiv = document.getElementById('images');
+
+            // Wait for OpenCV.js
+            status.textContent = 'Loading OpenCV.js...';
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load WASM
+            status.textContent = 'Loading WASM...';
+            wasmModule = await import('/pkg/opencv_rust.js');
+            await wasmModule.default();
+            await wasmModule.initGpu();
+
+            // Load test image
+            status.textContent = 'Loading test image...';
+            testImage = await loadImage('lenna.png');
+
+            // Convert to canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = testImage.width;
+            canvas.height = testImage.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(testImage, 0, 0);
+            const imageData = ctx.getImageData(0, 0, testImage.width, testImage.height);
+
+            // OpenCV.js processing
+            status.textContent = 'Running OpenCV.js median blur...';
+            const cvSrc = cv.matFromImageData(imageData);
+            const cvDst = new cv.Mat();
+            cv.medianBlur(cvSrc, cvDst, 5);
+
+            // Get OpenCV result
+            const cvCanvas = document.createElement('canvas');
+            cvCanvas.width = testImage.width;
+            cvCanvas.height = testImage.height;
+            cv.imshow(cvCanvas, cvDst);
+            const cvData = cvCanvas.getContext('2d').getImageData(0, 0, testImage.width, testImage.height);
+
+            // WASM processing
+            status.textContent = 'Running WASM median blur...';
+            const wasmSrc = wasmModule.WasmMat.fromImageData(
+                new Uint8Array(imageData.data),
+                testImage.width, testImage.height, 4
+            );
+            const wasmDst = await wasmModule.medianBlur(wasmSrc, 5);
+            const wasmData = wasmDst.getData();
+
+            // Create WASM canvas
+            const wasmCanvas = document.createElement('canvas');
+            wasmCanvas.width = testImage.width;
+            wasmCanvas.height = testImage.height;
+            const wasmCtx = wasmCanvas.getContext('2d');
+            const wasmImageData = new ImageData(
+                new Uint8ClampedArray(wasmData),
+                testImage.width,
+                testImage.height
+            );
+            wasmCtx.putImageData(wasmImageData, 0, 0);
+
+            // Compare first 10 pixels
+            let comparison = '';
+            for (let i = 0; i < 40; i += 4) {
+                const cvR = cvData.data[i];
+                const cvG = cvData.data[i+1];
+                const cvB = cvData.data[i+2];
+                const wasmR = wasmData[i];
+                const wasmG = wasmData[i+1];
+                const wasmB = wasmData[i+2];
+                comparison += `Pixel ${i/4}: OpenCV=(${cvR},${cvG},${cvB}) WASM=(${wasmR},${wasmG},${wasmB})<br>`;
+            }
+
+            // Count differences
+            let diffCount = 0;
+            let maxDiff = 0;
+            const totalPixels = cvData.data.length / 4;
+
+            for (let i = 0; i < cvData.data.length; i += 4) {
+                let hasDiff = false;
+                for (let c = 0; c < 3; c++) {
+                    const diff = Math.abs(cvData.data[i+c] - wasmData[i+c]);
+                    if (diff > 0) {
+                        hasDiff = true;
+                        maxDiff = Math.max(maxDiff, diff);
+                    }
+                }
+                if (hasDiff) diffCount++;
+            }
+
+            const accuracy = ((totalPixels - diffCount) / totalPixels * 100).toFixed(2);
+
+            stats.innerHTML = `
+                <h3>Statistics</h3>
+                <p>Accuracy: ${accuracy}%</p>
+                <p>Different pixels: ${diffCount.toLocaleString()} / ${totalPixels.toLocaleString()}</p>
+                <p>Max difference: ${maxDiff}</p>
+                <h3>First 10 pixels:</h3>
+                ${comparison}
+            `;
+
+            // Display canvases
+            const addCanvas = (title, canvas) => {
+                const container = document.createElement('div');
+                container.className = 'image-container';
+                container.innerHTML = `<div><strong>${title}</strong></div>`;
+                container.appendChild(canvas);
+                imagesDiv.appendChild(container);
+            };
+
+            addCanvas('Original', canvas);
+            addCanvas('OpenCV.js', cvCanvas);
+            addCanvas('WASM GPU', wasmCanvas);
+
+            status.textContent = 'Complete!';
+
+            // Cleanup
+            cvSrc.delete();
+            cvDst.delete();
+            wasmSrc.free();
+            wasmDst.free();
+        }
+
+        runTest().catch(err => {
+            document.getElementById('status').textContent = 'Error: ' + err.message;
+            document.getElementById('stats').textContent = err.stack;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

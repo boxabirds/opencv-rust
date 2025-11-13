@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Threshold Debug</title>
+</head>
+<body>
+    <h1>Threshold Debug</h1>
+    <div id="results"></div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        async function runTest() {
+            const results = document.getElementById('results');
+
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Test edge cases
+            const testData = new Uint8Array([126, 127, 128, 0, 255]);
+            const mat = cv.matFromArray(1, 5, cv.CV_8UC1, Array.from(testData));
+            const dst = new cv.Mat();
+
+            cv.threshold(mat, dst, 127, 255, cv.THRESH_BINARY);
+
+            results.innerHTML += `<h3>Threshold at 127, max=255</h3>`;
+            results.innerHTML += `<p>Input 126 → ${dst.ucharAt(0, 0)} (expected 0 since 126 ≤ 127)</p>`;
+            results.innerHTML += `<p>Input 127 → ${dst.ucharAt(0, 1)} (expected 0 since 127 ≤ 127)</p>`;
+            results.innerHTML += `<p>Input 128 → ${dst.ucharAt(0, 2)} (expected 255 since 128 > 127)</p>`;
+            results.innerHTML += `<p>Input 0 → ${dst.ucharAt(0, 3)} (expected 0)</p>`;
+            results.innerHTML += `<p>Input 255 → ${dst.ucharAt(0, 4)} (expected 255)</p>`;
+
+            mat.delete();
+            dst.delete();
+        }
+
+        runTest().catch(err => {
+            document.getElementById('results').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

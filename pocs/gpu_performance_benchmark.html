@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPU Performance Benchmark - Net Transform Time</title>
+    <style>
+        body { font-family: monospace; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+        h1 { color: #4ec9b0; }
+        .status { color: #dcdcaa; margin: 10px 0; }
+        table { border-collapse: collapse; margin: 20px 0; width: 100%; }
+        th, td { border: 1px solid #3e3e42; padding: 12px; text-align: left; }
+        th { background: #252526; color: #4ec9b0; font-weight: bold; }
+        tr:nth-child(even) { background: #252526; }
+        .highlight { background: #264f78; }
+        .metric { color: #b5cea8; }
+        .overhead { color: #ce9178; }
+        .fast { color: #4ec9b0; font-weight: bold; }
+        .note { color: #6a9955; font-style: italic; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>GPU Performance Benchmark</h1>
+    <div class="note">
+        Methodology: Measure pipeline overhead with empty operation, then run each operation 100x<br>
+        Net transform time = (Total time - Overhead) / 100 iterations
+    </div>
+    <div id="status" class="status">Initializing...</div>
+    <div id="results"></div>
+
+    <script type="module">
+        const ITERATIONS = 100;
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+
+        // Test image sizes
+        const TEST_SIZES = [
+            { name: '256x256', width: 256, height: 256 },
+            { name: '512x512', width: 512, height: 512 },
+            { name: '1024x1024', width: 1024, height: 1024 },
+        ];
+
+        // Operations to benchmark
+        const OPERATIONS = [
+            { name: 'Box Blur 5x5', fn: (m, w) => w.boxBlur(m, 5), channels: 4 },
+            { name: 'Gaussian Blur 5x5', fn: (m, w) => w.gaussianBlur(m, 5, 1.5), channels: 4 },
+            { name: 'Median Blur 5x5', fn: (m, w) => w.medianBlur(m, 5), channels: 4 },
+            { name: 'RGB to Gray', fn: (m, w) => w.rgbToGray(m), channels: 4, inputChannels: 4 },
+            { name: 'Threshold', fn: (m, w) => w.threshold(m, 127, 255), channels: 4, inputChannels: 1 },
+            { name: 'Sobel X', fn: (m, w) => w.sobel(m, 1, 0, 3), channels: 4, inputChannels: 1 },
+        ];
+
+        function formatTime(ms) {
+            if (ms < 0.001) return (ms * 1000).toFixed(3) + ' µs';
+            if (ms < 1) return (ms).toFixed(3) + ' ms';
+            return ms.toFixed(2) + ' ms';
+        }
+
+        function formatThroughput(pixelsPerMs) {
+            const mpixelsPerSec = (pixelsPerMs * 1000) / 1e6;
+            return mpixelsPerSec.toFixed(2) + ' Mpix/s';
+        }
+
+        async function measureOverhead(wasmModule, width, height) {
+            status.textContent = `Measuring pipeline overhead (${width}x${height})...`;
+
+            // Create minimal test data
+            const testData = new Uint8Array(width * height * 4);
+            testData.fill(128);
+            const mat = wasmModule.WasmMat.fromImageData(testData, width, height, 4);
+
+            // Warmup
+            for (let i = 0; i < 3; i++) {
+                const result = await wasmModule.boxBlur(mat, 1);
+                result.free();
+            }
+
+            // Measure overhead: run minimal operation (1x1 box blur which is basically a no-op)
+            const start = performance.now();
+            for (let i = 0; i < ITERATIONS; i++) {
+                const result = await wasmModule.boxBlur(mat, 1);
+                result.free();
+            }
+            const end = performance.now();
+
+            mat.free();
+
+            const totalOverhead = end - start;
+            const perIterationOverhead = totalOverhead / ITERATIONS;
+
+            return { totalOverhead, perIterationOverhead };
+        }
+
+        async function benchmarkOperation(op, wasmModule, width, height, overhead) {
+            status.textContent = `Benchmarking ${op.name} (${width}x${height})...`;
+
+            // Create test data
+            const inputChannels = op.inputChannels || 4;
+            const testData = new Uint8Array(width * height * inputChannels);
+
+            // Fill with pattern
+            for (let i = 0; i < testData.length; i++) {
+                testData[i] = (i % 256);
+            }
+
+            const mat = wasmModule.WasmMat.fromImageData(testData, width, height, inputChannels);
+
+            // Warmup
+            for (let i = 0; i < 3; i++) {
+                const result = await op.fn(mat, wasmModule);
+                result.free();
+            }
+
+            // Benchmark: run 100x
+            const start = performance.now();
+            for (let i = 0; i < ITERATIONS; i++) {
+                const result = await op.fn(mat, wasmModule);
+                result.free();
+            }
+            const end = performance.now();
+
+            mat.free();
+
+            const totalTime = end - start;
+            const totalWithoutOverhead = Math.max(0, totalTime - (overhead.perIterationOverhead * ITERATIONS));
+            const netTransformTime = totalWithoutOverhead / ITERATIONS;
+            const avgTotalTime = totalTime / ITERATIONS;
+            const pixelsProcessed = width * height;
+            const throughput = pixelsProcessed / netTransformTime;
+
+            return {
+                totalTime,
+                avgTotalTime,
+                netTransformTime,
+                throughput,
+                pixelsProcessed
+            };
+        }
+
+        async function runBenchmarks() {
+            try {
+                // Load WASM
+                status.textContent = 'Loading WASM module...';
+                const wasmModule = await import('/pkg/opencv_rust.js');
+                await wasmModule.default();
+
+                // Initialize GPU
+                status.textContent = 'Initializing GPU...';
+                const gpuAvailable = await wasmModule.initGpu();
+                if (!gpuAvailable) {
+                    status.textContent = 'ERROR: GPU not available';
+                    return;
+                }
+
+                let html = '<table>';
+                html += '<tr><th>Image Size</th><th>Operation</th><th>Avg Total Time</th>';
+                html += '<th>Net Transform Time</th><th>Overhead Removed</th><th>Throughput</th></tr>';
+
+                for (const size of TEST_SIZES) {
+                    // Measure overhead for this size
+                    const overhead = await measureOverhead(wasmModule, size.width, size.height);
+
+                    html += `<tr class="highlight">`;
+                    html += `<td rowspan="${OPERATIONS.length + 1}"><strong>${size.name}</strong><br>${(size.width * size.height / 1e6).toFixed(2)} Mpix</td>`;
+                    html += `<td colspan="5" class="overhead"><strong>Pipeline Overhead:</strong> ${formatTime(overhead.perIterationOverhead)} per call</td>`;
+                    html += '</tr>';
+
+                    for (const op of OPERATIONS) {
+                        const result = await benchmarkOperation(op, wasmModule, size.width, size.height, overhead);
+
+                        const overheadPct = ((overhead.perIterationOverhead / result.avgTotalTime) * 100).toFixed(1);
+
+                        html += '<tr>';
+                        html += `<td>${op.name}</td>`;
+                        html += `<td class="metric">${formatTime(result.avgTotalTime)}</td>`;
+                        html += `<td class="metric fast">${formatTime(result.netTransformTime)}</td>`;
+                        html += `<td class="overhead">${overheadPct}%</td>`;
+                        html += `<td class="metric">${formatThroughput(result.throughput)}</td>`;
+                        html += '</tr>';
+                    }
+                }
+
+                html += '</table>';
+
+                html += '<div class="note">';
+                html += '<strong>Methodology:</strong><br>';
+                html += '1. Pipeline overhead measured with minimal 1x1 box blur (100 iterations)<br>';
+                html += '2. Each operation run 100 times for accurate timing<br>';
+                html += '3. Net transform time = (Total time - Pipeline overhead × 100) ÷ 100<br>';
+                html += '4. Throughput = Megapixels processed per second (net time)<br>';
+                html += '</div>';
+
+                results.innerHTML = html;
+                status.textContent = `✓ Benchmark complete! (${ITERATIONS} iterations per operation)`;
+
+            } catch (error) {
+                status.textContent = 'ERROR: ' + error.message;
+                results.innerHTML = `<pre style="color: #f48771;">${error.stack}</pre>`;
+                console.error(error);
+            }
+        }
+
+        runBenchmarks();
+    </script>
+</body>
+</html>
