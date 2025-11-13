@@ -121,9 +121,9 @@ pub fn fisheye_project_points(
         let y = cam_point[1] / cam_point[2];
 
         // Apply fisheye distortion (equidistant model)
-        let r = (x * x + y * y).sqrt();
+        let r = libm::sqrt(x * x + y * y);
 
-        let theta = r.atan();
+        let theta = libm::atan(r);
         let theta2 = theta * theta;
         let theta4 = theta2 * theta2;
         let theta6 = theta4 * theta2;
@@ -173,8 +173,8 @@ pub fn fisheye_undistort_points(
         let mut y = y_d;
 
         for _ in 0..10 {
-            let r = (x * x + y * y).sqrt();
-            let theta = r.atan();
+            let r = libm::sqrt(x * x + y * y);
+            let theta = libm::atan(r);
             let theta2 = theta * theta;
             let theta4 = theta2 * theta2;
             let theta6 = theta4 * theta2;
@@ -187,7 +187,7 @@ pub fn fisheye_undistort_points(
                     + distortion.k3 * theta6
                     + distortion.k4 * theta8);
 
-            let scale = if theta_d.abs() > 1e-6 {
+            let scale = if libm::fabs(theta_d) > 1e-6 {
                 r / theta_d
             } else {
                 1.0
@@ -245,8 +245,8 @@ pub fn fisheye_calibrate(
 
     for img_pts in image_points {
         for pt in img_pts {
-            let dx = (f64::from(pt.x) - cx).abs();
-            let dy = (f64::from(pt.y) - cy).abs();
+            let dx = libm::fabs(f64::from(pt.x) - cx);
+            let dy = libm::fabs(f64::from(pt.y) - cy);
             total_spread += dx.max(dy);
             count += 1;
         }
@@ -295,14 +295,14 @@ pub fn fisheye_stereo_calibrate(
 
 /// Convert rotation vector to rotation matrix (Rodrigues)
 fn rodrigues_to_matrix(rvec: &[f64; 3]) -> Result<[[f64; 3]; 3]> {
-    let theta = (rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2]).sqrt();
+    let theta = libm::sqrt(rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2]);
 
     if theta < 1e-6 {
         return Ok([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
     }
 
-    let c = theta.cos();
-    let s = theta.sin();
+    let c = libm::cos(theta);
+    let s = libm::sin(theta);
     let c1 = 1.0 - c;
 
     let rx = rvec[0] / theta;
@@ -376,8 +376,8 @@ mod tests {
         assert_eq!(image_points.len(), 3);
 
         // Center point should be near principal point
-        assert!((image_points[0].x - 320.0).abs() < 10.0);
-        assert!((image_points[0].y - 240.0).abs() < 10.0);
+        assert!(libm::fabs(image_points[0].x - 320.0) < 10.0);
+        assert!(libm::fabs(image_points[0].y - 240.0) < 10.0);
     }
 
     #[test]
@@ -440,8 +440,8 @@ mod tests {
 
         let matrix = result.unwrap();
         // Should be identity matrix
-        assert!((matrix[0][0] - 1.0).abs() < 1e-6);
-        assert!((matrix[1][1] - 1.0).abs() < 1e-6);
-        assert!((matrix[2][2] - 1.0).abs() < 1e-6);
+        assert!(libm::fabs(matrix[0][0] - 1.0) < 1e-6);
+        assert!(libm::fabs(matrix[1][1] - 1.0) < 1e-6);
+        assert!(libm::fabs(matrix[2][2] - 1.0) < 1e-6);
     }
 }

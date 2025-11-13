@@ -1,0 +1,10 @@
+{
+  "name": "webgpu-poc",
+  "type": "module",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

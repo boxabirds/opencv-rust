@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CPU vs OpenCV.js</title>
+</head>
+<body>
+    <h1>Testing CPU Implementation vs OpenCV.js</h1>
+    <div id="status">Loading...</div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        async function main() {
+            const status = document.getElementById('status');
+
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load WASM
+            const module = await import('/pkg/opencv_rust.js');
+            await module.default();
+
+            // Force CPU mode
+            module.setBackend('cpu');
+            console.log('Backend:', module.getBackend());
+
+            // Load image
+            const img = await loadImage('lenna.png');
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, img.width, img.height);
+
+            // OpenCV.js blur
+            const cvSrc = cv.matFromImageData(imageData);
+            const cvDst = new cv.Mat();
+            cv.GaussianBlur(cvSrc, cvDst, new cv.Size(5, 5), 1.5, 1.5, cv.BORDER_DEFAULT);
+
+            const cvCanvas = document.createElement('canvas');
+            cvCanvas.width = img.width;
+            cvCanvas.height = img.height;
+            cv.imshow(cvCanvas, cvDst);
+            const cvData = cvCanvas.getContext('2d').getImageData(0, 0, img.width, img.height);
+
+            // Our CPU blur
+            const wasmSrc = module.WasmMat.fromImageData(
+                new Uint8Array(imageData.data),
+                img.width, img.height, 4
+            );
+            const wasmDst = await module.gaussianBlur(wasmSrc, 5, 1.5);
+            const wasmData = wasmDst.getData();
+
+            // Compare
+            let diffCount = 0;
+            let maxDiff = 0;
+            const totalPixels = img.width * img.height;
+
+            for (let i = 0; i < cvData.data.length; i += 4) {
+                for (let c = 0; c < 3; c++) {
+                    const diff = Math.abs(cvData.data[i+c] - wasmData[i+c]);
+                    if (diff > 0) {
+                        diffCount++;
+                        maxDiff = Math.max(maxDiff, diff);
+                        break;
+                    }
+                }
+            }
+
+            status.innerHTML = '<strong>CPU vs OpenCV.js</strong>';
+            status.innerHTML += `<br>Backend: ${module.getBackend()} (resolved: ${module.getResolvedBackend()})`;
+            status.innerHTML += `<br>Total pixels: ${totalPixels.toLocaleString()}`;
+            status.innerHTML += `<br>Different pixels: ${diffCount.toLocaleString()} (${(diffCount/totalPixels*100).toFixed(2)}%)`;
+            status.innerHTML += `<br>Max difference: ${maxDiff}`;
+
+            cvSrc.delete();
+            cvDst.delete();
+            wasmSrc.free();
+            wasmDst.free();
+        }
+
+        async function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        main().catch(err => {
+            document.getElementById('status').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

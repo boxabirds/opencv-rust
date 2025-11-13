@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trace Border Reflection</title>
+</head>
+<body>
+    <h1>Detailed Border Reflection Trace</h1>
+    <pre id="output"></pre>
+
+    <script>
+        const width = 5;
+        const ksize = 5;
+        const half = 2;
+        const x = 4; // Right edge pixel
+
+        let output = `Testing pixel at x=${x} in width=${width} image\n`;
+        output += `Kernel size=${ksize}, half=${half}\n\n`;
+
+        const gradient = [0, 64, 128, 192, 255];
+
+        output += 'Our BORDER_REFLECT implementation (-sx-1 for negative, 2*w-sx-1 for positive):\n';
+        let ourSum = 0;
+        const kernel = [246, 479, 598, 479, 246];
+
+        for (let i = 0; i < ksize; i++) {
+            const offset = i - half;
+            let sampleX = x + offset;
+            const origSampleX = sampleX;
+
+            // Our reflection
+            if (sampleX < 0) {
+                sampleX = -sampleX - 1;
+            } else if (sampleX >= width) {
+                sampleX = 2 * width - sampleX - 1;
+            }
+            sampleX = Math.max(0, Math.min(sampleX, width - 1));
+
+            const pixelVal = gradient[sampleX];
+            ourSum += pixelVal * kernel[i];
+
+            output += `  i=${i}, offset=${offset}, orig=${origSampleX} -> reflected=${sampleX}, val=${pixelVal}, weight=${kernel[i]}, contrib=${pixelVal*kernel[i]}\n`;
+        }
+
+        output += `\nOur sum: ${ourSum}\n`;
+        output += `Our result: ${(ourSum + 1024) >> 11}\n\n`;
+
+        // Try alternative: REFLECT (without -1)
+        output += 'Alternative BORDER_REFLECT (without -1):\n';
+        let altSum = 0;
+
+        for (let i = 0; i < ksize; i++) {
+            const offset = i - half;
+            let sampleX = x + offset;
+            const origSampleX = sampleX;
+
+            // Alternative reflection (might match OpenCV better?)
+            if (sampleX < 0) {
+                sampleX = -sampleX;
+            } else if (sampleX >= width) {
+                sampleX = 2 * width - sampleX - 2;
+            }
+            sampleX = Math.max(0, Math.min(sampleX, width - 1));
+
+            const pixelVal = gradient[sampleX];
+            altSum += pixelVal * kernel[i];
+
+            output += `  i=${i}, offset=${offset}, orig=${origSampleX} -> reflected=${sampleX}, val=${pixelVal}\n`;
+        }
+
+        output += `\nAlt sum: ${altSum}\n`;
+        output += `Alt result: ${(altSum + 1024) >> 11}\n\n`;
+
+        // Try REPLICATE (clamp to edges)
+        output += 'BORDER_REPLICATE (clamp to edges):\n';
+        let repSum = 0;
+
+        for (let i = 0; i < ksize; i++) {
+            const offset = i - half;
+            const sampleX = Math.max(0, Math.min(x + offset, width - 1));
+            const pixelVal = gradient[sampleX];
+            repSum += pixelVal * kernel[i];
+
+            output += `  i=${i}, offset=${offset}, sampleX=${sampleX}, val=${pixelVal}\n`;
+        }
+
+        output += `\nRep sum: ${repSum}\n`;
+        output += `Rep result: ${(repSum + 1024) >> 11}\n\n`;
+
+        output += 'Expected from OpenCV: 217\n';
+
+        document.getElementById('output').textContent = output;
+    </script>
+</body>
+</html>

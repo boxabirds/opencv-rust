@@ -9,15 +9,12 @@ if ! command -v wasm-pack &> /dev/null; then
     cargo install wasm-pack
 fi
 
-# Build for web target with WASM, threading, and GPU features
-echo "Compiling to WASM with multi-threading and WebGPU support..."
-RUSTFLAGS='-C target-feature=+atomics,+bulk-memory,+mutable-globals' \
+# Build for web target with WASM and GPU features
+echo "Compiling to WASM with WebGPU support..."
 wasm-pack build \
     --target web \
     --out-dir pkg \
-    --features wasm \
-    --release \
-    -- -Z build-std=panic_abort,std
+    --features wasm
 
 echo ""
 echo "✓ WASM build complete! Output in ./pkg/"

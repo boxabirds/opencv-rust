@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pixel Difference Diagnostic</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-size: 11px;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        td {
+            border: 1px solid #444;
+            padding: 4px;
+            text-align: center;
+            width: 60px;
+            font-size: 10px;
+        }
+        .diff-pos { background: #ff6b6b; }
+        .diff-neg { background: #6b9bff; }
+        .match { background: #2e2e2e; }
+        pre {
+            background: #2e2e2e;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pixel-by-Pixel Difference Analysis</h1>
+    <div id="status">Loading...</div>
+    <div id="output"></div>
+
+    <script async src="/cache/opencv.js"></script>
+    <script type="module">
+        async function main() {
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load our WASM
+            const module = await import('/pkg/opencv_rust.js');
+            await module.default();
+            try { await module.initGpu(); } catch(e) { console.log('GPU init failed:', e); }
+
+            document.getElementById('status').textContent = 'Processing small test region...';
+
+            // Load image and extract a small region (30x30 from center)
+            const img = await loadImage('/tests/fixtures/lenna.png');
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const fullData = ctx.getImageData(0, 0, img.width, img.height);
+
+            // Extract 30x30 region from center
+            const regionSize = 30;
+            const startX = Math.floor(img.width / 2 - regionSize / 2);
+            const startY = Math.floor(img.height / 2 - regionSize / 2);
+            const regionData = ctx.getImageData(startX, startY, regionSize, regionSize);
+
+            // OpenCV.js blur on region
+            const cvSrc = cv.matFromImageData(regionData);
+            const cvDst = new cv.Mat();
+            cv.GaussianBlur(cvSrc, cvDst, new cv.Size(5, 5), 1.5, 1.5, cv.BORDER_DEFAULT);
+
+            const cvCanvas = document.createElement('canvas');
+            cvCanvas.width = regionSize;
+            cvCanvas.height = regionSize;
+            cv.imshow(cvCanvas, cvDst);
+            const cvResult = cvCanvas.getContext('2d').getImageData(0, 0, regionSize, regionSize);
+
+            // Our WASM blur on region
+            const wasmSrc = module.WasmMat.fromImageData(
+                new Uint8Array(regionData.data),
+                regionSize, regionSize, 4
+            );
+            const wasmDst = await module.gaussianBlur(wasmSrc, 5, 1.5);
+            const wasmResult = wasmDst.getData();
+
+            // Analyze differences - sample center 10x10 area
+            const output = document.getElementById('output');
+            const sampleSize = 10;
+            const sampleStart = Math.floor((regionSize - sampleSize) / 2);
+
+            output.innerHTML = '<h2>Center 10x10 Sample (R channel)</h2>';
+            output.innerHTML += '<h3>OpenCV.js values:</h3><table>';
+
+            // OpenCV values
+            for (let y = 0; y < sampleSize; y++) {
+                output.innerHTML += '<tr>';
+                for (let x = 0; x < sampleSize; x++) {
+                    const idx = ((sampleStart + y) * regionSize + (sampleStart + x)) * 4;
+                    const val = cvResult.data[idx];
+                    output.innerHTML += `<td>${val}</td>`;
+                }
+                output.innerHTML += '</tr>';
+            }
+            output.innerHTML += '</table>';
+
+            // Our values
+            output.innerHTML += '<h3>Our values:</h3><table>';
+            for (let y = 0; y < sampleSize; y++) {
+                output.innerHTML += '<tr>';
+                for (let x = 0; x < sampleSize; x++) {
+                    const idx = ((sampleStart + y) * regionSize + (sampleStart + x)) * 4;
+                    const val = wasmResult[idx];
+                    output.innerHTML += `<td>${val}</td>`;
+                }
+                output.innerHTML += '</tr>';
+            }
+            output.innerHTML += '</table>';
+
+            // Difference map
+            output.innerHTML += '<h3>Difference (Ours - OpenCV):</h3><table>';
+            let stats = { pos: 0, neg: 0, zero: 0, other: 0 };
+
+            for (let y = 0; y < sampleSize; y++) {
+                output.innerHTML += '<tr>';
+                for (let x = 0; x < sampleSize; x++) {
+                    const idx = ((sampleStart + y) * regionSize + (sampleStart + x)) * 4;
+                    const cvVal = cvResult.data[idx];
+                    const ourVal = wasmResult[idx];
+                    const diff = ourVal - cvVal;
+
+                    let className = 'match';
+                    if (diff > 0) {
+                        className = 'diff-pos';
+                        if (diff === 1) stats.pos++;
+                        else stats.other++;
+                    } else if (diff < 0) {
+                        className = 'diff-neg';
+                        if (diff === -1) stats.neg++;
+                        else stats.other++;
+                    } else {
+                        stats.zero++;
+                    }
+
+                    output.innerHTML += `<td class="${className}">${diff > 0 ? '+' : ''}${diff}</td>`;
+                }
+                output.innerHTML += '</tr>';
+            }
+            output.innerHTML += '</table>';
+
+            output.innerHTML += '<pre>';
+            output.innerHTML += `Statistics for 10x10 sample:\n`;
+            output.innerHTML += `  Exact matches (0): ${stats.zero}\n`;
+            output.innerHTML += `  Off by +1: ${stats.pos}\n`;
+            output.innerHTML += `  Off by -1: ${stats.neg}\n`;
+            output.innerHTML += `  Off by more: ${stats.other}\n`;
+            output.innerHTML += `  Total pixels: ${sampleSize * sampleSize}\n`;
+            output.innerHTML += '</pre>';
+
+            document.getElementById('status').textContent = 'Analysis complete';
+
+            // Cleanup
+            cvSrc.delete();
+            cvDst.delete();
+            wasmSrc.free();
+            wasmDst.free();
+        }
+
+        async function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        main().catch(err => {
+            document.getElementById('status').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

@@ -23,7 +23,7 @@ pub fn arc_length(contour: &[Point], closed: bool) -> f64 {
         let dx = f64::from(p2.x - p1.x);
         let dy = f64::from(p2.y - p1.y);
 
-        length += (dx * dx + dy * dy).sqrt();
+        length += libm::sqrt(dx * dx + dy * dy);
     }
 
     length
@@ -44,7 +44,7 @@ pub fn contour_area(contour: &[Point]) -> f64 {
         area -= f64::from(contour[j].x * contour[i].y);
     }
 
-    area.abs() / 2.0
+    libm::fabs(area) / 2.0
 }
 
 /// Compute circularity (4π·area / perimeter²)
@@ -97,8 +97,8 @@ pub fn convex_hull(points: &[Point]) -> Vec<Point> {
 
     // Sort by polar angle
     pts[1..].sort_by(|a, b| {
-        let angle_a = f64::from(a.y - anchor.y).atan2(f64::from(a.x - anchor.x));
-        let angle_b = f64::from(b.y - anchor.y).atan2(f64::from(b.x - anchor.x));
+        let angle_a = libm::atan2(f64::from(a.y - anchor.y), f64::from(a.x - anchor.x));
+        let angle_b = libm::atan2(f64::from(b.y - anchor.y), f64::from(b.x - anchor.x));
 
         angle_a.partial_cmp(&angle_b).unwrap()
     });
@@ -201,9 +201,9 @@ fn circle_from_3_points(p1: &Point, p2: &Point, p3: &Point) -> (Point, f32) {
 }
 
 fn distance(p1: &Point, p2: &Point) -> f32 {
-    let dx = (p2.x - p1.x) as f32;
-    let dy = (p2.y - p1.y) as f32;
-    (dx * dx + dy * dy).sqrt()
+    let dx = (p2.x - p1.x) as f64;
+    let dy = (p2.y - p1.y) as f64;
+    libm::sqrt(dx * dx + dy * dy) as f32
 }
 
 fn is_inside(p: &Point, center: &Point, radius: f32) -> bool {

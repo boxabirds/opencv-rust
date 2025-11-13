@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kernel Value Comparison</title>
+</head>
+<body>
+    <h1>Comparing Kernel Computation</h1>
+    <pre id="output"></pre>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        async function test() {
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const ksize = 5;
+            const sigma = 1.5;
+
+            // Our kernel computation
+            const FIXED_POINT_SCALE = 2048;
+            const actualSigma = sigma <= 0 ? 0.3 * ((ksize - 1) * 0.5 - 1) + 0.8 : sigma;
+            const half = Math.floor(ksize / 2);
+
+            const kernelF64 = [];
+            let sum = 0;
+            for (let i = -half; i <= half; i++) {
+                const x = i;
+                const exponent = -x * x / (2 * actualSigma * actualSigma);
+                const value = Math.exp(exponent);
+                kernelF64.push(value);
+                sum += value;
+            }
+
+            for (let i = 0; i < kernelF64.length; i++) {
+                kernelF64[i] /= sum;
+            }
+
+            const kernelFixed = [];
+            let sumFixed = 0;
+            for (const val of kernelF64) {
+                const scaled = val * FIXED_POINT_SCALE;
+                const fixed = Math.round(scaled);
+                kernelFixed.push(fixed);
+                sumFixed += fixed;
+            }
+
+            const diff = FIXED_POINT_SCALE - sumFixed;
+            const centerIdx = Math.floor(ksize / 2);
+            kernelFixed[centerIdx] += diff;
+
+            // Create a test image and apply our kernel manually vs OpenCV
+            // Use a simple gradient: [0, 64, 128, 192, 255]
+            const width = 5;
+            const data = new Uint8ClampedArray(width * 4);
+            for (let x = 0; x < width; x++) {
+                const val = x * 64;
+                data[x*4] = data[x*4+1] = data[x*4+2] = val;
+                data[x*4+3] = 255;
+            }
+
+            const imageData = new ImageData(data, width, 1);
+            const src = cv.matFromImageData(imageData);
+            const dst = new cv.Mat();
+
+            // Apply OpenCV blur (horizontal only by using 5x1 kernel)
+            cv.GaussianBlur(src, dst, new cv.Size(5, 1), 1.5, 1.5, cv.BORDER_REFLECT);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = 1;
+            cv.imshow(canvas, dst);
+            const result = canvas.getContext('2d').getImageData(0, 0, width, 1);
+
+            let output = `Kernel (ksize=${ksize}, sigma=${sigma}):\n\n`;
+            output += 'Our kernel (fixed-point):\n';
+            for (let i = 0; i < ksize; i++) {
+                output += `  [${i-half}] = ${kernelFixed[i]} (${(kernelFixed[i]/FIXED_POINT_SCALE).toFixed(6)})\n`;
+            }
+            output += `  Sum: ${kernelFixed.reduce((a,b)=>a+b, 0)}\n\n`;
+
+            output += 'Input:  ';
+            for (let x = 0; x < width; x++) output += data[x*4].toString().padStart(3) + ' ';
+
+            output += '\nOpenCV: ';
+            for (let x = 0; x < width; x++) output += result.data[x*4].toString().padStart(3) + ' ';
+
+            // Manual computation with our kernel
+            output += '\n\nManual computation:\n';
+            for (let x = 0; x < width; x++) {
+                let sum = 0;
+                for (let i = 0; i < ksize; i++) {
+                    const offset = i - half;
+                    let sampleX = x + offset;
+
+                    // BORDER_REFLECT
+                    if (sampleX < 0) {
+                        sampleX = -sampleX - 1;
+                    } else if (sampleX >= width) {
+                        sampleX = 2 * width - sampleX - 1;
+                    }
+                    sampleX = Math.max(0, Math.min(sampleX, width - 1));
+
+                    const pixelVal = sampleX * 64; // Our gradient
+                    sum += pixelVal * kernelFixed[i];
+                }
+
+                const rounded = (sum + 1024) >> 11;
+                output += `  x=${x}: sum=${sum}, rounded=${rounded}`;
+                if (rounded !== result.data[x*4]) {
+                    output += ` ✗ (OpenCV=${result.data[x*4]}, diff=${rounded - result.data[x*4]})`;
+                } else {
+                    output += ' ✓';
+                }
+                output += '\n';
+            }
+
+            document.getElementById('output').textContent = output;
+
+            src.delete();
+            dst.delete();
+        }
+
+        test();
+    </script>
+</body>
+</html>

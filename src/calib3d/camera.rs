@@ -184,9 +184,9 @@ pub fn calibrate_camera(
             }
         }
 
-        let rms_error = (total_error / f64::from(num_points)).sqrt();
+        let rms_error = libm::sqrt(total_error / f64::from(num_points));
 
-        if (prev_error - rms_error).abs() < 1e-6 {
+        if libm::fabs(prev_error - rms_error) < 1e-6 {
             return Ok((camera, dist, rms_error));
         }
 
@@ -198,7 +198,7 @@ pub fn calibrate_camera(
         camera.fy -= learning_rate * rms_error;
     }
 
-    let final_error = (prev_error / object_points.len() as f64).sqrt();
+    let final_error = libm::sqrt(prev_error / object_points.len() as f64);
     Ok((camera, dist, final_error))
 }
 
@@ -255,14 +255,14 @@ fn project_point(
 /// Convert rotation vector to rotation matrix using Rodrigues formula
 #[must_use] 
 pub fn rodrigues(rvec: &[f64; 3]) -> [[f64; 3]; 3] {
-    let theta = (rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2]).sqrt();
+    let theta = libm::sqrt(rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2]);
 
     if theta < 1e-10 {
         return [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
     }
 
-    let c = theta.cos();
-    let s = theta.sin();
+    let c = libm::cos(theta);
+    let s = libm::sin(theta);
     let c1 = 1.0 - c;
 
     let itheta = 1.0 / theta;
@@ -315,8 +315,8 @@ mod tests {
         assert!(x != 0.5 || y != 0.5);
 
         let (xu, yu) = dist.undistort(x, y);
-        assert!((xu - 0.5).abs() < 0.01);
-        assert!((yu - 0.5).abs() < 0.01);
+        assert!(libm::fabs(xu - 0.5) < 0.01);
+        assert!(libm::fabs(yu - 0.5) < 0.01);
     }
 
     #[test]
@@ -329,6 +329,6 @@ mod tests {
             - r_mat[0][1] * (r_mat[1][0] * r_mat[2][2] - r_mat[1][2] * r_mat[2][0])
             + r_mat[0][2] * (r_mat[1][0] * r_mat[2][1] - r_mat[1][1] * r_mat[2][0]);
 
-        assert!((det - 1.0).abs() < 0.01);
+        assert!(libm::fabs(det - 1.0) < 0.01);
     }
 }

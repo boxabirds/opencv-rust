@@ -130,8 +130,8 @@ impl PipelineCache {
         cache.flip = Self::create_flip_pipeline(device).await;
         cache.laplacian = Self::create_laplacian_pipeline(device).await;
 
-        // Note: gaussian_blur uses separable filters with two entry points (horizontal/vertical)
-        // and is compiled on-demand rather than cached
+        // Skip Gaussian blur pipeline - it uses separable passes, not a single cached pipeline
+        // cache.gaussian_blur = Self::create_gaussian_blur_pipeline(device).await;
 
         // Store the cache
         #[cfg(not(target_arch = "wasm32"))]
@@ -501,6 +501,16 @@ impl PipelineCache {
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },

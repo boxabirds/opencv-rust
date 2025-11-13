@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inspect OpenCV Kernel</title>
+</head>
+<body>
+    <h1>Inspecting OpenCV.js Internals</h1>
+    <pre id="output"></pre>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        async function test() {
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Create simple test: 1x5 image with values [0, 64, 128, 192, 255]
+            const width = 5;
+            const data = new Uint8ClampedArray(width * 4);
+            for (let x = 0; x < width; x++) {
+                const val = x * 64;
+                data[x*4] = val;
+                data[x*4+1] = val;
+                data[x*4+2] = val;
+                data[x*4+3] = 255;
+            }
+
+            const imageData = new ImageData(data, width, 1);
+            const src = cv.matFromImageData(imageData);
+            const dst = new cv.Mat();
+
+            // Test with ksize=5, sigma=1.5 (same as our test)
+            cv.GaussianBlur(src, dst, new cv.Size(5, 1), 1.5, 1.5, cv.BORDER_REFLECT);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = 1;
+            cv.imshow(canvas, dst);
+            const result = canvas.getContext('2d').getImageData(0, 0, width, 1);
+
+            let output = 'Input:  ';
+            for (let x = 0; x < width; x++) output += data[x*4].toString().padStart(3) + ' ';
+
+            output += '\nOutput: ';
+            for (let x = 0; x < width; x++) output += result.data[x*4].toString().padStart(3) + ' ';
+
+            // Now let's manually compute with our kernel [246, 479, 598, 479, 246] / 2048
+            output += '\n\nManual computation with fixed-point kernel [246, 479, 598, 479, 246] scale 2048:';
+            output += '\nCenter pixel (x=2, val=128):';
+            const kernel = [246, 479, 598, 479, 246];
+            const input = [0, 64, 128, 192, 255];
+
+            let sum = 0;
+            for (let i = 0; i < 5; i++) {
+                sum += input[i] * kernel[i];
+                output += `\n  ${input[i]} * ${kernel[i]} = ${input[i] * kernel[i]}`;
+            }
+            output += `\n  Total sum: ${sum}`;
+            output += `\n  sum / 2048 = ${sum / 2048}`;
+            output += `\n  Rounded: ${Math.round(sum / 2048)}`;
+            output += `\n  With +1024 rounding: ${(sum + 1024) >> 11}`;
+
+            output += `\n\nActual OpenCV output: ${result.data[2*4]}`;
+
+            document.getElementById('output').textContent = output;
+
+            src.delete();
+            dst.delete();
+        }
+
+        test();
+    </script>
+</body>
+</html>

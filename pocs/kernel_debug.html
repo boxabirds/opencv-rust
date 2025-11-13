@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kernel Debug</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        table { border-collapse: collapse; margin: 20px 0; }
+        td, th { border: 1px solid #ccc; padding: 8px; text-align: right; }
+        .diff { background: #ffcccc; }
+    </style>
+</head>
+<body>
+    <h1>Gaussian Kernel Comparison</h1>
+
+    <div>
+        <label>Kernel Size: <input type="number" id="ksize" value="5" min="3" max="31" step="2"></label>
+        <label>Sigma: <input type="number" id="sigma" value="1.5" min="0" max="10" step="0.1"></label>
+        <button onclick="compareKernels()">Compare</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script type="module">
+        window.compareKernels = async function() {
+            const ksize = parseInt(document.getElementById('ksize').value);
+            const sigma = parseFloat(document.getElementById('sigma').value);
+
+            // Our kernel generation (mimic Rust code)
+            const FIXED_POINT_SCALE = 2048;
+            const half = Math.floor(ksize / 2);
+
+            // Calculate sigma if not provided
+            const actualSigma = sigma <= 0 ? 0.3 * ((ksize - 1) * 0.5 - 1) + 0.8 : sigma;
+
+            // Generate kernel in f64
+            const kernelF64 = [];
+            let sum = 0;
+            for (let i = -half; i <= half; i++) {
+                const x = i;
+                const exponent = -x * x / (2 * actualSigma * actualSigma);
+                const value = Math.exp(exponent);
+                kernelF64.push(value);
+                sum += value;
+            }
+
+            // Normalize
+            for (let i = 0; i < kernelF64.length; i++) {
+                kernelF64[i] /= sum;
+            }
+
+            // Convert to fixed-point
+            const kernelFixed = [];
+            let sumFixed = 0;
+            for (const val of kernelF64) {
+                const scaled = val * FIXED_POINT_SCALE;
+                const fixed = Math.round(scaled);
+                kernelFixed.push(fixed);
+                sumFixed += fixed;
+            }
+
+            // Adjust for rounding errors
+            const diff = FIXED_POINT_SCALE - sumFixed;
+            const centerIdx = Math.floor(ksize / 2);
+            kernelFixed[centerIdx] += diff;
+
+            // Display
+            let html = '<h2>Our Kernel (fixed-point, scale 2048)</h2>';
+            html += '<table><tr><th>Index</th><th>Float</th><th>Fixed</th><th>Float (normalized)</th></tr>';
+
+            const finalSum = kernelFixed.reduce((a,b) => a+b, 0);
+            for (let i = 0; i < ksize; i++) {
+                const floatNorm = kernelFixed[i] / FIXED_POINT_SCALE;
+                html += `<tr>
+                    <td>${i-half}</td>
+                    <td>${kernelF64[i].toFixed(6)}</td>
+                    <td>${kernelFixed[i]}</td>
+                    <td>${floatNorm.toFixed(6)}</td>
+                </tr>`;
+            }
+            html += `</table>`;
+            html += `<p>Sum of fixed-point kernel: ${finalSum} (should be ${FIXED_POINT_SCALE})</p>`;
+            html += `<p>Adjustment applied to center: ${diff}</p>`;
+            html += `<p>Actual sigma used: ${actualSigma.toFixed(4)}</p>`;
+
+            document.getElementById('output').innerHTML = html;
+        };
+
+        // Run on load
+        window.compareKernels();
+    </script>
+</body>
+</html>

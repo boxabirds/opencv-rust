@@ -208,18 +208,18 @@
                 // Try to initialize GPU (may fail in headless mode, that's OK)
                 log('WASM', 'Step 3: Checking for GPU support...');
                 try {
-                    if (module.init_gpu) {
-                        log('WASM', 'Step 3a: init_gpu found, attempting GPU initialization...');
+                    if (module.initGpu) {
+                        log('WASM', 'Step 3a: initGpu found, attempting GPU initialization...');
                         const gpuStart = performance.now();
 
-                        await module.init_gpu();
+                        await module.initGpu();
 
                         const gpuDuration = performance.now() - gpuStart;
                         log('WASM', `Step 3a COMPLETE: GPU initialized in ${gpuDuration.toFixed(2)}ms`);
                         addDetails('✓ GPU initialized');
                         logMemoryUsage('After GPU init');
                     } else {
-                        log('WASM', 'Step 3b: No init_gpu function found (CPU mode)');
+                        log('WASM', 'Step 3b: No initGpu function found (CPU mode)');
                         addDetails('ℹ CPU mode (no GPU function)');
                     }
                 } catch (e) {

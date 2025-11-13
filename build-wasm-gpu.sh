@@ -9,12 +9,13 @@ if ! command -v wasm-pack &> /dev/null; then
     cargo install wasm-pack
 fi
 
-# Build for web target with GPU (no CPU threading)
+# Build for web target with GPU
 echo "Compiling to WASM with WebGPU..."
+
 wasm-pack build \
     --target web \
     --out-dir pkg \
-    --features wasm,gpu
+    --features wasm-gpu
 
 echo ""
 echo "✓ WASM build complete! Output in ./pkg/"

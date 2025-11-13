@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kernel Weights Comparison</title>
+</head>
+<body>
+    <h1>Gaussian Kernel Weights Comparison</h1>
+    <div id="output"></div>
+
+    <script async src="/cache/opencv.js"></script>
+    <script type="module">
+        async function main() {
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const output = document.getElementById('output');
+
+            // Get OpenCV.js kernel for ksize=5, sigma=1.5
+            const kernel = cv.getGaussianKernel(5, 1.5, cv.CV_64F);
+
+            output.innerHTML += '<h2>OpenCV.js Kernel (ksize=5, sigma=1.5)</h2>';
+            output.innerHTML += '<pre>';
+
+            const weights = [];
+            for (let i = 0; i < kernel.rows; i++) {
+                const val = kernel.doubleAt(i, 0);
+                weights.push(val);
+                output.innerHTML += `kernel[${i}] = ${val.toFixed(15)}\n`;
+            }
+
+            // Calculate sum
+            const sum = weights.reduce((a, b) => a + b, 0);
+            output.innerHTML += `\nSum = ${sum.toFixed(15)}\n`;
+
+            // Show fixed-point conversion (scaled by 2048)
+            output.innerHTML += '\n<h3>Fixed-Point (scaled by 2048)</h3>';
+            let fixedSum = 0;
+            for (let i = 0; i < weights.length; i++) {
+                const fixed = Math.round(weights[i] * 2048);
+                fixedSum += fixed;
+                output.innerHTML += `kernel_fixed[${i}] = ${fixed}\n`;
+            }
+            output.innerHTML += `\nFixed Sum = ${fixedSum}\n`;
+            output.innerHTML += `Expected Sum = 2048\n`;
+            output.innerHTML += `Difference = ${2048 - fixedSum}\n`;
+
+            output.innerHTML += '</pre>';
+
+            kernel.delete();
+        }
+
+        main().catch(err => {
+            document.getElementById('output').innerHTML = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

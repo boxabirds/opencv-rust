@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Solid Color Test</title>
+</head>
+<body>
+    <h1>Testing with Solid Color</h1>
+    <div id="status">Loading...</div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        async function main() {
+            const status = document.getElementById('status');
+
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load WASM
+            const module = await import('/pkg/opencv_rust.js');
+            await module.default();
+            await module.initGpu();
+
+            // Create solid gray image (128, 128, 128)
+            const width = 100;
+            const height = 100;
+            const solidData = new Uint8ClampedArray(width * height * 4);
+            for (let i = 0; i < solidData.length; i += 4) {
+                solidData[i] = 128;     // R
+                solidData[i+1] = 128;   // G
+                solidData[i+2] = 128;   // B
+                solidData[i+3] = 255;   // A
+            }
+
+            const imageData = new ImageData(solidData, width, height);
+
+            // OpenCV.js blur
+            const cvSrc = cv.matFromImageData(imageData);
+            const cvDst = new cv.Mat();
+            cv.GaussianBlur(cvSrc, cvDst, new cv.Size(5, 5), 1.5, 1.5, cv.BORDER_DEFAULT);
+
+            const cvCanvas = document.createElement('canvas');
+            cvCanvas.width = width;
+            cvCanvas.height = height;
+            cv.imshow(cvCanvas, cvDst);
+            const cvData = cvCanvas.getContext('2d').getImageData(0, 0, width, height);
+
+            // WASM blur
+            const wasmSrc = module.WasmMat.fromImageData(
+                new Uint8Array(solidData),
+                width, height, 4
+            );
+            const wasmDst = await module.gaussianBlur(wasmSrc, 5, 1.5);
+            const wasmData = wasmDst.getData();
+
+            // Compare
+            let diffCount = 0;
+            let maxDiff = 0;
+            const totalPixels = width * height;
+
+            for (let i = 0; i < cvData.data.length; i += 4) {
+                for (let c = 0; c < 3; c++) {
+                    const diff = Math.abs(cvData.data[i+c] - wasmData[i+c]);
+                    if (diff > 0) {
+                        diffCount++;
+                        maxDiff = Math.max(maxDiff, diff);
+                        console.log(`Pixel ${i/4}: channel ${c}: OpenCV=${cvData.data[i+c]}, WASM=${wasmData[i+c]}, diff=${diff}`);
+                        break;  // Only log once per pixel
+                    }
+                }
+            }
+
+            status.innerHTML = '<strong>Solid Color Test</strong>';
+            status.innerHTML += `<br>Input: 128,128,128 (solid gray)`;
+            status.innerHTML += `<br>Total pixels: ${totalPixels}`;
+            status.innerHTML += `<br>Different pixels: ${diffCount} (${(diffCount/totalPixels*100).toFixed(2)}%)`;
+            status.innerHTML += `<br>Max difference: ${maxDiff}`;
+            status.innerHTML += `<br>OpenCV center pixel: ${cvData.data[50*width*4 + 50*4]},${cvData.data[50*width*4 + 50*4+1]},${cvData.data[50*width*4 + 50*4+2]}`;
+            status.innerHTML += `<br>WASM center pixel: ${wasmData[50*width*4 + 50*4]},${wasmData[50*width*4 + 50*4+1]},${wasmData[50*width*4 + 50*4+2]}`;
+
+            cvSrc.delete();
+            cvDst.delete();
+            wasmSrc.free();
+            wasmDst.free();
+        }
+
+        main().catch(err => {
+            document.getElementById('status').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

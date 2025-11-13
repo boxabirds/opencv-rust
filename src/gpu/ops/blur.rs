@@ -44,11 +44,9 @@ pub async fn gaussian_blur_gpu_async(src: &Mat, dst: &mut Mat, ksize: Size, sigm
 
     let kernel_size = usize::try_from(ksize.width).unwrap_or(0);
     let kernel_weights = create_gaussian_kernel(kernel_size, sigma);
-    let mut temp = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
 
-    // Execute blur passes (context is obtained internally)
-    execute_blur_pass(src, &mut temp, &kernel_weights, sigma, true).await?;
-    execute_blur_pass(&temp, dst, &kernel_weights, sigma, false).await?;
+    // Execute both passes in a single GPU submission (intermediate buffer stays on GPU)
+    execute_separable_blur(src, dst, &kernel_weights, sigma).await?;
 
     Ok(())
 }
@@ -59,7 +57,11 @@ pub fn gaussian_blur_gpu(src: &Mat, dst: &mut Mat, ksize: Size, sigma: f64) -> R
     pollster::block_on(gaussian_blur_gpu_async(src, dst, ksize, sigma))
 }
 
-fn create_gaussian_kernel(size: usize, sigma: f64) -> Vec<f32> {
+// Fixed-point scale (matches OpenCV's INTER_RESIZE_COEF_BITS)
+const FIXED_POINT_BITS: u32 = 11;
+const FIXED_POINT_SCALE: i32 = 1 << FIXED_POINT_BITS; // 2048
+
+fn create_gaussian_kernel(size: usize, sigma: f64) -> Vec<i32> {
     #[allow(clippy::cast_precision_loss)]
     let sigma = if sigma <= 0.0 {
         0.3 * ((size as f64 - 1.0) * 0.5 - 1.0) + 0.8
@@ -69,36 +71,53 @@ fn create_gaussian_kernel(size: usize, sigma: f64) -> Vec<f32> {
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     let half = (size / 2) as i32;
-    let mut kernel = Vec::with_capacity(size);
-    let mut sum = 0.0;
+    let mut kernel_f64 = Vec::with_capacity(size);
+    let mut sum = 0.0_f64;
 
+    // Generate kernel in f64 for maximum precision
     for i in -half..=half {
         let x = f64::from(i);
         let exponent = -x * x / (2.0 * sigma * sigma);
         // Use libm::exp which works correctly in WASM
         let value = libm::exp(exponent);
-        #[allow(clippy::cast_possible_truncation)]
-        let value_f32 = value as f32;
-        kernel.push(value_f32);
+        kernel_f64.push(value);
         sum += value;
     }
 
-    // Normalize
-    #[allow(clippy::cast_possible_truncation)]
-    let sum_f32 = sum as f32;
-    for val in &mut kernel {
-        *val /= sum_f32;
+    // Normalize in f64
+    for val in &mut kernel_f64 {
+        *val /= sum;
     }
 
-    kernel
+    // Convert to fixed-point i32 (scale by 2048 and round)
+    let mut kernel_fixed = Vec::with_capacity(size);
+    let mut sum_fixed = 0_i32;
+
+    for &val in &kernel_f64 {
+        #[allow(clippy::cast_possible_truncation)]
+        let scaled = val * f64::from(FIXED_POINT_SCALE);
+        let fixed = libm::round(scaled) as i32;
+        kernel_fixed.push(fixed);
+        sum_fixed += fixed;
+    }
+
+    // Adjust for rounding errors to ensure sum equals FIXED_POINT_SCALE exactly
+    // This matches OpenCV's approach
+    let diff = FIXED_POINT_SCALE - sum_fixed;
+    if diff != 0 {
+        // Add difference to center element (most significant weight)
+        let center_idx = size / 2;
+        kernel_fixed[center_idx] += diff;
+    }
+
+    kernel_fixed
 }
 
-async fn execute_blur_pass(
+async fn execute_separable_blur(
     src: &Mat,
     dst: &mut Mat,
-    kernel_weights: &[f32],
+    kernel_weights: &[i32],
     sigma: f64,
-    is_horizontal: bool,
 ) -> Result<()> {
     // Get GPU context with platform-specific approach
     #[cfg(not(target_arch = "wasm32"))]
@@ -122,26 +141,25 @@ async fn execute_blur_pass(
             adapter,
         };
 
-        return execute_blur_pass_impl(&temp_ctx, src, dst, kernel_weights, sigma, is_horizontal, width, height, channels, kernel_size).await;
+        return execute_separable_blur_impl(&temp_ctx, src, dst, kernel_weights, sigma, width, height, channels, kernel_size).await;
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    return execute_blur_pass_impl(ctx, src, dst, kernel_weights, sigma, is_horizontal, width, height, channels, kernel_size).await;
+    return execute_separable_blur_impl(ctx, src, dst, kernel_weights, sigma, width, height, channels, kernel_size).await;
 }
 
-async fn execute_blur_pass_impl(
+async fn execute_separable_blur_impl(
     ctx: &GpuContext,
     src: &Mat,
     dst: &mut Mat,
-    kernel_weights: &[f32],
+    kernel_weights: &[i32],
     sigma: f64,
-    is_horizontal: bool,
     width: u32,
     height: u32,
     channels: u32,
     kernel_size: u32,
 ) -> Result<()> {
-    // Create shader module
+    // Create shader module (reused from cache on native, created fresh on WASM)
     let shader = ctx.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Gaussian Blur Shader"),
         source: wgpu::ShaderSource::Wgsl(
@@ -157,10 +175,19 @@ async fn execute_blur_pass_impl(
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    // Create output buffer
+    // Create intermediate buffer for horizontal pass output (i32, 4 bytes per element - matches OpenCV C++)
+    let intermediate_size = u64::from(width) * u64::from(height) * u64::from(channels) * 4;
+    let intermediate_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Intermediate i32 Buffer"),
+        size: intermediate_size,
+        usage: wgpu::BufferUsages::STORAGE,
+        mapped_at_creation: false,
+    });
+
+    // Create final output buffer (u8, 1 byte per element)
     let output_size = u64::from(width) * u64::from(height) * u64::from(channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Output Buffer"),
+        label: Some("Output u8 Buffer"),
         size: output_size,
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
         mapped_at_creation: false,
@@ -239,14 +266,38 @@ async fn execute_blur_pass_impl(
         ],
     });
 
-    // Create bind group
-    let bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Gaussian Blur Bind Group"),
+    // Create bind group for horizontal pass (input → intermediate)
+    let bind_group_h = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Horizontal Pass Bind Group"),
         layout: &bind_group_layout,
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
                 resource: input_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: intermediate_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: params_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: kernel_buffer.as_entire_binding(),
+            },
+        ],
+    });
+
+    // Create bind group for vertical pass (intermediate → output)
+    let bind_group_v = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Vertical Pass Bind Group"),
+        layout: &bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: intermediate_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
                 binding: 1,
@@ -263,41 +314,62 @@ async fn execute_blur_pass_impl(
         ],
     });
 
-    // Create compute pipeline
+    // Create pipeline layout
     let pipeline_layout = ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Gaussian Blur Pipeline Layout"),
         bind_group_layouts: &[&bind_group_layout],
         push_constant_ranges: &[],
     });
 
-    let entry_point = if is_horizontal {
-        "gaussian_horizontal"
-    } else {
-        "gaussian_vertical"
-    };
-
-    let compute_pipeline = ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("Gaussian Blur Pipeline"),
+    // Create compute pipelines for both passes
+    let pipeline_h = ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("Horizontal Blur Pipeline"),
         layout: Some(&pipeline_layout),
         module: &shader,
-        entry_point: Some(entry_point),
+        entry_point: Some("gaussian_horizontal"),
         compilation_options: Default::default(),
         cache: None,
     });
 
-    // Create command encoder and execute compute pass
+    let pipeline_v = ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("Vertical Blur Pipeline"),
+        layout: Some(&pipeline_layout),
+        module: &shader,
+        entry_point: Some("gaussian_vertical"),
+        compilation_options: Default::default(),
+        cache: None,
+    });
+
+    // Create command encoder and execute both compute passes
     let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Gaussian Blur Encoder"),
     });
 
+    // Horizontal pass
     {
         let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some("Gaussian Blur Compute Pass"),
+            label: Some("Horizontal Blur Pass"),
             timestamp_writes: None,
         });
 
-        compute_pass.set_pipeline(&compute_pipeline);
-        compute_pass.set_bind_group(0, &bind_group, &[]);
+        compute_pass.set_pipeline(&pipeline_h);
+        compute_pass.set_bind_group(0, &bind_group_h, &[]);
+        compute_pass.dispatch_workgroups(
+            width.div_ceil(16),
+            height.div_ceil(16),
+            1,
+        );
+    }
+
+    // Vertical pass
+    {
+        let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some("Vertical Blur Pass"),
+            timestamp_writes: None,
+        });
+
+        compute_pass.set_pipeline(&pipeline_v);
+        compute_pass.set_bind_group(0, &bind_group_v, &[]);
         compute_pass.dispatch_workgroups(
             width.div_ceil(16),
             height.div_ceil(16),

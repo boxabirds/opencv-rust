@@ -25,8 +25,8 @@ pub fn match_shapes(
         ShapeMatchMethod::I1 => {
             let mut sum = 0.0;
             for i in 0..7 {
-                let ma = sign(hu1[i]) * hu1[i].abs().ln();
-                let mb = sign(hu2[i]) * hu2[i].abs().ln();
+                let ma = sign(hu1[i]) * libm::log(libm::fabs(hu1[i]));
+                let mb = sign(hu2[i]) * libm::log(libm::fabs(hu2[i]));
 
                 if ma.is_finite() && mb.is_finite() && ma != 0.0 && mb != 0.0 {
                     sum += (1.0 / ma - 1.0 / mb).abs();
@@ -37,8 +37,8 @@ pub fn match_shapes(
         ShapeMatchMethod::I2 => {
             let mut sum = 0.0;
             for i in 0..7 {
-                let ma = sign(hu1[i]) * hu1[i].abs().ln();
-                let mb = sign(hu2[i]) * hu2[i].abs().ln();
+                let ma = sign(hu1[i]) * libm::log(libm::fabs(hu1[i]));
+                let mb = sign(hu2[i]) * libm::log(libm::fabs(hu2[i]));
 
                 if ma.is_finite() && mb.is_finite() {
                     sum += (ma - mb).abs();
@@ -49,11 +49,11 @@ pub fn match_shapes(
         ShapeMatchMethod::I3 => {
             let mut sum = 0.0;
             for i in 0..7 {
-                let ma = sign(hu1[i]) * hu1[i].abs().ln();
-                let mb = sign(hu2[i]) * hu2[i].abs().ln();
+                let ma = sign(hu1[i]) * libm::log(libm::fabs(hu1[i]));
+                let mb = sign(hu2[i]) * libm::log(libm::fabs(hu2[i]));
 
-                if ma.is_finite() && mb.is_finite() && ma.abs() > 1e-10 {
-                    sum += ((ma - mb) / ma).abs();
+                if ma.is_finite() && mb.is_finite() && libm::fabs(ma) > 1e-10 {
+                    sum += libm::fabs((ma - mb) / ma);
                 }
             }
             sum
@@ -91,7 +91,7 @@ fn directed_hausdorff(from: &[Point], to: &[Point]) -> f64 {
         for p2 in to {
             let dx = f64::from(p1.x - p2.x);
             let dy = f64::from(p1.y - p2.y);
-            let dist = (dx * dx + dy * dy).sqrt();
+            let dist = libm::sqrt(dx * dx + dy * dy);
 
             min_dist = min_dist.min(dist);
         }
@@ -150,7 +150,7 @@ pub fn frechet_distance(curve1: &[Point], curve2: &[Point]) -> Result<f64> {
 fn point_distance(p1: &Point, p2: &Point) -> f64 {
     let dx = f64::from(p1.x - p2.x);
     let dy = f64::from(p1.y - p2.y);
-    (dx * dx + dy * dy).sqrt()
+    libm::sqrt(dx * dx + dy * dy)
 }
 
 /// Shape context descriptor for a point in a contour
@@ -204,12 +204,12 @@ impl ShapeContext {
             let dx = f64::from(p.x - point.x);
             let dy = f64::from(p.y - point.y);
 
-            let dist = (dx * dx + dy * dy).sqrt() / mean_dist;
-            let angle = dy.atan2(dx);
+            let dist = libm::sqrt(dx * dx + dy * dy) / mean_dist;
+            let angle = libm::atan2(dy, dx);
 
             // Determine radial bin (log scale)
-            let log_r = (dist / self.r_inner).ln();
-            let log_r_outer = (self.r_outer / self.r_inner).ln();
+            let log_r = libm::log(dist / self.r_inner);
+            let log_r_outer = libm::log(self.r_outer / self.r_inner);
 
             let r_bin = if dist < self.r_inner {
                 0

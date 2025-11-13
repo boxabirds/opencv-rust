@@ -283,7 +283,7 @@ fn solve_dlt_system(a_matrix: &[Vec<f64>]) -> Result<[f64; 9]> {
     let mut h = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
 
     // Normalize to avoid trivial solution
-    let norm: f64 = h.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let norm: f64 = libm::sqrt(h.iter().map(|x| x * x).sum::<f64>());
     for val in &mut h {
         *val /= norm;
     }
@@ -296,14 +296,14 @@ fn compute_ransac_iterations(confidence: f64, inlier_ratio: f64, sample_size: us
         return 1000;
     }
 
-    let num_iterations = (1.0 - confidence).ln() / (1.0 - inlier_ratio.powi(sample_size as i32)).ln();
-    num_iterations.ceil() as usize
+    let num_iterations = libm::log(1.0 - confidence) / libm::log(1.0 - libm::pow(inlier_ratio, sample_size as f64));
+    libm::ceil(num_iterations) as usize
 }
 
 fn distance_points(p1: &Point, p2: &Point) -> f64 {
     let dx = p1.x - p2.x;
     let dy = p1.y - p2.y;
-    f64::from(dx * dx + dy * dy).sqrt()
+    libm::sqrt(f64::from(dx * dx + dy * dy))
 }
 
 fn invert_homography(h: &[[f64; 3]; 3]) -> Result<[[f64; 3]; 3]> {
@@ -315,7 +315,7 @@ fn invert_3x3(m: &[[f64; 3]; 3]) -> Result<[[f64; 3]; 3]> {
         - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
         + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
 
-    if det.abs() < 1e-10 {
+    if libm::fabs(det) < 1e-10 {
         return Err(Error::InvalidParameter(
             "Matrix is singular, cannot invert".to_string(),
         ));
@@ -381,8 +381,8 @@ mod tests {
 
         // With identity mapping, homography should exist (simplified DLT)
         // Real implementation would return closer to identity matrix
-        assert!(h[0][0].abs() < 10.0); // Basic sanity check
-        assert!(h[1][1].abs() < 10.0);
+        assert!(libm::fabs(h[0][0]) < 10.0); // Basic sanity check
+        assert!(libm::fabs(h[1][1]) < 10.0);
     }
 
     #[test]
@@ -400,8 +400,8 @@ mod tests {
         let m = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]];
         let inv = invert_3x3(&m).unwrap();
 
-        assert!((inv[0][0] - 0.5).abs() < 1e-6);
-        assert!((inv[1][1] - 0.5).abs() < 1e-6);
-        assert!((inv[2][2] - 0.5).abs() < 1e-6);
+        assert!(libm::fabs(inv[0][0] - 0.5) < 1e-6);
+        assert!(libm::fabs(inv[1][1] - 0.5) < 1e-6);
+        assert!(libm::fabs(inv[2][2] - 0.5) < 1e-6);
     }
 }

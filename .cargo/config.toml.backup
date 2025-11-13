@@ -1,0 +1,9 @@
+[target.wasm32-unknown-unknown]
+rustflags = [
+  "-C", "target-feature=+atomics,+bulk-memory,+mutable-globals",
+]
+
+[unstable]
+build-std = ["panic_abort", "std"]
+
+# Note: For wasm-pack builds, use the build-wasm.sh script which sets these flags correctly

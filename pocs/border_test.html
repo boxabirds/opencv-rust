@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Border Mode Test</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>OpenCV.js Border Mode Test</h1>
+    <div id="output"></div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        async function testBorderModes() {
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            let html = '<h2>Border Mode Constants</h2>';
+            html += '<table border="1"><tr><th>Name</th><th>Value</th></tr>';
+
+            const modes = [
+                'BORDER_CONSTANT',
+                'BORDER_REPLICATE',
+                'BORDER_REFLECT',
+                'BORDER_WRAP',
+                'BORDER_REFLECT_101',
+                'BORDER_REFLECT101',
+                'BORDER_DEFAULT',
+                'BORDER_ISOLATED'
+            ];
+
+            for (const mode of modes) {
+                if (cv[mode] !== undefined) {
+                    html += `<tr><td>${mode}</td><td>${cv[mode]}</td></tr>`;
+                }
+            }
+
+            html += '</table>';
+
+            // Test what BORDER_DEFAULT actually equals
+            html += '<h2>Border Default Analysis</h2>';
+            if (cv.BORDER_DEFAULT === cv.BORDER_REFLECT_101) {
+                html += '<p><strong>✓ BORDER_DEFAULT === BORDER_REFLECT_101</strong></p>';
+            } else if (cv.BORDER_DEFAULT === cv.BORDER_REFLECT) {
+                html += '<p><strong>⚠ BORDER_DEFAULT === BORDER_REFLECT (NOT REFLECT_101!)</strong></p>';
+            } else {
+                html += `<p><strong>✗ BORDER_DEFAULT = ${cv.BORDER_DEFAULT}</strong></p>`;
+            }
+
+            document.getElementById('output').innerHTML = html;
+        }
+
+        testBorderModes();
+    </script>
+</body>
+</html>

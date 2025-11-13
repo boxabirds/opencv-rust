@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gaussian Blur Comparison</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .controls { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+        .controls label { margin-right: 10px; }
+        .controls input { margin-right: 20px; }
+        .controls button { padding: 5px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        .controls button:hover { background: #45a049; }
+        .images { display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
+        .image-container { text-align: center; }
+        canvas { border: 1px solid #ccc; display: block; }
+        h3 { margin: 10px 0 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Testing Gaussian Blur</h1>
+    <div id="status">Loading...</div>
+
+    <div class="controls">
+        <label>Kernel Size: <input type="number" id="ksize" value="5" min="3" max="31" step="2"></label>
+        <label>Sigma: <input type="number" id="sigma" value="1.5" min="0" max="10" step="0.1"></label>
+        <label>Diff Amplify: <input type="number" id="amplify" value="100" min="1" max="255"></label>
+        <button onclick="runTest()">Run Test</button>
+    </div>
+
+    <div class="images">
+        <div class="image-container">
+            <h3>Original</h3>
+            <canvas id="original"></canvas>
+        </div>
+        <div class="image-container">
+            <h3>OpenCV.js Result</h3>
+            <canvas id="opencv"></canvas>
+        </div>
+        <div class="image-container">
+            <h3>Our WASM Result</h3>
+            <canvas id="wasm"></canvas>
+        </div>
+        <div class="image-container">
+            <h3>Difference Map (color-coded)</h3>
+            <canvas id="diff"></canvas>
+            <small>Red=Our higher, Blue=OpenCV higher, Gray=Equal</small>
+        </div>
+    </div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        let wasmModule = null;
+
+        async function runTest() {
+            const status = document.getElementById('status');
+
+            // Wait for OpenCV.js
+            status.textContent = 'Loading OpenCV.js...';
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load WASM (once)
+            if (!wasmModule) {
+                status.textContent = 'Loading WASM...';
+                wasmModule = await import('/pkg/opencv_rust.js');
+                await wasmModule.default();
+                try {
+                    await wasmModule.initGpu();
+                    status.textContent = 'GPU initialized';
+                } catch(e) {
+                    status.textContent = 'GPU init failed, using CPU: ' + e.message;
+                }
+            }
+
+            // Get parameters from controls
+            const ksize = parseInt(document.getElementById('ksize').value);
+            const sigma = parseFloat(document.getElementById('sigma').value);
+            const amplify = parseInt(document.getElementById('amplify').value);
+
+            // Load image
+            status.textContent = 'Loading image...';
+            const img = await loadImage('lenna.png');
+
+            // Show original
+            const origCanvas = document.getElementById('original');
+            origCanvas.width = img.width;
+            origCanvas.height = img.height;
+            const origCtx = origCanvas.getContext('2d');
+            origCtx.drawImage(img, 0, 0);
+            const imageData = origCtx.getImageData(0, 0, img.width, img.height);
+
+            // OpenCV.js blur
+            status.textContent = `Running OpenCV.js blur (${ksize}x${ksize}, σ=${sigma})...`;
+            const cvSrc = cv.matFromImageData(imageData);
+            const cvDst = new cv.Mat();
+            cv.GaussianBlur(cvSrc, cvDst, new cv.Size(ksize, ksize), sigma, sigma, cv.BORDER_DEFAULT);
+
+            // Show OpenCV result
+            const cvCanvas = document.getElementById('opencv');
+            cvCanvas.width = img.width;
+            cvCanvas.height = img.height;
+            cv.imshow(cvCanvas, cvDst);
+            const cvData = cvCanvas.getContext('2d').getImageData(0, 0, img.width, img.height);
+
+            // Our WASM blur
+            status.textContent = `Running WASM blur (${ksize}x${ksize}, σ=${sigma})...`;
+            const wasmSrc = wasmModule.WasmMat.fromImageData(
+                new Uint8Array(imageData.data),
+                img.width, img.height, 4
+            );
+            const wasmDst = await wasmModule.gaussianBlur(wasmSrc, ksize, sigma);
+            const wasmData = wasmDst.getData();
+
+            // Show WASM result
+            const wasmCanvas = document.getElementById('wasm');
+            wasmCanvas.width = img.width;
+            wasmCanvas.height = img.height;
+            const wasmCtx = wasmCanvas.getContext('2d');
+            const wasmImageData = new ImageData(new Uint8ClampedArray(wasmData), img.width, img.height);
+            wasmCtx.putImageData(wasmImageData, 0, 0);
+
+            // Compare and create difference map
+            status.textContent = 'Comparing results...';
+            let diffCount = 0;
+            let maxDiff = 0;
+            const totalPixels = img.width * img.height;
+
+            const diffCanvas = document.getElementById('diff');
+            diffCanvas.width = img.width;
+            diffCanvas.height = img.height;
+            const diffCtx = diffCanvas.getContext('2d');
+            const diffImageData = diffCtx.createImageData(img.width, img.height);
+
+            for (let i = 0; i < cvData.data.length; i += 4) {
+                let hasDiff = false;
+                let maxPixelDiff = 0;
+                let signedDiff = 0;
+
+                for (let c = 0; c < 3; c++) {
+                    const diff = wasmData[i+c] - cvData.data[i+c]; // Signed difference
+                    if (diff !== 0) {
+                        hasDiff = true;
+                        const absDiff = Math.abs(diff);
+                        if (absDiff > Math.abs(signedDiff)) {
+                            signedDiff = diff;
+                            maxPixelDiff = absDiff;
+                        }
+                        maxDiff = Math.max(maxDiff, absDiff);
+                    }
+                }
+                if (hasDiff) diffCount++;
+
+                // Color-coded difference map with amplification
+                const amplified = Math.min(255, maxPixelDiff * amplify);
+                if (signedDiff > 0) {
+                    // Our value higher = Red
+                    diffImageData.data[i] = amplified;
+                    diffImageData.data[i+1] = 0;
+                    diffImageData.data[i+2] = 0;
+                } else if (signedDiff < 0) {
+                    // OpenCV value higher = Blue
+                    diffImageData.data[i] = 0;
+                    diffImageData.data[i+1] = 0;
+                    diffImageData.data[i+2] = amplified;
+                } else {
+                    // Equal = Gray (128)
+                    diffImageData.data[i] = 128;
+                    diffImageData.data[i+1] = 128;
+                    diffImageData.data[i+2] = 128;
+                }
+                diffImageData.data[i+3] = 255;
+            }
+
+            diffCtx.putImageData(diffImageData, 0, 0);
+
+            const diffPercent = (diffCount / totalPixels * 100).toFixed(2);
+
+            status.innerHTML = `<strong>COMPLETE</strong> (ksize=${ksize}, σ=${sigma}, amplify=${amplify}x)`;
+            status.innerHTML += `<br>Total pixels: ${totalPixels.toLocaleString()}`;
+            status.innerHTML += `<br>Different pixels: ${diffCount.toLocaleString()} (${diffPercent}%)`;
+            status.innerHTML += `<br>Max difference: ${maxDiff}`;
+
+            // Cleanup
+            cvSrc.delete();
+            cvDst.delete();
+            wasmSrc.free();
+            wasmDst.free();
+        }
+
+        async function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        // Make runTest available globally for the button
+        window.runTest = function() {
+            runTest().catch(err => {
+                document.getElementById('status').textContent = 'Error: ' + err.message;
+                console.error(err);
+            });
+        };
+
+        // Run test on initial load
+        window.runTest();
+    </script>
+</body>
+</html>

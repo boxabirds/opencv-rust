@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Actual Border Behavior</title>
+</head>
+<body>
+    <h1>Testing Actual Border Reflection</h1>
+    <pre id="output"></pre>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        async function test() {
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Create a test image with clear gradient: [0, 64, 128, 192, 255]
+            const width = 5;
+            const height = 1;
+            const data = new Uint8ClampedArray(width * height * 4);
+            for (let x = 0; x < width; x++) {
+                const val = x * 64;
+                data[x*4] = val;
+                data[x*4+1] = val;
+                data[x*4+2] = val;
+                data[x*4+3] = 255;
+            }
+
+            const imageData = new ImageData(data, width, height);
+            const src = cv.matFromImageData(imageData);
+            const dst = new cv.Mat();
+
+            // Blur with kernel size 3 (will sample x-1, x, x+1)
+            // At x=0: samples x=-1, x=0, x=1
+            // REFLECT_101: should sample [64, 0, 64] (reflecting to pixel 1)
+            // REFLECT: should sample [0, 0, 64] (duplicating edge pixel 0)
+            cv.GaussianBlur(src, dst, new cv.Size(3, 3), 0.5, 0.5, cv.BORDER_DEFAULT);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            cv.imshow(canvas, dst);
+            const result = canvas.getContext('2d').getImageData(0, 0, width, height);
+
+            let output = 'Input:  [0, 64, 128, 192, 255]\n';
+            output += 'Output: [';
+            for (let x = 0; x < width; x++) {
+                output += result.data[x*4];
+                if (x < width-1) output += ', ';
+            }
+            output += ']\n\n';
+
+            output += 'At pixel 0, if OpenCV used:\n';
+            output += '- REFLECT_101: sampled [64,0,64] -> output around 43\n';
+            output += '- REFLECT: sampled [0,0,64] -> output around 21\n';
+            output += `\nActual output at pixel 0: ${result.data[0]}\n`;
+
+            if (result.data[0] < 30) {
+                output += '\n✓ Looks like BORDER_REFLECT (edge duplicated)';
+            } else {
+                output += '\n✓ Looks like BORDER_REFLECT_101 (edge not duplicated)';
+            }
+
+            document.getElementById('output').textContent = output;
+
+            src.delete();
+            dst.delete();
+        }
+
+        test();
+    </script>
+</body>
+</html>

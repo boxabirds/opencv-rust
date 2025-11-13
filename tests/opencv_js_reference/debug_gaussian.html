@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gaussian Blur Debug - Visual Comparison</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .image-container {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .image-box {
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #444;
+            image-rendering: pixelated;
+        }
+        .diff-canvas {
+            border-color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gaussian Blur Visual Comparison</h1>
+    <div id="status">Loading...</div>
+
+    <div class="image-container">
+        <div class="image-box">
+            <h3>Original</h3>
+            <canvas id="original"></canvas>
+        </div>
+        <div class="image-box">
+            <h3>OpenCV.js Reference</h3>
+            <canvas id="opencv"></canvas>
+        </div>
+        <div class="image-box">
+            <h3>Our WASM</h3>
+            <canvas id="ours"></canvas>
+        </div>
+        <div class="image-box">
+            <h3>Difference (amplified 10x)</h3>
+            <canvas id="diff" class="diff-canvas"></canvas>
+        </div>
+    </div>
+
+    <div id="stats"></div>
+
+    <script async src="/cache/opencv.js"></script>
+    <script type="module">
+        async function main() {
+            // Wait for OpenCV.js
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load our WASM
+            const module = await import('/pkg/opencv_rust.js');
+            await module.default();
+            try { await module.initGpu(); } catch(e) { console.log('GPU init failed:', e); }
+            window.opencvRust = module;
+
+            document.getElementById('status').textContent = 'Libraries loaded. Processing...';
+
+            // Load test image
+            const img = await loadImage('/tests/fixtures/lenna.png');
+            const width = img.width;
+            const height = img.height;
+
+            // Show original
+            const origCanvas = document.getElementById('original');
+            origCanvas.width = width;
+            origCanvas.height = height;
+            const origCtx = origCanvas.getContext('2d');
+            origCtx.drawImage(img, 0, 0);
+            const originalData = origCtx.getImageData(0, 0, width, height);
+
+            // OpenCV.js blur
+            const cvSrc = cv.matFromImageData(originalData);
+            const cvDst = new cv.Mat();
+            cv.GaussianBlur(cvSrc, cvDst, new cv.Size(5, 5), 1.5, 1.5, cv.BORDER_DEFAULT);
+
+            const cvCanvas = document.getElementById('opencv');
+            cvCanvas.width = width;
+            cvCanvas.height = height;
+            cv.imshow(cvCanvas, cvDst);
+            const cvData = cvCanvas.getContext('2d').getImageData(0, 0, width, height);
+
+            // Our WASM blur
+            const wasmSrc = window.opencvRust.WasmMat.fromImageData(
+                new Uint8Array(originalData.data),
+                width, height, 4
+            );
+            const wasmDst = await window.opencvRust.gaussianBlur(wasmSrc, 5, 1.5);
+            const wasmData = wasmDst.getData();
+
+            const ourCanvas = document.getElementById('ours');
+            ourCanvas.width = width;
+            ourCanvas.height = height;
+            const ourCtx = ourCanvas.getContext('2d');
+            const ourImageData = new ImageData(new Uint8ClampedArray(wasmData), width, height);
+            ourCtx.putImageData(ourImageData, 0, 0);
+
+            // Compute difference
+            const diffCanvas = document.getElementById('diff');
+            diffCanvas.width = width;
+            diffCanvas.height = height;
+            const diffCtx = diffCanvas.getContext('2d');
+            const diffData = new ImageData(width, height);
+
+            let diffCount = 0;
+            let maxDiff = 0;
+            let totalDiff = 0;
+
+            for (let i = 0; i < cvData.data.length; i += 4) {
+                let channelDiff = 0;
+                for (let c = 0; c < 3; c++) {  // RGB only, skip alpha
+                    const diff = Math.abs(cvData.data[i+c] - wasmData[i+c]);
+                    channelDiff = Math.max(channelDiff, diff);
+                    maxDiff = Math.max(maxDiff, diff);
+                    totalDiff += diff;
+                }
+
+                if (channelDiff > 0) {
+                    diffCount++;
+                    // Amplify difference for visibility
+                    diffData.data[i] = Math.min(255, channelDiff * 10);    // R
+                    diffData.data[i+1] = Math.min(255, channelDiff * 10);  // G
+                    diffData.data[i+2] = Math.min(255, channelDiff * 10);  // B
+                } else {
+                    diffData.data[i] = 0;
+                    diffData.data[i+1] = 0;
+                    diffData.data[i+2] = 0;
+                }
+                diffData.data[i+3] = 255;  // Alpha
+            }
+
+            diffCtx.putImageData(diffData, 0, 0);
+
+            // Stats
+            const totalPixels = width * height;
+            const diffPercent = (diffCount / totalPixels * 100).toFixed(2);
+            const avgDiff = (totalDiff / (cvData.data.length * 3/4)).toFixed(4);
+
+            document.getElementById('stats').innerHTML = `
+                <h3>Statistics</h3>
+                <p>Total pixels: ${totalPixels.toLocaleString()}</p>
+                <p>Different pixels: ${diffCount.toLocaleString()} (${diffPercent}%)</p>
+                <p>Max difference: ${maxDiff}</p>
+                <p>Average difference: ${avgDiff}</p>
+            `;
+
+            document.getElementById('status').textContent = 'Processing complete!';
+
+            // Download links
+            document.getElementById('stats').innerHTML += `
+                <p><button onclick="downloadCanvas('opencv')">Download OpenCV.js output</button></p>
+                <p><button onclick="downloadCanvas('ours')">Download Our output</button></p>
+                <p><button onclick="downloadCanvas('diff')">Download Difference map</button></p>
+            `;
+
+            // Cleanup
+            cvSrc.delete();
+            cvDst.delete();
+            wasmSrc.free();
+            wasmDst.free();
+        }
+
+        async function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        window.downloadCanvas = function(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = `gaussian_${canvasId}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        };
+
+        main().catch(err => {
+            document.getElementById('status').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

@@ -192,13 +192,13 @@ pub fn triangulate_point(
     let y2 = (f64::from(point_right.y) - stereo_params.camera_matrix_right.cy) / stereo_params.camera_matrix_right.fy;
 
     // Compute disparity
-    let baseline = (stereo_params.translation[0] * stereo_params.translation[0] +
+    let baseline = libm::sqrt(stereo_params.translation[0] * stereo_params.translation[0] +
                     stereo_params.translation[1] * stereo_params.translation[1] +
-                    stereo_params.translation[2] * stereo_params.translation[2]).sqrt();
+                    stereo_params.translation[2] * stereo_params.translation[2]);
 
     let disparity = x1 - x2;
 
-    if disparity.abs() < 1e-6 {
+    if libm::fabs(disparity) < 1e-6 {
         return Err(Error::InvalidParameter(
             "Disparity too small for triangulation".to_string(),
         ));
@@ -280,7 +280,7 @@ fn matrix_inverse_3x3(m: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
         - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
         + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
 
-    if det.abs() < 1e-10 {
+    if libm::fabs(det) < 1e-10 {
         return [[0.0; 3]; 3];
     }
 

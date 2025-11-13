@@ -91,26 +91,26 @@ impl Moments {
     }
 
     /// Compute orientation angle
-    #[must_use] 
+    #[must_use]
     pub fn orientation(&self) -> f64 {
         if self.mu20 - self.mu02 == 0.0 && self.mu11 == 0.0 {
             0.0
         } else {
-            0.5 * (2.0 * self.mu11).atan2(self.mu20 - self.mu02)
+            0.5 * libm::atan2(2.0 * self.mu11, self.mu20 - self.mu02)
         }
     }
 
     /// Compute eccentricity
-    #[must_use] 
+    #[must_use]
     pub fn eccentricity(&self) -> f64 {
         let a = self.mu20 + self.mu02;
-        let b = ((self.mu20 - self.mu02).powi(2) + 4.0 * self.mu11.powi(2)).sqrt();
+        let b = libm::sqrt(libm::pow(self.mu20 - self.mu02, 2.0) + 4.0 * libm::pow(self.mu11, 2.0));
 
         let lambda1 = 0.5 * (a + b);
         let lambda2 = 0.5 * (a - b);
 
         if lambda1 > 0.0 {
-            (1.0 - lambda2 / lambda1).sqrt()
+            libm::sqrt(1.0 - lambda2 / lambda1)
         } else {
             0.0
         }
@@ -176,12 +176,12 @@ pub fn compute_moments(image: &Mat) -> Result<Moments> {
         }
 
         // Compute normalized central moments
-        let m00_pow = moments.m00.powf(2.5);
+        let m00_pow = libm::pow(moments.m00, 2.5);
 
         if m00_pow != 0.0 {
-            moments.nu20 = moments.mu20 / moments.m00.powf(2.0);
-            moments.nu11 = moments.mu11 / moments.m00.powf(2.0);
-            moments.nu02 = moments.mu02 / moments.m00.powf(2.0);
+            moments.nu20 = moments.mu20 / libm::pow(moments.m00, 2.0);
+            moments.nu11 = moments.mu11 / libm::pow(moments.m00, 2.0);
+            moments.nu02 = moments.mu02 / libm::pow(moments.m00, 2.0);
             moments.nu30 = moments.mu30 / m00_pow;
             moments.nu21 = moments.mu21 / m00_pow;
             moments.nu12 = moments.mu12 / m00_pow;
@@ -193,7 +193,7 @@ pub fn compute_moments(image: &Mat) -> Result<Moments> {
 }
 
 /// Compute Hu's 7 invariant moments
-#[must_use] 
+#[must_use]
 pub fn hu_moments(moments: &Moments) -> [f64; 7] {
     let nu20 = moments.nu20;
     let nu11 = moments.nu11;
@@ -205,25 +205,25 @@ pub fn hu_moments(moments: &Moments) -> [f64; 7] {
 
     let hu1 = nu20 + nu02;
 
-    let hu2 = (nu20 - nu02).powi(2) + 4.0 * nu11.powi(2);
+    let hu2 = libm::pow(nu20 - nu02, 2.0) + 4.0 * libm::pow(nu11, 2.0);
 
-    let hu3 = (nu30 - 3.0 * nu12).powi(2) + (3.0 * nu21 - nu03).powi(2);
+    let hu3 = libm::pow(nu30 - 3.0 * nu12, 2.0) + libm::pow(3.0 * nu21 - nu03, 2.0);
 
-    let hu4 = (nu30 + nu12).powi(2) + (nu21 + nu03).powi(2);
+    let hu4 = libm::pow(nu30 + nu12, 2.0) + libm::pow(nu21 + nu03, 2.0);
 
     let hu5 = (nu30 - 3.0 * nu12) * (nu30 + nu12)
-        * ((nu30 + nu12).powi(2) - 3.0 * (nu21 + nu03).powi(2))
+        * (libm::pow(nu30 + nu12, 2.0) - 3.0 * libm::pow(nu21 + nu03, 2.0))
         + (3.0 * nu21 - nu03) * (nu21 + nu03)
-        * (3.0 * (nu30 + nu12).powi(2) - (nu21 + nu03).powi(2));
+        * (3.0 * libm::pow(nu30 + nu12, 2.0) - libm::pow(nu21 + nu03, 2.0));
 
     let hu6 = (nu20 - nu02)
-        * ((nu30 + nu12).powi(2) - (nu21 + nu03).powi(2))
+        * (libm::pow(nu30 + nu12, 2.0) - libm::pow(nu21 + nu03, 2.0))
         + 4.0 * nu11 * (nu30 + nu12) * (nu21 + nu03);
 
     let hu7 = (3.0 * nu21 - nu03) * (nu30 + nu12)
-        * ((nu30 + nu12).powi(2) - 3.0 * (nu21 + nu03).powi(2))
+        * (libm::pow(nu30 + nu12, 2.0) - 3.0 * libm::pow(nu21 + nu03, 2.0))
         - (nu30 - 3.0 * nu12) * (nu21 + nu03)
-        * (3.0 * (nu30 + nu12).powi(2) - (nu21 + nu03).powi(2));
+        * (3.0 * libm::pow(nu30 + nu12, 2.0) - libm::pow(nu21 + nu03, 2.0));
 
     [hu1, hu2, hu3, hu4, hu5, hu6, hu7]
 }
@@ -266,7 +266,7 @@ pub fn contour_moments(contour: &[Point]) -> Moments {
     moments.m02 /= 12.0;
 
     // Compute central moments
-    if moments.m00.abs() > 1e-10 {
+    if libm::fabs(moments.m00) > 1e-10 {
         let x_bar = moments.m10 / moments.m00;
         let y_bar = moments.m01 / moments.m00;
 
@@ -275,7 +275,7 @@ pub fn contour_moments(contour: &[Point]) -> Moments {
         moments.mu02 = moments.m02 - y_bar * moments.m01;
 
         // Normalized moments
-        let norm = moments.m00.powf(2.0);
+        let norm = libm::pow(moments.m00, 2.0);
         if norm != 0.0 {
             moments.nu20 = moments.mu20 / norm;
             moments.nu11 = moments.mu11 / norm;

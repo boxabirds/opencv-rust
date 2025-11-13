@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extract OpenCV Implementation</title>
+</head>
+<body>
+    <h1>Extracting OpenCV.js Implementation</h1>
+    <pre id="output"></pre>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script>
+        async function extract() {
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            let output = '';
+
+            // Check the GaussianBlur function
+            output += 'cv.GaussianBlur function:\n';
+            output += cv.GaussianBlur.toString().substring(0, 500) + '...\n\n';
+
+            // Look for getGaussianKernel
+            if (cv.getGaussianKernel) {
+                output += 'cv.getGaussianKernel exists!\n';
+
+                // Try to extract a kernel
+                try {
+                    const kernel = cv.getGaussianKernel(5, 1.5, cv.CV_64F);
+                    output += `Kernel type: ${kernel.type()}\n`;
+                    output += `Kernel size: ${kernel.rows}x${kernel.cols}\n`;
+
+                    // Try to read kernel values
+                    output += 'Kernel values:\n';
+                    for (let i = 0; i < kernel.rows; i++) {
+                        const val = kernel.doubleAt(i, 0);
+                        output += `  [${i}] = ${val}\n`;
+                    }
+
+                    kernel.delete();
+                } catch (e) {
+                    output += `Error getting kernel: ${e.message}\n`;
+                }
+            } else {
+                output += 'cv.getGaussianKernel does NOT exist\n';
+            }
+
+            // Check WASM memory
+            output += '\n\nWASM module info:\n';
+            if (cv._malloc) {
+                output += 'cv._malloc exists (WASM memory access available)\n';
+            }
+
+            // Check for internal functions
+            output += '\nSearching for internal filter functions:\n';
+            const keys = Object.keys(cv).filter(k =>
+                k.toLowerCase().includes('filter') ||
+                k.toLowerCase().includes('kernel') ||
+                k.toLowerCase().includes('gaussian')
+            );
+            output += keys.join(', ') || 'None found';
+
+            document.getElementById('output').textContent = output;
+        }
+
+        extract();
+    </script>
+</body>
+</html>
