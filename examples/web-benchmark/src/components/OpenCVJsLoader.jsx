@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 
 // OpenCV.js URL - using local copy to avoid CDN/network issues
+// Path is relative to project root (Vite config allows serving from parent dirs)
 // To use CDN instead: 'https://docs.opencv.org/4.8.0/opencv.js'
 const OPENCV_JS_URL = '/cache/opencv.js';
 
