@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple GPU Bench</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .status { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Simple GPU Benchmark Test</h1>
+    <div id="status">Loading...</div>
+    <pre id="results"></pre>
+
+    <script type="module">
+        const ITERATIONS = 10;  // Start with just 10
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+
+        async function run() {
+            try {
+                status.textContent = 'Loading WASM...';
+                console.log('Loading WASM...');
+                const wasmModule = await import('/pkg/opencv_rust.js');
+                await wasmModule.default();
+
+                status.textContent = 'Initializing GPU...';
+                console.log('Initializing GPU...');
+                const gpuAvailable = await wasmModule.initGpu();
+                console.log('GPU available:', gpuAvailable);
+
+                if (!gpuAvailable) {
+                    status.textContent = 'ERROR: GPU not available';
+                    return;
+                }
+
+                const width = 256, height = 256;
+                const testData = new Uint8Array(width * height * 4);
+                testData.fill(128);
+
+                status.textContent = 'Creating test matrix...';
+                console.log('Creating test matrix...');
+                const mat = wasmModule.WasmMat.fromImageData(testData, width, height, 4);
+
+                // Measure overhead (minimal 1x1 blur)
+                status.textContent = 'Measuring overhead...';
+                console.log('Measuring overhead with', ITERATIONS, 'iterations...');
+                const overheadStart = performance.now();
+                for (let i = 0; i < ITERATIONS; i++) {
+                    const result = await wasmModule.boxBlur(mat, 1);
+                    result.free();
+                }
+                const overheadEnd = performance.now();
+                const overhead = (overheadEnd - overheadStart) / ITERATIONS;
+                console.log('Overhead per iteration:', overhead.toFixed(3), 'ms');
+
+                // Benchmark actual operation (5x5 blur)
+                status.textContent = 'Benchmarking box blur 5x5...';
+                console.log('Benchmarking box blur 5x5 with', ITERATIONS, 'iterations...');
+                const benchStart = performance.now();
+                for (let i = 0; i < ITERATIONS; i++) {
+                    const result = await wasmModule.boxBlur(mat, 5);
+                    result.free();
+                }
+                const benchEnd = performance.now();
+                const totalTime = benchEnd - benchStart;
+                const avgTime = totalTime / ITERATIONS;
+                const netTime = Math.max(0, avgTime - overhead);
+
+                mat.free();
+
+                const output = `
+Results (${ITERATIONS} iterations):
+================================================================================
+Overhead per call:    ${overhead.toFixed(3)} ms
+Average total time:   ${avgTime.toFixed(3)} ms
+Net transform time:   ${netTime.toFixed(3)} ms
+Overhead percentage:  ${((overhead/avgTime) * 100).toFixed(1)}%
+Total time:           ${totalTime.toFixed(2)} ms
+Throughput:           ${((width * height) / (netTime * 1000)).toFixed(2)} Mpix/s
+================================================================================
+`;
+
+                results.textContent = output;
+                status.textContent = '✓ Complete!';
+                console.log(output);
+
+            } catch (error) {
+                status.textContent = 'ERROR: ' + error.message;
+                results.textContent = error.stack;
+                console.error(error);
+            }
+        }
+
+        run();
+    </script>
+</body>
+</html>

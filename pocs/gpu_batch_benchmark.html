@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPU Batch Performance Benchmark</title>
+    <style>
+        body { font-family: 'Courier New', monospace; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+        h1 { color: #4ec9b0; }
+        .status { color: #dcdcaa; margin: 10px 0; }
+        table { border-collapse: collapse; margin: 20px 0; width: 100%; }
+        th, td { border: 1px solid #3e3e42; padding: 10px; text-align: right; }
+        th { background: #252526; color: #4ec9b0; font-weight: bold; text-align: left; }
+        th.numeric { text-align: right; }
+        tr:nth-child(even) { background: #252526; }
+        .size-header { background: #264f78 !important; font-weight: bold; text-align: left !important; }
+        .fast { color: #4ec9b0; font-weight: bold; }
+        .note { color: #6a9955; font-style: italic; margin: 10px 0; }
+        .op-name { text-align: left !important; }
+    </style>
+</head>
+<body>
+    <h1>GPU Batch Performance Benchmark</h1>
+    <div class="note">
+        Measures pure GPU performance with 100x batch processing<br>
+        Includes warmup to ensure pipelines are compiled and cached<br>
+        Reports average time per operation and throughput
+    </div>
+    <div id="status" class="status">Initializing...</div>
+    <div id="results"></div>
+
+    <script type="module">
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+
+        // Adaptive iteration counts based on image size
+        function getIterations(width) {
+            if (width <= 256) return { warmup: 5, bench: 100 };
+            if (width <= 512) return { warmup: 3, bench: 50 };
+            if (width <= 1024) return { warmup: 2, bench: 20 };
+            return { warmup: 1, bench: 10 };  // 2048+
+        }
+
+        // Test configurations
+        const TEST_SIZES = [
+            { name: '256x256', width: 256, height: 256 },
+            { name: '512x512', width: 512, height: 512 },
+            { name: '1024x1024', width: 1024, height: 1024 },
+            { name: '2048x2048', width: 2048, height: 2048 },
+        ];
+
+        const OPERATIONS = [
+            { name: 'Box Blur 5x5', fn: (m, w) => w.boxBlur(m, 5), inputCh: 4 },
+            { name: 'Gaussian Blur 5x5', fn: (m, w) => w.gaussianBlur(m, 5, 1.5), inputCh: 4 },
+            { name: 'Median Blur 5x5', fn: (m, w) => w.medianBlur(m, 5), inputCh: 4 },
+            { name: 'RGB to Gray', fn: (m, w) => w.rgbToGray(m), inputCh: 4 },
+            { name: 'Threshold', fn: (m, w) => w.threshold(m, 127, 255), inputCh: 1 },
+            { name: 'Sobel X', fn: (m, w) => w.sobel(m, 1, 0, 3), inputCh: 1 },
+        ];
+
+        function formatTime(ms) {
+            if (ms < 0.001) return (ms * 1000).toFixed(2) + ' µs';
+            if (ms < 1) return ms.toFixed(3) + ' ms';
+            return ms.toFixed(2) + ' ms';
+        }
+
+        function formatThroughput(pixelsPerMs) {
+            const mpixelsPerSec = (pixelsPerMs * 1000) / 1e6;
+            return mpixelsPerSec.toFixed(1) + ' Mpix/s';
+        }
+
+        async function benchmarkOperation(op, wasmModule, width, height) {
+            const opName = op.name;
+            const iterations = getIterations(width);
+
+            // Skip slow operations at large sizes
+            if (width >= 2048 && opName.includes('Median')) {
+                console.log(`[BENCHMARK] Skipping ${opName} @ ${width}x${height} (too slow)`);
+                return null;
+            }
+
+            status.textContent = `Benchmarking ${opName} @ ${width}x${height}... (${iterations.bench}x)`;
+            console.log(`[BENCHMARK] Starting ${opName} @ ${width}x${height} (${iterations.bench} iterations)`);
+
+            // Create test data
+            const testData = new Uint8Array(width * height * op.inputCh);
+            for (let i = 0; i < testData.length; i++) {
+                testData[i] = (i * 17 + 128) % 256;  // Pattern
+            }
+            const mat = wasmModule.WasmMat.fromImageData(testData, width, height, op.inputCh);
+
+            // Warmup - ensure pipelines compiled and cached
+            for (let i = 0; i < iterations.warmup; i++) {
+                const result = await op.fn(mat, wasmModule);
+                result.free();
+            }
+
+            // Benchmark
+            const start = performance.now();
+            for (let i = 0; i < iterations.bench; i++) {
+                const result = await op.fn(mat, wasmModule);
+                result.free();
+            }
+            const end = performance.now();
+
+            mat.free();
+
+            const totalTime = end - start;
+            const avgTime = totalTime / iterations.bench;
+            const pixelsProcessed = width * height;
+            const throughput = pixelsProcessed / avgTime;
+
+            return {
+                totalTime,
+                avgTime,
+                throughput,
+                pixelsProcessed,
+                iterations: iterations.bench
+            };
+        }
+
+        async function runBenchmarks() {
+            try {
+                // Load WASM
+                status.textContent = 'Loading WASM module...';
+                const wasmModule = await import('/pkg/opencv_rust.js');
+                await wasmModule.default();
+
+                // Initialize GPU
+                status.textContent = 'Initializing GPU...';
+                const gpuAvailable = await wasmModule.initGpu();
+                if (!gpuAvailable) {
+                    status.textContent = 'ERROR: GPU not available';
+                    return;
+                }
+
+                let html = '<table>';
+                html += '<tr>';
+                html += '<th class="op-name">Operation</th>';
+                html += '<th class="numeric">Avg Time</th>';
+                html += '<th class="numeric">Throughput</th>';
+                html += '<th class="numeric">Total (100x)</th>';
+                html += '</tr>';
+
+                for (const size of TEST_SIZES) {
+                    const iterations = getIterations(size.width);
+                    html += `<tr><td colspan="4" class="size-header">${size.name} (${(size.width * size.height / 1e6).toFixed(2)} Mpix, ${iterations.bench} iterations)</td></tr>`;
+
+                    for (const op of OPERATIONS) {
+                        const result = await benchmarkOperation(op, wasmModule, size.width, size.height);
+
+                        if (result === null) {
+                            html += '<tr>';
+                            html += `<td class="op-name">${op.name}</td>`;
+                            html += `<td colspan="3" style="text-align: center; color: #6a9955;">Skipped (too slow)</td>`;
+                            html += '</tr>';
+                            continue;
+                        }
+
+                        html += '<tr>';
+                        html += `<td class="op-name">${op.name}</td>`;
+                        html += `<td class="fast">${formatTime(result.avgTime)}</td>`;
+                        html += `<td>${formatThroughput(result.throughput)}</td>`;
+                        html += `<td>${formatTime(result.totalTime)}</td>`;
+                        html += '</tr>';
+                    }
+                }
+
+                html += '</table>';
+
+                html += '<div class="note">';
+                html += '<strong>Methodology:</strong><br>';
+                html += '• Adaptive iterations: 256px→100x, 512px→50x, 1024px→20x, 2048px→10x<br>';
+                html += '• Warmup runs before each benchmark to ensure pipelines compiled<br>';
+                html += '• Average time includes buffer allocation, GPU dispatch, compute, and readback<br>';
+                html += '• Throughput = Megapixels processed per second<br>';
+                html += '• All times include full round-trip overhead (unavoidable in WebGPU)<br>';
+                html += '• Very slow operations (Median Blur 2048+) are skipped<br>';
+                html += '</div>';
+
+                results.innerHTML = html;
+                status.textContent = `✓ Benchmark complete!`;
+
+            } catch (error) {
+                status.textContent = 'ERROR: ' + error.message;
+                results.innerHTML = `<pre style="color: #f48771;">${error.message}\n${error.stack}</pre>`;
+                console.error(error);
+            }
+        }
+
+        runBenchmarks();
+    </script>
+</body>
+</html>
