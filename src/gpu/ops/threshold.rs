@@ -28,7 +28,8 @@ pub async fn threshold_gpu_async(src: &Mat, dst: &mut Mat, thresh: u8, max_value
         ));
     }
 
-    *dst = Mat::new(src.rows(), src.cols(), src.channels(), src.depth())?;
+    // Output as 4-channel RGBA to avoid race conditions (gray replicated to RGB)
+    *dst = Mat::new(src.rows(), src.cols(), 4, src.depth())?;
 
     execute_threshold(src, dst, thresh, max_value).await
 }
@@ -51,7 +52,8 @@ async fn execute_threshold(
 
     let width = u32::try_from(src.cols()).unwrap_or(u32::MAX);
     let height = u32::try_from(src.rows()).unwrap_or(u32::MAX);
-    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);
+    let channels = u32::try_from(src.channels()).unwrap_or(u32::MAX);  // Input channels (1)
+    let out_channels = u32::try_from(dst.channels()).unwrap_or(u32::MAX);  // Output channels (4)
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -65,11 +67,11 @@ async fn execute_threshold(
             adapter,
         };
 
-        return execute_threshold_impl(&temp_ctx, src, dst, thresh, max_value, width, height, channels).await;
+        return execute_threshold_impl(&temp_ctx, src, dst, thresh, max_value, width, height, channels, out_channels).await;
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    return execute_threshold_impl(ctx, src, dst, thresh, max_value, width, height, channels).await;
+    return execute_threshold_impl(ctx, src, dst, thresh, max_value, width, height, channels, out_channels).await;
 }
 
 async fn execute_threshold_impl(
@@ -80,7 +82,8 @@ async fn execute_threshold_impl(
     max_value: u8,
     width: u32,
     height: u32,
-    channels: u32,
+    channels: u32,       // Input channels
+    out_channels: u32,    // Output channels
 ) -> Result<()> {
     // Create input buffer
     let input_data = src.data();
@@ -90,8 +93,8 @@ async fn execute_threshold_impl(
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    // Create output buffer
-    let output_size = u64::from(width) * u64::from(height) * u64::from(channels);
+    // Create output buffer (RGBA format to avoid race conditions)
+    let output_size = u64::from(width) * u64::from(height) * u64::from(out_channels);
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Threshold Output Buffer"),
         size: output_size,

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPU Operations Test Suite</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .operation { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+        .pass { color: green; }
+        .fail { color: red; }
+        .warn { color: orange; }
+        table { border-collapse: collapse; margin: 10px 0; }
+        td, th { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .images { display: flex; gap: 10px; margin-top: 10px; }
+        .image-container { text-align: center; }
+        canvas { border: 1px solid #ccc; max-width: 256px; }
+        button { padding: 5px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>GPU Operations Test Suite</h1>
+    <div id="status">Loading...</div>
+    <div id="results"></div>
+
+    <!-- Using CDN for operation tests. If CDN fails, download opencv.js to /cache/opencv.js and use: -->
+    <!-- <script async src="/cache/opencv.js"></script> -->
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        let wasmModule = null;
+        let testImage = null;
+
+        const operations = [
+            {
+                name: 'Box Blur (5x5)',
+                opencv: (src, dst) => cv.blur(src, dst, new cv.Size(5, 5)),
+                wasm: async (src) => await wasmModule.boxBlur(src, 5)
+            },
+            {
+                name: 'Gaussian Blur (5x5, σ=1.5)',
+                opencv: (src, dst) => cv.GaussianBlur(src, dst, new cv.Size(5, 5), 1.5, 1.5),
+                wasm: async (src) => await wasmModule.gaussianBlur(src, 5, 1.5)
+            },
+            {
+                name: 'Median Blur (5x5)',
+                opencv: (src, dst) => cv.medianBlur(src, dst, 5),
+                wasm: async (src) => await wasmModule.medianBlur(src, 5)
+            },
+            {
+                name: 'Sobel X (ksize=3)',
+                opencv: (src, dst) => {
+                    const gray = new cv.Mat();
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                    cv.Sobel(gray, dst, cv.CV_8U, 1, 0, 3);
+                    gray.delete();
+                },
+                wasm: async (src) => await wasmModule.sobel(src, 1, 0, 3),
+                grayscale: true,
+                outputChannels: 1
+            },
+            {
+                name: 'Threshold (127, binary)',
+                opencv: (src, dst) => {
+                    const gray = new cv.Mat();
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                    cv.threshold(gray, dst, 127, 255, cv.THRESH_BINARY);
+                    gray.delete();
+                },
+                wasm: async (src) => await wasmModule.threshold(src, 127, 255),
+                grayscale: true,
+                outputChannels: 1
+            },
+            {
+                name: 'RGB to Grayscale',
+                opencv: (src, dst) => cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY),
+                wasm: async (src) => await wasmModule.rgbToGray(src),
+                grayscale: false,
+                outputChannels: 1
+            }
+        ];
+
+        async function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        function compareResults(cvData, wasmData) {
+            let diffCount = 0;
+            let maxDiff = 0;
+            const totalPixels = cvData.length / 4;
+
+            for (let i = 0; i < cvData.length; i += 4) {
+                let hasDiff = false;
+                for (let c = 0; c < 3; c++) {
+                    const diff = Math.abs(cvData[i+c] - wasmData[i+c]);
+                    if (diff > 0) {
+                        hasDiff = true;
+                        maxDiff = Math.max(maxDiff, diff);
+                    }
+                }
+                if (hasDiff) diffCount++;
+            }
+
+            const accuracy = ((totalPixels - diffCount) / totalPixels * 100).toFixed(2);
+            return { diffCount, maxDiff, accuracy, totalPixels };
+        }
+
+        async function testOperation(op) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'operation';
+
+            try {
+                // Convert test image to OpenCV Mat
+                const canvas = document.createElement('canvas');
+                canvas.width = testImage.width;
+                canvas.height = testImage.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(testImage, 0, 0);
+                const imageData = ctx.getImageData(0, 0, testImage.width, testImage.height);
+
+                // OpenCV.js processing
+                const cvSrc = cv.matFromImageData(imageData);
+                const cvDst = new cv.Mat();
+                const startCV = performance.now();
+                op.opencv(cvSrc, cvDst);
+                const timeCV = (performance.now() - startCV).toFixed(2);
+
+                // Get OpenCV result
+                const cvCanvas = document.createElement('canvas');
+                cvCanvas.width = testImage.width;
+                cvCanvas.height = testImage.height;
+                cv.imshow(cvCanvas, cvDst);
+                const cvData = cvCanvas.getContext('2d').getImageData(0, 0, testImage.width, testImage.height);
+
+                // WASM processing
+                let wasmSrc;
+                if (op.grayscale) {
+                    // Convert to grayscale first
+                    const grayData = new Uint8Array(testImage.width * testImage.height);
+                    for (let i = 0; i < grayData.length; i++) {
+                        const r = imageData.data[i*4];
+                        const g = imageData.data[i*4+1];
+                        const b = imageData.data[i*4+2];
+                        grayData[i] = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+                    }
+                    wasmSrc = wasmModule.WasmMat.fromImageData(
+                        grayData,
+                        testImage.width, testImage.height, 1
+                    );
+                } else {
+                    wasmSrc = wasmModule.WasmMat.fromImageData(
+                        new Uint8Array(imageData.data),
+                        testImage.width, testImage.height, 4
+                    );
+                }
+
+                const startWasm = performance.now();
+                const wasmDst = await op.wasm(wasmSrc);
+                const timeWasm = (performance.now() - startWasm).toFixed(2);
+                let wasmData = wasmDst.getData();
+
+                // GPU now outputs grayscale as RGBA (gray replicated) to avoid race conditions
+                // No conversion needed
+
+                // Create WASM canvas
+                const wasmCanvas = document.createElement('canvas');
+                wasmCanvas.width = testImage.width;
+                wasmCanvas.height = testImage.height;
+                const wasmCtx = wasmCanvas.getContext('2d');
+                const wasmImageData = new ImageData(
+                    new Uint8ClampedArray(wasmData),
+                    testImage.width,
+                    testImage.height
+                );
+                wasmCtx.putImageData(wasmImageData, 0, 0);
+
+                // Compare
+                const comparison = compareResults(cvData.data, wasmData);
+
+                // Display results
+                const statusClass = comparison.accuracy >= 99 ? 'pass' :
+                                  comparison.accuracy >= 95 ? 'warn' : 'fail';
+
+                resultDiv.innerHTML = `
+                    <h3>${op.name}</h3>
+                    <table>
+                        <tr><th>Metric</th><th>Value</th></tr>
+                        <tr><td>Accuracy</td><td class="${statusClass}">${comparison.accuracy}%</td></tr>
+                        <tr><td>Different pixels</td><td>${comparison.diffCount.toLocaleString()} / ${comparison.totalPixels.toLocaleString()}</td></tr>
+                        <tr><td>Max difference</td><td>${comparison.maxDiff}</td></tr>
+                        <tr><td>OpenCV.js time</td><td>${timeCV}ms</td></tr>
+                        <tr><td>WASM GPU time</td><td>${timeWasm}ms</td></tr>
+                        <tr><td>Speedup</td><td>${(timeCV / timeWasm).toFixed(2)}x</td></tr>
+                    </table>
+                    <div class="images">
+                        <div class="image-container">
+                            <div>OpenCV.js</div>
+                            <canvas></canvas>
+                        </div>
+                        <div class="image-container">
+                            <div>WASM GPU</div>
+                            <canvas></canvas>
+                        </div>
+                    </div>
+                `;
+
+                // Add canvases
+                const canvases = resultDiv.querySelectorAll('canvas');
+                canvases[0].width = canvases[1].width = testImage.width;
+                canvases[0].height = canvases[1].height = testImage.height;
+                canvases[0].getContext('2d').putImageData(cvData, 0, 0);
+                canvases[1].getContext('2d').putImageData(wasmImageData, 0, 0);
+
+                // Cleanup
+                cvSrc.delete();
+                cvDst.delete();
+                wasmSrc.free();
+                wasmDst.free();
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>${op.name}</h3>
+                    <p class="fail">ERROR: ${error.message}</p>
+                `;
+            }
+
+            return resultDiv;
+        }
+
+        async function runTests() {
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+
+            // Wait for OpenCV.js
+            status.textContent = 'Loading OpenCV.js...';
+            while (!window.cv || !cv.Mat) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Load WASM
+            status.textContent = 'Loading WASM...';
+            wasmModule = await import('/pkg/opencv_rust.js');
+            await wasmModule.default();
+            await wasmModule.initGpu();
+
+            // Load test image
+            status.textContent = 'Loading test image...';
+            testImage = await loadImage('lenna.png');
+
+            // Run tests
+            status.textContent = 'Running tests...';
+            for (const op of operations) {
+                status.textContent = `Testing: ${op.name}...`;
+                const resultDiv = await testOperation(op);
+                results.appendChild(resultDiv);
+            }
+
+            status.textContent = 'All tests complete!';
+        }
+
+        runTests().catch(err => {
+            document.getElementById('status').textContent = 'Error: ' + err.message;
+            console.error(err);
+        });
+    </script>
+</body>
+</html>

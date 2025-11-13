@@ -17,14 +17,15 @@ struct RgbToGrayParams {
 }
 
 pub async fn rgb_to_gray_gpu_async(src: &Mat, dst: &mut Mat) -> Result<()> {
-    if src.channels() != 3 {
-        return Err(Error::InvalidParameter("RGB to Gray requires 3-channel input".to_string()));
+    if src.channels() != 3 && src.channels() != 4 {
+        return Err(Error::InvalidParameter("RGB to Gray requires 3 or 4-channel input (RGB or RGBA)".to_string()));
     }
     if src.depth() != MatDepth::U8 {
         return Err(Error::UnsupportedOperation("GPU rgb_to_gray only supports U8 depth".to_string()));
     }
 
-    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
+    // Output as 4-channel RGBA to avoid race conditions (gray replicated to RGB)
+    *dst = Mat::new(src.rows(), src.cols(), 4, MatDepth::U8)?;
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -61,7 +62,8 @@ async fn execute_rgb_to_gray_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) ->
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
-    let output_buffer_size = u64::from(width) * u64::from(height);
+    // Output as RGBA (4 channels) to avoid race conditions
+    let output_buffer_size = u64::from(width) * u64::from(height) * 4;
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,
@@ -131,6 +133,7 @@ async fn execute_rgb_to_gray_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) ->
         receiver.await.map_err(|_| Error::GpuError("Failed to receive map result".to_string()))?.map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
 
         let data = buffer_slice.get_mapped_range();
+        // Copy RGBA output
         dst.data_mut().copy_from_slice(&data[..]);
         drop(data);
         staging_buffer.unmap();
@@ -189,6 +192,7 @@ async fn execute_rgb_to_gray_impl(ctx: &GpuContext, src: &Mat, dst: &mut Mat) ->
         receiver.await.map_err(|_| Error::GpuError("Failed to receive map result".to_string()))?.map_err(|e| Error::GpuError(format!("Buffer mapping failed: {:?}", e)))?;
 
         let data = buffer_slice.get_mapped_range();
+        // Copy RGBA output
         dst.data_mut().copy_from_slice(&data[..]);
         drop(data);
         staging_buffer.unmap();

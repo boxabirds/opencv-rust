@@ -134,10 +134,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    // Skip border pixels
+    // Skip border pixels - output as RGBA [0,0,0,255]
     if (x == 0u || y == 0u || x >= params.width - 1u || y >= params.height - 1u) {
-        let idx = y * params.width + x;
-        write_byte(&output, idx, 0u);
+        let out_idx = (y * params.width + x) * 4u;
+        write_byte(&output, out_idx, 0u);
+        write_byte(&output, out_idx + 1u, 0u);
+        write_byte(&output, out_idx + 2u, 0u);
+        write_byte(&output, out_idx + 3u, 255u);
         return;
     }
 
@@ -171,9 +174,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 
-    // Clamp to [0, 255]
-    let result = u32(clamp(abs(sum), 0.0, 255.0));
+    // Clamp to [0, 255] with rounding (matches OpenCV)
+    let gray = u32(clamp(abs(sum) + 0.5, 0.0, 255.0));
 
-    let idx = y * params.width + x;
-    write_byte(&output, idx, result);
+    // Output as RGBA with gray value replicated (avoids race conditions)
+    let out_idx = (y * params.width + x) * 4u;
+    write_byte(&output, out_idx, gray);
+    write_byte(&output, out_idx + 1u, gray);
+    write_byte(&output, out_idx + 2u, gray);
+    write_byte(&output, out_idx + 3u, 255u);
 }

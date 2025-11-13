@@ -7,8 +7,9 @@
 
 import { useEffect, useState } from 'react';
 
-// OpenCV.js CDN URL (using official build)
-const OPENCV_JS_URL = 'https://docs.opencv.org/4.8.0/opencv.js';
+// OpenCV.js URL - using local copy to avoid CDN/network issues
+// To use CDN instead: 'https://docs.opencv.org/4.8.0/opencv.js'
+const OPENCV_JS_URL = '/cache/opencv.js';
 
 // Global state
 let opencvLoaded = false;

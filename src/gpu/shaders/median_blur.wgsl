@@ -112,28 +112,67 @@ fn write_pixel(buffer: ptr<storage, array<u32>, read_write>, pixel_index: u32, p
 
 // === End Byte Access Helpers ===
 
-fn swap(a: ptr<function, u32>, b: ptr<function, u32>) {
-    let temp = min(*a, *b);
-    *b = max(*a, *b);
-    *a = temp;
+// Inline swap to avoid pointer aliasing issues in WGSL
+fn swap_inline(a: u32, b: u32) -> vec2<u32> {
+    return vec2<u32>(min(a, b), max(a, b));
 }
 
 // 3x3 median (9 elements) - optimal sorting network
+// Rewritten to avoid pointer aliasing (not allowed in WGSL)
 fn median9(values: array<u32, 9>) -> u32 {
     var v = values;
-    swap(&v[0], &v[1]); swap(&v[3], &v[4]); swap(&v[6], &v[7]);
-    swap(&v[1], &v[2]); swap(&v[4], &v[5]); swap(&v[7], &v[8]);
-    swap(&v[0], &v[1]); swap(&v[3], &v[4]); swap(&v[6], &v[7]);
-    swap(&v[0], &v[3]); swap(&v[3], &v[6]);
-    swap(&v[0], &v[3]);
-    swap(&v[1], &v[4]); swap(&v[4], &v[7]);
-    swap(&v[1], &v[4]);
-    swap(&v[2], &v[5]); swap(&v[5], &v[8]);
-    swap(&v[2], &v[5]);
-    swap(&v[1], &v[3]); swap(&v[5], &v[7]);
-    swap(&v[2], &v[6]); swap(&v[4], &v[6]);
-    swap(&v[2], &v[4]);
-    swap(&v[2], &v[3]);
+    var tmp: vec2<u32>;
+
+    // Layer 1
+    tmp = swap_inline(v[0], v[1]); v[0] = tmp.x; v[1] = tmp.y;
+    tmp = swap_inline(v[3], v[4]); v[3] = tmp.x; v[4] = tmp.y;
+    tmp = swap_inline(v[6], v[7]); v[6] = tmp.x; v[7] = tmp.y;
+
+    // Layer 2
+    tmp = swap_inline(v[1], v[2]); v[1] = tmp.x; v[2] = tmp.y;
+    tmp = swap_inline(v[4], v[5]); v[4] = tmp.x; v[5] = tmp.y;
+    tmp = swap_inline(v[7], v[8]); v[7] = tmp.x; v[8] = tmp.y;
+
+    // Layer 3
+    tmp = swap_inline(v[0], v[1]); v[0] = tmp.x; v[1] = tmp.y;
+    tmp = swap_inline(v[3], v[4]); v[3] = tmp.x; v[4] = tmp.y;
+    tmp = swap_inline(v[6], v[7]); v[6] = tmp.x; v[7] = tmp.y;
+
+    // Layer 4
+    tmp = swap_inline(v[0], v[3]); v[0] = tmp.x; v[3] = tmp.y;
+    tmp = swap_inline(v[3], v[6]); v[3] = tmp.x; v[6] = tmp.y;
+
+    // Layer 5
+    tmp = swap_inline(v[0], v[3]); v[0] = tmp.x; v[3] = tmp.y;
+
+    // Layer 6
+    tmp = swap_inline(v[1], v[4]); v[1] = tmp.x; v[4] = tmp.y;
+    tmp = swap_inline(v[4], v[7]); v[4] = tmp.x; v[7] = tmp.y;
+
+    // Layer 7
+    tmp = swap_inline(v[1], v[4]); v[1] = tmp.x; v[4] = tmp.y;
+
+    // Layer 8
+    tmp = swap_inline(v[2], v[5]); v[2] = tmp.x; v[5] = tmp.y;
+    tmp = swap_inline(v[5], v[8]); v[5] = tmp.x; v[8] = tmp.y;
+
+    // Layer 9
+    tmp = swap_inline(v[2], v[5]); v[2] = tmp.x; v[5] = tmp.y;
+
+    // Layer 10
+    tmp = swap_inline(v[1], v[3]); v[1] = tmp.x; v[3] = tmp.y;
+    tmp = swap_inline(v[5], v[7]); v[5] = tmp.x; v[7] = tmp.y;
+
+    // Layer 11
+    tmp = swap_inline(v[2], v[6]); v[2] = tmp.x; v[6] = tmp.y;
+    tmp = swap_inline(v[4], v[6]); v[4] = tmp.x; v[6] = tmp.y;
+
+    // Layer 12
+    tmp = swap_inline(v[2], v[4]); v[2] = tmp.x; v[4] = tmp.y;
+
+    // Layer 13
+    tmp = swap_inline(v[2], v[3]); v[2] = tmp.x; v[3] = tmp.y;
+
     return v[4]; // Middle element
 }
 

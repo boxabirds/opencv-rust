@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify RGBA Fix</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>RGBA Fix Verification</h1>
+    <div id="status">Loading...</div>
+    <div id="results"></div>
+
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js"></script>
+    <script type="module">
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+
+        async function runTest() {
+            try {
+                // Wait for OpenCV.js
+                status.textContent = 'Loading OpenCV.js...';
+                while (!window.cv || !cv.Mat) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                // Load WASM
+                status.textContent = 'Loading WASM...';
+                const wasmModule = await import('/pkg/opencv_rust.js');
+                await wasmModule.default();
+
+                // Initialize GPU
+                status.textContent = 'Initializing GPU...';
+                await wasmModule.initGpu();
+
+                // Create test image
+                const width = 4, height = 4;
+                const testData = new Uint8Array(width * height * 4);
+                for (let i = 0; i < width * height; i++) {
+                    testData[i*4] = 100 + i;    // R
+                    testData[i*4+1] = 150 + i;  // G
+                    testData[i*4+2] = 200 + i;  // B
+                    testData[i*4+3] = 255;       // A
+                }
+
+                // Test 1: RGB to Grayscale
+                status.textContent = 'Testing RGB to Grayscale...';
+                const rgbMat = wasmModule.WasmMat.fromImageData(testData, width, height, 4);
+                const grayResult = await wasmModule.rgbToGray(rgbMat);
+                const grayData = grayResult.getData();
+
+                // Verify it's 4-channel output
+                const expectedChannels = 4;
+                const actualSize = grayData.length;
+                const expectedSize = width * height * expectedChannels;
+
+                let html = '<h2>Test Results:</h2>';
+                html += '<h3>RGB to Grayscale</h3>';
+                html += `<p>Output size: ${actualSize} bytes (expected ${expectedSize})</p>`;
+
+                if (actualSize === expectedSize) {
+                    html += '<p class="pass">✓ PASS: Outputs 4-channel RGBA</p>';
+
+                    // Check that RGB channels are equal (grayscale)
+                    let allGray = true;
+                    for (let i = 0; i < width * height; i++) {
+                        const r = grayData[i*4];
+                        const g = grayData[i*4+1];
+                        const b = grayData[i*4+2];
+                        const a = grayData[i*4+3];
+
+                        if (r !== g || g !== b || a !== 255) {
+                            allGray = false;
+                            html += `<p class="fail">✗ FAIL: Pixel ${i} has R=${r}, G=${g}, B=${b}, A=${a} (not grayscale)</p>`;
+                            break;
+                        }
+                    }
+
+                    if (allGray) {
+                        html += '<p class="pass">✓ PASS: All pixels are grayscale (R=G=B)</p>';
+                    }
+                } else {
+                    html += '<p class="fail">✗ FAIL: Wrong output size</p>';
+                }
+
+                // Test 2: Threshold
+                status.textContent = 'Testing Threshold...';
+                const grayInput = new Uint8Array(width * height);
+                for (let i = 0; i < width * height; i++) {
+                    grayInput[i] = i * 16;
+                }
+                const grayInputMat = wasmModule.WasmMat.fromImageData(grayInput, width, height, 1);
+                const threshResult = await wasmModule.threshold(grayInputMat, 127, 255);
+                const threshData = threshResult.getData();
+
+                html += '<h3>Threshold</h3>';
+                html += `<p>Output size: ${threshData.length} bytes (expected ${expectedSize})</p>`;
+
+                if (threshData.length === expectedSize) {
+                    html += '<p class="pass">✓ PASS: Outputs 4-channel RGBA</p>';
+
+                    // Verify threshold logic
+                    let threshCorrect = true;
+                    for (let i = 0; i < width * height; i++) {
+                        const inputVal = i * 16;
+                        const expected = inputVal > 127 ? 255 : 0;
+                        const actual = threshData[i*4];
+
+                        if (actual !== expected) {
+                            threshCorrect = false;
+                            html += `<p class="fail">✗ FAIL: Pixel ${i} has value ${actual}, expected ${expected}</p>`;
+                            break;
+                        }
+                    }
+
+                    if (threshCorrect) {
+                        html += '<p class="pass">✓ PASS: Threshold logic correct</p>';
+                    }
+                } else {
+                    html += '<p class="fail">✗ FAIL: Wrong output size</p>';
+                }
+
+                // Test 3: Sobel
+                status.textContent = 'Testing Sobel...';
+                const sobelInput = new Uint8Array(width * height);
+                for (let i = 0; i < width * height; i++) {
+                    sobelInput[i] = (i % width) * 50;
+                }
+                const sobelInputMat = wasmModule.WasmMat.fromImageData(sobelInput, width, height, 1);
+                const sobelResult = await wasmModule.sobel(sobelInputMat, 1, 0, 3);
+                const sobelData = sobelResult.getData();
+
+                html += '<h3>Sobel</h3>';
+                html += `<p>Output size: ${sobelData.length} bytes (expected ${expectedSize})</p>`;
+
+                if (sobelData.length === expectedSize) {
+                    html += '<p class="pass">✓ PASS: Outputs 4-channel RGBA</p>';
+                } else {
+                    html += '<p class="fail">✗ FAIL: Wrong output size</p>';
+                }
+
+                results.innerHTML = html;
+                status.textContent = 'Tests complete!';
+
+                // Cleanup
+                rgbMat.free();
+                grayResult.free();
+                grayInputMat.free();
+                threshResult.free();
+                sobelInputMat.free();
+                sobelResult.free();
+
+            } catch (error) {
+                status.textContent = 'Error: ' + error.message;
+                results.innerHTML = `<p class="fail">ERROR: ${error.message}</p><pre>${error.stack}</pre>`;
+                console.error(error);
+            }
+        }
+
+        runTest();
+    </script>
+</body>
+</html>

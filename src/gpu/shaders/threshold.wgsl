@@ -124,13 +124,17 @@ fn threshold_binary(@builtin(global_invocation_id) id: vec3<u32>) {
         return;
     }
 
-    // Process each channel
-    for (var ch = 0u; ch < params.channels; ch++) {
-        let idx = (x + y * params.width) * params.channels + ch;
-        let value = read_byte(&input, idx);
+    // Read grayscale value
+    let idx = x + y * params.width;
+    let value = read_byte(&input, idx);
 
-        // Binary threshold: value > threshold ? max_value : 0
-        let result = select(0u, params.max_value, value > params.threshold);
-        write_byte(&output, idx, result);
-    }
+    // Binary threshold: value > threshold ? max_value : 0
+    let gray = select(0u, params.max_value, value > params.threshold);
+
+    // Output as RGBA with gray value replicated (avoids race conditions)
+    let out_idx = (y * params.width + x) * 4u;
+    write_byte(&output, out_idx, gray);
+    write_byte(&output, out_idx + 1u, gray);
+    write_byte(&output, out_idx + 2u, gray);
+    write_byte(&output, out_idx + 3u, 255u);
 }

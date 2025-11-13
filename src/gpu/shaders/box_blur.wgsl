@@ -137,9 +137,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 
-    // Write averaged values
+    // Write averaged values with rounding (matches OpenCV.js)
     let out_idx = (y * params.width + x) * params.channels;
     for (var c: u32 = 0u; c < params.channels; c++) {
-        write_byte(&output, out_idx + c, u32(sums[c] / kernel_area));
+        // Add 0.5 for round-half-up behavior (not truncation)
+        write_byte(&output, out_idx + c, u32(sums[c] / kernel_area + 0.5));
     }
 }

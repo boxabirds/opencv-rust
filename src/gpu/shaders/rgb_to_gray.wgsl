@@ -8,7 +8,7 @@
 struct Params {
     width: u32,
     height: u32,
-    channels: u32,  // Should be 3 for RGB
+    channels: u32,  // 3 for RGB, 4 for RGBA
     _pad: u32,
 }
 
@@ -123,13 +123,18 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let idx_color = (y * params.width + x) * params.channels;
     let idx_gray = y * params.width + x;
 
-    // Read RGB values
+    // Read RGB values (ignoring alpha if present)
     let r = f32(read_byte(&input, idx_color));
     let g = f32(read_byte(&input, idx_color + 1u));
     let b = f32(read_byte(&input, idx_color + 2u));
 
-    // Convert to grayscale using luminance formula
-    let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    // Convert to grayscale using luminance formula with rounding (matches OpenCV)
+    let gray_val = u32(clamp(0.299 * r + 0.587 * g + 0.114 * b + 0.5, 0.0, 255.0));
 
-    write_byte(&output, idx_gray, u32(clamp(gray, 0.0, 255.0)));
+    // Output as RGBA with gray value replicated (avoids race conditions)
+    let out_idx = (y * params.width + x) * 4u;
+    write_byte(&output, out_idx, gray_val);
+    write_byte(&output, out_idx + 1u, gray_val);
+    write_byte(&output, out_idx + 2u, gray_val);
+    write_byte(&output, out_idx + 3u, 255u);
 }

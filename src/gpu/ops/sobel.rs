@@ -41,7 +41,8 @@ pub async fn sobel_gpu_async(
         ));
     }
 
-    *dst = Mat::new(src.rows(), src.cols(), 1, MatDepth::U8)?;
+    // Output as 4-channel RGBA to avoid race conditions (gray replicated to RGB)
+    *dst = Mat::new(src.rows(), src.cols(), 4, MatDepth::U8)?;
 
     // Get GPU context with platform-specific approach
     #[cfg(target_arch = "wasm32")]
@@ -94,8 +95,8 @@ async fn execute_sobel_impl(
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
 
-    // Create output buffer
-    let output_buffer_size = u64::from(width) * u64::from(height);
+    // Create output buffer (4 channels: RGBA with gray replicated)
+    let output_buffer_size = u64::from(width) * u64::from(height) * 4;
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Output Buffer"),
         size: output_buffer_size,
