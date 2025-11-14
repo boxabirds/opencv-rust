@@ -22,18 +22,6 @@ export default function PerformanceMetrics() {
     <div className="performance-section">
       <h3>Performance Metrics</h3>
       <div className="performance-grid">
-        {lastCpuTime && (
-          <div className="performance-card cpu">
-            <div className="card-icon">
-              <Cpu size={24} />
-            </div>
-            <div className="card-content">
-              <div className="card-label">CPU Time</div>
-              <div className="card-value">{formatTime(lastCpuTime)}</div>
-            </div>
-          </div>
-        )}
-
         {hasGpu && (
           <div className="performance-card gpu">
             <div className="card-icon">
@@ -42,27 +30,33 @@ export default function PerformanceMetrics() {
             <div className="card-content">
               <div className="card-label">GPU Time</div>
               <div className="card-value">{formatTime(lastGpuTime)}</div>
+              <div className="card-hint">WebGPU Accelerated</div>
             </div>
           </div>
         )}
 
-        {hasGpu && lastSpeedup && (
-          <div className="performance-card speedup">
+        {lastCpuTime && !hasGpu && (
+          <div className="performance-card cpu">
             <div className="card-icon">
-              <span className="speedup-icon">⚡</span>
+              <Cpu size={24} />
             </div>
             <div className="card-content">
-              <div className="card-label">Speedup</div>
-              <div className="card-value">{lastSpeedup}x</div>
-              <div className="card-hint">
-                {parseFloat(lastSpeedup) > 10 ? 'Excellent!' :
-                 parseFloat(lastSpeedup) > 5 ? 'Very Good' :
-                 parseFloat(lastSpeedup) > 2 ? 'Good' : 'Modest'}
-              </div>
+              <div className="card-label">CPU Time</div>
+              <div className="card-value">{formatTime(lastCpuTime)}</div>
+              <div className="card-hint">CPU Fallback</div>
             </div>
           </div>
         )}
       </div>
+
+      {gpuAvailable && (
+        <div className="performance-note" style={{ color: 'var(--success)', borderColor: 'var(--success)' }}>
+          <p>
+            <strong>✓ WebGPU Enabled:</strong> Operations are GPU-accelerated for maximum performance.
+            Warmup run performed to compile and cache GPU compute pipelines.
+          </p>
+        </div>
+      )}
 
       {!gpuAvailable && (
         <div className="performance-note">

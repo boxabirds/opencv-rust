@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head><title>NLM Realistic Test</title></head>
+<body>
+  <h1>NLM Denoising - Realistic Parameters</h1>
+  <div id="output"></div>
+  <script type="module">
+    import init, { WasmMat, nlmDenoising, setBackend } from './pkg/opencv_rust.js';
+
+    async function test() {
+      const output = document.getElementById('output');
+      try {
+        await init();
+        setBackend('cpu');
+        output.textContent = 'Initialized...\n';
+
+        // Test with progressively larger sizes
+        const tests = [
+          { size: 64, h: 10, tw: 3, sw: 7, desc: '64x64 small params' },
+          { size: 128, h: 10, tw: 3, sw: 7, desc: '128x128 small params' },
+          { size: 128, h: 10, tw: 7, sw: 21, desc: '128x128 default params' },
+        ];
+
+        for (const t of tests) {
+          output.textContent += `\nTesting ${t.desc}...\n`;
+          const data = new Uint8ClampedArray(t.size * t.size * 4);
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.random() * 255;
+            data[i+1] = Math.random() * 255;
+            data[i+2] = Math.random() * 255;
+            data[i+3] = 255;
+          }
+
+          const mat = WasmMat.fromImageData(data, t.size, t.size, 4);
+          const start = performance.now();
+          const result = await nlmDenoising(mat, t.h, t.tw, t.sw);
+          const elapsed = performance.now() - start;
+
+          if (result) {
+            output.textContent += `✓ ${t.desc}: ${elapsed.toFixed(2)}ms\n`;
+            result.free();
+          } else {
+            output.textContent += `✗ ${t.desc}: returned null\n`;
+          }
+          mat.free();
+        }
+
+        output.textContent += '\n✓ All tests completed!';
+      } catch (e) {
+        output.textContent += `\n✗ ERROR: ${e.message}\n${e.stack}`;
+      }
+    }
+
+    test();
+  </script>
+</body>
+</html>

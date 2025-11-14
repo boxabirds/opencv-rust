@@ -367,7 +367,7 @@ fn create_gaussian_response(height: usize, width: usize, sigma: f32) -> Vec<Vec<
             let dx = x as f32 - center_x;
             let dist2 = dx * dx + dy * dy;
 
-            gaussian[y][x] = (-dist2 / (2.0 * sigma * sigma)).exp();
+            gaussian[y][x] = libm::expf(-dist2 / (2.0 * sigma * sigma));
         }
     }
 

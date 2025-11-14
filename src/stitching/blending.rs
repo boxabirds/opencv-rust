@@ -313,7 +313,7 @@ impl FeatherBlender {
                 for col in 0..mask.cols() {
                     if mask.at(row, col)?[0] > 0 {
                         let dist = self.distance_to_boundary(mask, row, col)?;
-                        let weight = 1.0 / (1.0 + (-self.sharpness * dist).exp());
+                        let weight = 1.0 / (1.0 + libm::expf(-self.sharpness * dist));
                         weights.set_f32(row, col, 0, weight)?;
                     } else {
                         weights.set_f32(row, col, 0, 0.0)?;

@@ -16,7 +16,13 @@ pub async fn detect_aruco_wasm(src: &WasmMat, dict_id: i32) -> Result<WasmMat, J
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -74,7 +80,13 @@ pub async fn detect_qr_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -125,7 +137,13 @@ pub async fn hog_descriptor_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -172,7 +190,13 @@ pub async fn cascade_classifier_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {

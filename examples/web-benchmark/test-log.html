@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LoG Filter Test</title>
+</head>
+<body>
+  <h1>Testing LoG Filter</h1>
+  <div id="output"></div>
+
+  <script type="module">
+    const output = document.getElementById('output');
+
+    async function test() {
+      try {
+        output.innerHTML += 'Loading WASM...<br>';
+        const module = await import('./pkg/opencv_rust.js');
+        await module.default();
+        output.innerHTML += '✓ WASM loaded<br>';
+
+        // Create test image
+        const width = 100, height = 100, channels = 1;
+        const data = new Uint8Array(width * height * channels);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = Math.floor(Math.random() * 256);
+        }
+
+        output.innerHTML += 'Creating test image...<br>';
+        const mat = module.WasmMat.fromImageData(data, width, height, channels);
+        output.innerHTML += '✓ Test image created<br>';
+
+        output.innerHTML += 'Running logFilter...<br>';
+        const result = await module.logFilter(mat, 5, 1.0);
+        output.innerHTML += '✓ logFilter completed!<br>';
+
+        mat.free();
+        result.free();
+
+        output.innerHTML += '<b style="color:green">SUCCESS</b>';
+      } catch (e) {
+        output.innerHTML += `<b style="color:red">ERROR: ${e.message}</b><br><pre>${e.stack}</pre>`;
+        console.error(e);
+      }
+    }
+
+    test();
+  </script>
+</body>
+</html>

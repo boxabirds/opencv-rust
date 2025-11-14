@@ -56,7 +56,7 @@ pub fn fast_nl_means_denoising_colored(
                             half_template,
                         )?;
 
-                        let weight = (-distance / (h * h + h_color * h_color)).exp();
+                        let weight = libm::expf(-distance / (h * h + h_color * h_color));
 
                         #[allow(clippy::cast_sign_loss)]
                         let y_usize = y as usize;
@@ -167,7 +167,7 @@ pub fn bilateral_filter(
             let radius_f32 = radius as f32;
             let dx = i_f32 - radius_f32;
             let dy = j_f32 - radius_f32;
-            space_weights[i][j] = (-(dx * dx + dy * dy) / (2.0 * sigma_space * sigma_space)).exp();
+            space_weights[i][j] = libm::expf(-(dx * dx + dy * dy) / (2.0 * sigma_space * sigma_space));
         }
     }
 
@@ -198,7 +198,7 @@ pub fn bilateral_filter(
                         let neighbor_val = f32::from(src.at(y, x)?[ch]);
                         let color_diff = neighbor_val - center_val;
 
-                        let color_weight = (-(color_diff * color_diff) / (2.0 * sigma_color * sigma_color)).exp();
+                        let color_weight = libm::expf(-(color_diff * color_diff) / (2.0 * sigma_color * sigma_color));
                         #[allow(clippy::cast_sign_loss)]
                         let dy_idx = (dy + radius) as usize;
                         #[allow(clippy::cast_sign_loss)]
@@ -251,10 +251,10 @@ pub fn anisotropic_diffusion(
                 let west = f32::from(result.at(row, col - 1)?[0]) - center;
 
                 // Compute conductance (edge-stopping function)
-                let cn = (-((north / kappa).powi(2))).exp();
-                let cs = (-((south / kappa).powi(2))).exp();
-                let ce = (-((east / kappa).powi(2))).exp();
-                let cw = (-((west / kappa).powi(2))).exp();
+                let cn = libm::expf(-((north / kappa).powi(2)));
+                let cs = libm::expf(-((south / kappa).powi(2)));
+                let ce = libm::expf(-((east / kappa).powi(2)));
+                let cw = libm::expf(-((west / kappa).powi(2)));
 
                 // Update
                 let update = lambda * (cn * north + cs * south + ce * east + cw * west);

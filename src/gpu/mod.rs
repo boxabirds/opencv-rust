@@ -29,6 +29,9 @@ pub mod pipeline_cache;
 pub mod ops;
 
 #[cfg(feature = "gpu")]
+pub mod optical_flow;
+
+#[cfg(feature = "gpu")]
 pub use device::GpuContext;
 
 pub use batch::GpuBatch;

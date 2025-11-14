@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WASM Endpoint Test Suite</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #4ec9b0;
+      border-bottom: 2px solid #4ec9b0;
+      padding-bottom: 10px;
+    }
+
+    .status {
+      margin: 20px 0;
+      padding: 15px;
+      background: #2d2d2d;
+      border-radius: 5px;
+      border-left: 4px solid #4ec9b0;
+    }
+
+    .status.running {
+      border-left-color: #dcdcaa;
+    }
+
+    .status.complete {
+      border-left-color: #4ec9b0;
+    }
+
+    .status.error {
+      border-left-color: #f48771;
+    }
+
+    .progress {
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .summary-card {
+      background: #2d2d2d;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 4px solid #4ec9b0;
+    }
+
+    .summary-card.fail {
+      border-left-color: #f48771;
+    }
+
+    .summary-card h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #808080;
+    }
+
+    .summary-card .value {
+      font-size: 32px;
+      font-weight: bold;
+    }
+
+    .results {
+      margin: 20px 0;
+    }
+
+    .result-category {
+      margin: 20px 0;
+      background: #2d2d2d;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .result-category h2 {
+      margin: 0;
+      padding: 15px;
+      background: #252526;
+      font-size: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .result-category h2:hover {
+      background: #2a2a2a;
+    }
+
+    .result-category.ok h2 {
+      color: #4ec9b0;
+    }
+
+    .result-category.fail h2 {
+      color: #f48771;
+    }
+
+    .result-list {
+      padding: 15px;
+      display: none;
+    }
+
+    .result-category.expanded .result-list {
+      display: block;
+    }
+
+    .result-item {
+      padding: 10px;
+      margin: 5px 0;
+      background: #1e1e1e;
+      border-radius: 3px;
+      border-left: 3px solid #4ec9b0;
+    }
+
+    .result-item.fail {
+      border-left-color: #f48771;
+    }
+
+    .result-item .name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .result-item .id {
+      color: #808080;
+      font-size: 12px;
+    }
+
+    .result-item .error {
+      color: #f48771;
+      font-size: 12px;
+      margin-top: 5px;
+      padding: 5px;
+      background: rgba(244, 135, 113, 0.1);
+      border-radius: 3px;
+    }
+
+    .result-item .duration {
+      color: #4ec9b0;
+      font-size: 12px;
+    }
+
+    button {
+      background: #0e639c;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    button:hover {
+      background: #1177bb;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .log {
+      background: #1e1e1e;
+      border: 1px solid #3e3e3e;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 0;
+    }
+
+    .log-entry.info {
+      color: #4ec9b0;
+    }
+
+    .log-entry.error {
+      color: #f48771;
+    }
+
+    .log-entry.warn {
+      color: #dcdcaa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 WASM Endpoint Test Suite</h1>
+
+    <div class="status" id="status">
+      <div>Status: <span id="statusText">Initializing...</span></div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <button id="startBtn" disabled>Start Tests</button>
+    <button id="downloadBtn" style="display: none;">Download Results JSON</button>
+
+    <div class="summary" id="summary" style="display: none;">
+      <div class="summary-card">
+        <h3>Total Operations</h3>
+        <div class="value" id="totalCount">0</div>
+      </div>
+      <div class="summary-card">
+        <h3>✓ Passing</h3>
+        <div class="value" id="passCount">0</div>
+      </div>
+      <div class="summary-card fail">
+        <h3>✗ Failing</h3>
+        <div class="value" id="failCount">0</div>
+      </div>
+      <div class="summary-card">
+        <h3>Pass Rate</h3>
+        <div class="value" id="passRate">0%</div>
+      </div>
+    </div>
+
+    <div class="results" id="results"></div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    import init, { WasmMat, initGpu } from '../../pkg/opencv_rust.js';
+    import { demos } from './src/demos/demoRegistry.js';
+
+    const MAX_LOG_ENTRIES = 100;
+    const logEntries = [];
+
+    function addLog(message, type = 'info') {
+      logEntries.push({ message, type, timestamp: new Date().toISOString() });
+      if (logEntries.length > MAX_LOG_ENTRIES) {
+        logEntries.shift();
+      }
+
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function createTestImage(width = 640, height = 480, channels = 4) {
+      const size = width * height * channels;
+      const data = new Uint8Array(size);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * channels;
+          data[idx + 0] = (x / width) * 255;
+          data[idx + 1] = (y / height) * 255;
+          data[idx + 2] = 128;
+          if (channels === 4) {
+            data[idx + 3] = 255;
+          }
+        }
+      }
+
+      return { data, width, height, channels };
+    }
+
+    // Call a demo operation with proper parameter mapping (mirrors App.jsx logic)
+    async function callDemoOperation(module, demoId, srcMat, params) {
+      const functionName = demoId.split('_')
+        .map((word, idx) => idx === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))
+        .join('');
+
+      const wasmFunc = module[functionName];
+      if (!wasmFunc) {
+        throw new Error(`Function '${functionName}' not found in WASM module`);
+      }
+
+      // Special cases that need parameter transformation
+      switch (demoId) {
+        case 'gabor_filter': {
+          const ksize = 21;
+          const sigma = params.sigma || 3.0;
+          const theta = (params.orientation || 0) * Math.PI / 180;
+          const lambda = 1.0 / (params.frequency || 0.1);
+          const gamma = 0.5;
+          const psi = 0;
+          return await wasmFunc(srcMat, ksize, sigma, theta, lambda, gamma, psi);
+        }
+
+        // Default: call with simple parameter mapping
+        default: {
+          const args = [srcMat];
+          // Add params in the order they appear in the demo definition
+          if (params) {
+            for (const [key, value] of Object.entries(params)) {
+              args.push(value);
+            }
+          }
+          return await wasmFunc(...args);
+        }
+      }
+    }
+
+    async function testOperation(demo, testImages) {
+      const result = {
+        id: demo.id,
+        name: demo.name,
+        category: demo.category,
+        status: 'UNKNOWN',
+        error: null,
+        duration: 0
+      };
+
+      try {
+        const module = await import('../../pkg/opencv_rust.js');
+
+        const testImg = testImages.rgba;
+        const srcMat = WasmMat.fromImageData(
+          testImg.data,
+          testImg.width,
+          testImg.height,
+          testImg.channels
+        );
+
+        // Get default parameters
+        const params = {};
+        if (demo.params) {
+          demo.params.forEach(param => {
+            params[param.id] = param.default;
+          });
+        }
+
+        // Call the operation using the same logic as App.jsx
+        const start = performance.now();
+        const output = await callDemoOperation(module, demo.id, srcMat, params);
+        const duration = performance.now() - start;
+
+        if (!output) {
+          result.status = 'NULL_OUTPUT';
+          result.error = 'Function returned null/undefined';
+          srcMat.free();
+          return result;
+        }
+
+        if (typeof output.width !== 'number' || typeof output.height !== 'number') {
+          result.status = 'INVALID_OUTPUT';
+          result.error = 'Output missing width/height properties';
+          srcMat.free();
+          if (output.free) output.free();
+          return result;
+        }
+
+        result.status = 'OK';
+        result.duration = duration;
+        srcMat.free();
+        if (output.free) output.free();
+
+      } catch (error) {
+        const errorMsg = error.message || error.toString();
+        result.error = errorMsg;
+
+        // Check for NOT_EXPORTED first
+        if (errorMsg.includes('not found in WASM module')) {
+          result.status = 'NOT_EXPORTED';
+          result.errorType = 'NOT_EXPORTED';
+        } else {
+          result.status = 'ERROR';
+
+          if (errorMsg.includes('Source must have 3 channels')) {
+            result.errorType = 'CHANNEL_MISMATCH';
+          } else if (errorMsg.includes('unreachable')) {
+            result.errorType = 'UNIMPLEMENTED';
+          } else if (errorMsg.includes('RuntimeError') || errorMsg.includes('index out of bounds')) {
+            result.errorType = 'WASM_PANIC';
+          } else if (errorMsg.includes('Invalid parameter')) {
+            result.errorType = 'INVALID_PARAM';
+          } else {
+            result.errorType = 'UNKNOWN_ERROR';
+          }
+        }
+      }
+
+      return result;
+    }
+
+    function updateUI(results, current, total) {
+      document.getElementById('progress').textContent =
+        `Testing: ${current}/${total} operations (${Math.round(current/total*100)}%)`;
+
+      if (current === total) {
+        const passing = results.ok.length;
+        const failing = total - passing;
+        const passRate = ((passing / total) * 100).toFixed(1);
+
+        document.getElementById('summary').style.display = 'grid';
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('passCount').textContent = passing;
+        document.getElementById('failCount').textContent = failing;
+        document.getElementById('passRate').textContent = `${passRate}%`;
+
+        document.getElementById('statusText').textContent = 'Complete';
+        document.getElementById('status').className = 'status complete';
+        document.getElementById('downloadBtn').style.display = 'inline-block';
+      }
+    }
+
+    function renderResults(results) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      const categories = [
+        { name: 'Passing', key: 'ok', items: results.ok, type: 'ok' },
+        { name: 'Channel Mismatch', key: 'channelMismatch', items: results.channelMismatch, type: 'fail' },
+        { name: 'Not Exported', key: 'notExported', items: results.notExported, type: 'fail' },
+        { name: 'Unimplemented', key: 'unimplemented', items: results.unimplemented, type: 'fail' },
+        { name: 'WASM Panic', key: 'wasmPanic', items: results.wasmPanic, type: 'fail' },
+        { name: 'Invalid Parameter', key: 'invalidParam', items: results.invalidParam, type: 'fail' },
+        { name: 'Null Output', key: 'nullOutput', items: results.nullOutput, type: 'fail' },
+        { name: 'Invalid Output', key: 'invalidOutput', items: results.invalidOutput, type: 'fail' },
+        { name: 'Unknown Error', key: 'unknownError', items: results.unknownError, type: 'fail' }
+      ];
+
+      for (const category of categories) {
+        if (category.items.length === 0) continue;
+
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = `result-category ${category.type}`;
+
+        const header = document.createElement('h2');
+        header.textContent = `${category.name} (${category.items.length})`;
+        header.onclick = () => categoryDiv.classList.toggle('expanded');
+        categoryDiv.appendChild(header);
+
+        const listDiv = document.createElement('div');
+        listDiv.className = 'result-list';
+
+        for (const item of category.items) {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = `result-item ${category.type === 'ok' ? '' : 'fail'}`;
+
+          const nameDiv = document.createElement('div');
+          nameDiv.className = 'name';
+          nameDiv.textContent = item.name;
+          itemDiv.appendChild(nameDiv);
+
+          const idDiv = document.createElement('div');
+          idDiv.className = 'id';
+          idDiv.textContent = `${item.id} (${item.category})`;
+          itemDiv.appendChild(idDiv);
+
+          if (item.duration) {
+            const durationDiv = document.createElement('div');
+            durationDiv.className = 'duration';
+            durationDiv.textContent = `⚡ ${item.duration.toFixed(2)}ms`;
+            itemDiv.appendChild(durationDiv);
+          }
+
+          if (item.error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = item.error;
+            itemDiv.appendChild(errorDiv);
+          }
+
+          listDiv.appendChild(itemDiv);
+        }
+
+        categoryDiv.appendChild(listDiv);
+        resultsDiv.appendChild(categoryDiv);
+      }
+    }
+
+    async function runTests() {
+      addLog('='.repeat(80));
+      addLog('AUTOMATED WASM ENDPOINT TEST SUITE');
+      addLog('='.repeat(80));
+
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('statusText').textContent = 'Running tests...';
+      document.getElementById('status').className = 'status running';
+
+      addLog('Creating test images...');
+      const testImages = {
+        rgba: createTestImage(640, 480, 4),
+        rgb: createTestImage(640, 480, 3),
+        small: createTestImage(320, 240, 4),
+        large: createTestImage(1024, 1024, 4)
+      };
+      addLog('Test images created');
+
+      const results = {
+        ok: [],
+        notExported: [],
+        nullOutput: [],
+        invalidOutput: [],
+        channelMismatch: [],
+        unimplemented: [],
+        wasmPanic: [],
+        invalidParam: [],
+        unknownError: []
+      };
+
+      let completed = 0;
+      for (const demo of demos) {
+        completed++;
+        addLog(`[${completed}/${demos.length}] Testing ${demo.name}...`);
+
+        // Use smaller image for slow operations
+        const testImagesForDemo = (demo.id === 'gabor_filter' || demo.id === 'farneback_optical_flow')
+          ? { rgba: createTestImage(64, 64, 4), rgb: createTestImage(64, 64, 3), small: createTestImage(32, 32, 4) }
+          : testImages;
+
+        const result = await testOperation(demo, testImagesForDemo);
+
+        switch (result.status) {
+          case 'OK':
+            results.ok.push(result);
+            addLog(`✓ ${demo.name} - ${result.duration.toFixed(2)}ms`, 'info');
+            break;
+          case 'NOT_EXPORTED':
+            results.notExported.push(result);
+            addLog(`✗ ${demo.name} - NOT_EXPORTED`, 'error');
+            break;
+          case 'NULL_OUTPUT':
+            results.nullOutput.push(result);
+            addLog(`✗ ${demo.name} - NULL_OUTPUT`, 'error');
+            break;
+          case 'INVALID_OUTPUT':
+            results.invalidOutput.push(result);
+            addLog(`✗ ${demo.name} - INVALID_OUTPUT`, 'error');
+            break;
+          case 'ERROR':
+            switch (result.errorType) {
+              case 'CHANNEL_MISMATCH':
+                results.channelMismatch.push(result);
+                addLog(`✗ ${demo.name} - CHANNEL_MISMATCH`, 'error');
+                break;
+              case 'UNIMPLEMENTED':
+                results.unimplemented.push(result);
+                addLog(`✗ ${demo.name} - UNIMPLEMENTED`, 'error');
+                break;
+              case 'WASM_PANIC':
+                results.wasmPanic.push(result);
+                addLog(`✗ ${demo.name} - WASM_PANIC`, 'error');
+                break;
+              case 'INVALID_PARAM':
+                results.invalidParam.push(result);
+                addLog(`✗ ${demo.name} - INVALID_PARAM`, 'error');
+                break;
+              default:
+                results.unknownError.push(result);
+                addLog(`✗ ${demo.name} - ERROR: ${result.error}`, 'error');
+            }
+            break;
+        }
+
+        updateUI(results, completed, demos.length);
+        renderResults(results);
+
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      window.testResults = {
+        timestamp: new Date().toISOString(),
+        summary: {
+          total: demos.length,
+          passing: results.ok.length,
+          failing: demos.length - results.ok.length,
+          passRate: ((results.ok.length / demos.length) * 100).toFixed(1)
+        },
+        results
+      };
+
+      addLog('='.repeat(80));
+      addLog(`COMPLETE: ${results.ok.length}/${demos.length} passing (${window.testResults.summary.passRate}%)`);
+      addLog('='.repeat(80));
+    }
+
+    async function initialize() {
+      try {
+        addLog('Initializing WASM module...');
+        await init();
+        addLog('✓ WASM initialized', 'info');
+
+        addLog('Initializing GPU...');
+        try {
+          await initGpu();
+          addLog('✓ GPU initialized', 'info');
+        } catch (e) {
+          addLog('⚠ GPU initialization failed, will test CPU fallback', 'warn');
+        }
+
+        addLog(`Found ${demos.length} operations to test`);
+
+        document.getElementById('statusText').textContent = 'Ready';
+        document.getElementById('status').className = 'status';
+        document.getElementById('startBtn').disabled = false;
+
+      } catch (error) {
+        addLog(`✗ Initialization failed: ${error.message}`, 'error');
+        document.getElementById('statusText').textContent = 'Initialization failed';
+        document.getElementById('status').className = 'status error';
+      }
+    }
+
+    document.getElementById('startBtn').onclick = runTests;
+
+    document.getElementById('downloadBtn').onclick = () => {
+      const dataStr = JSON.stringify(window.testResults, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'wasm-test-results.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+
+    initialize();
+  </script>
+</body>
+</html>

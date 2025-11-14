@@ -16,7 +16,13 @@ pub async fn find_homography_wasm(src: &WasmMat, n_features: usize) -> Result<Wa
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -120,7 +126,13 @@ pub async fn compute_disparity_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {

@@ -1,0 +1,87 @@
+================================================================================
+AUTOMATED WASM ENDPOINT TEST SUITE
+================================================================================
+
+🚀 Launching browser...
+📄 Loading http://localhost:3000/test-suite.html...
+[vite] connecting...
+[vite] connected.
+⏳ Waiting for initialization...
+✓ Test suite initialized
+
+================================================================================
+RUNNING TESTS
+================================================================================
+
+Error while parsing WGSL: :127:34 error: cannot convert value of type 'abstract-float' to type 'u32'
+        write_byte(&output, idx, 0.0);
+                                 ^^^
+
+
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateShaderModule([ShaderModuleDescriptor ""DistanceTransform Shader""]).
+
+[Invalid ShaderModule "DistanceTransform Shader"] is invalid.
+ - While validating compute stage ([Invalid ShaderModule "DistanceTransform Shader"], entryPoint: "main").
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateComputePipeline([ComputePipelineDescriptor ""DistanceTransform Pipeline""]).
+
+[Invalid ComputePipeline "DistanceTransform Pipeline"] is invalid.
+ - While encoding [ComputePassEncoder "DistanceTransform Compute Pass"].SetPipeline([Invalid ComputePipeline "DistanceTransform Pipeline"]).
+ - While finishing [CommandEncoder "DistanceTransform Encoder"].
+
+[Invalid CommandBuffer "DistanceTransform Encoder" from CommandEncoder "DistanceTransform Encoder"] is invalid.
+ - While calling [Queue].Submit([[Invalid CommandBuffer "DistanceTransform Encoder" from CommandEncoder "DistanceTransform Encoder"]])
+
+Error while parsing WGSL: :14:5 error: 'pass' is a reserved keyword
+    pass: u32,  // 0 = compute histogram, 1 = compute CDF, 2 = apply equalization
+    ^^^^
+
+
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateShaderModule([ShaderModuleDescriptor ""EqualizeHist Shader""]).
+
+[Invalid ShaderModule "EqualizeHist Shader"] is invalid.
+ - While validating compute stage ([Invalid ShaderModule "EqualizeHist Shader"], entryPoint: "compute_histogram").
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateComputePipeline([ComputePipelineDescriptor ""EqualizeHist Histogram Pipeline""]).
+
+[Invalid ComputePipeline "EqualizeHist Histogram Pipeline"] is invalid.
+ - While encoding [ComputePassEncoder "EqualizeHist Histogram Pass"].SetPipeline([Invalid ComputePipeline "EqualizeHist Histogram Pipeline"]).
+ - While finishing [CommandEncoder "EqualizeHist Histogram Encoder"].
+
+[Invalid CommandBuffer "EqualizeHist Histogram Encoder" from CommandEncoder "EqualizeHist Histogram Encoder"] is invalid.
+ - While calling [Queue].Submit([[Invalid CommandBuffer "EqualizeHist Histogram Encoder" from CommandEncoder "EqualizeHist Histogram Encoder"]])
+
+[Invalid ShaderModule "EqualizeHist Shader"] is invalid.
+ - While validating compute stage ([Invalid ShaderModule "EqualizeHist Shader"], entryPoint: "compute_cdf").
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateComputePipeline([ComputePipelineDescriptor ""EqualizeHist CDF Pipeline""]).
+
+[Invalid ComputePipeline "EqualizeHist CDF Pipeline"] is invalid.
+ - While encoding [ComputePassEncoder "EqualizeHist CDF Pass"].SetPipeline([Invalid ComputePipeline "EqualizeHist CDF Pipeline"]).
+ - While finishing [CommandEncoder "EqualizeHist CDF Encoder"].
+
+[Invalid CommandBuffer "EqualizeHist CDF Encoder" from CommandEncoder "EqualizeHist CDF Encoder"] is invalid.
+ - While calling [Queue].Submit([[Invalid CommandBuffer "EqualizeHist CDF Encoder" from CommandEncoder "EqualizeHist CDF Encoder"]])
+
+[Invalid ShaderModule "EqualizeHist Shader"] is invalid.
+ - While validating compute stage ([Invalid ShaderModule "EqualizeHist Shader"], entryPoint: "apply_equalization").
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateComputePipeline([ComputePipelineDescriptor ""EqualizeHist Equalize Pipeline""]).
+
+[Invalid ComputePipeline "EqualizeHist Equalize Pipeline"] is invalid.
+ - While encoding [ComputePassEncoder "EqualizeHist Equalize Pass"].SetPipeline([Invalid ComputePipeline "EqualizeHist Equalize Pipeline"]).
+ - While finishing [CommandEncoder "EqualizeHist Equalize Encoder"].
+
+[Invalid CommandBuffer "EqualizeHist Equalize Encoder" from CommandEncoder "EqualizeHist Equalize Encoder"] is invalid.
+ - While calling [Queue].Submit([[Invalid CommandBuffer "EqualizeHist Equalize Encoder" from CommandEncoder "EqualizeHist Equalize Encoder"]])
+
+⚠️ Test timed out. Status: Running tests..., Progress: Testing: 62/102 operations (61%)
+
+================================================================================
+FATAL ERROR
+================================================================================
+Waiting failed
+Error: Waiting failed
+    at <instance_members_initializer> (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/common/WaitTask.js:21:21)
+    at new WaitTask (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/common/WaitTask.js:27:16)
+    at IsolatedWorld.waitForFunction (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/api/Realm.js:22:26)
+    at CdpFrame.waitForFunction (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/api/Frame.js:580:43)
+    at CdpFrame.<anonymous> (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/util/decorators.js:101:27)
+    at CdpPage.waitForFunction (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/api/Page.js:1433:37)
+    at runTestSuite (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/run-test-suite.js:73:18)

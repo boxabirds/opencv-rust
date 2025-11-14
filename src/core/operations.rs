@@ -525,7 +525,7 @@ pub fn exp(src: &Mat, dst: &mut Mat) -> Result<()> {
             let pd = dst.at_mut(row, col)?;
 
             for ch in 0..src.channels() {
-                let val = (f64::from(ps[ch]) / 255.0).exp() * 255.0;
+                let val = libm::exp(f64::from(ps[ch]) / 255.0) * 255.0;
                 let clamped = val.clamp(0.0, 255.0);
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let byte_val = clamped as u8;

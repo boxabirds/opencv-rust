@@ -1,0 +1,33 @@
+================================================================================
+AUTOMATED WASM ENDPOINT TEST SUITE
+================================================================================
+
+🚀 Launching browser...
+📄 Loading http://localhost:3000/test-suite.html...
+[vite] connecting...
+[vite] connected.
+⏳ Waiting for initialization...
+✓ Test suite initialized
+
+================================================================================
+RUNNING TESTS
+================================================================================
+
+Error while parsing WGSL: :127:20 error: type mismatch for argument 1 in call to 'write_byte', expected 'ptr<storage, array<u32>, read_write>', got 'ptr<storage, array<f32>, read_write>'
+        write_byte(&output, idx, 0u);
+                   ^^^^^^^
+
+
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateShaderModule([ShaderModuleDescriptor ""DistanceTransform Shader""]).
+
+[Invalid ShaderModule "DistanceTransform Shader"] is invalid.
+ - While validating compute stage ([Invalid ShaderModule "DistanceTransform Shader"], entryPoint: "main").
+ - While calling [Device "OpenCV-Rust GPU Device"].CreateComputePipeline([ComputePipelineDescriptor ""DistanceTransform Pipeline""]).
+
+[Invalid ComputePipeline "DistanceTransform Pipeline"] is invalid.
+ - While encoding [ComputePassEncoder "DistanceTransform Compute Pass"].SetPipeline([Invalid ComputePipeline "DistanceTransform Pipeline"]).
+ - While finishing [CommandEncoder "DistanceTransform Encoder"].
+
+[Invalid CommandBuffer "DistanceTransform Encoder" from CommandEncoder "DistanceTransform Encoder"] is invalid.
+ - While calling [Queue].Submit([[Invalid CommandBuffer "DistanceTransform Encoder" from CommandEncoder "DistanceTransform Encoder"]])
+

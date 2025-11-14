@@ -1,0 +1,736 @@
+{
+  "timestamp": "2025-11-13T23:11:34.572Z",
+  "summary": {
+    "total": 102,
+    "passing": 0,
+    "failing": 102,
+    "passRate": "0.0"
+  },
+  "results": {
+    "ok": [],
+    "notExported": [],
+    "nullOutput": [],
+    "invalidOutput": [],
+    "channelMismatch": [],
+    "unimplemented": [],
+    "wasmPanic": [],
+    "invalidParam": [],
+    "unknownError": [],
+    "pageCrash": [
+      {
+        "id": "gaussian_blur",
+        "name": "Gaussian Blur",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "box_blur",
+        "name": "Box Filter / Blur",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "median_blur",
+        "name": "Median Blur",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "bilateral_filter",
+        "name": "Bilateral Filter",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "guided_filter",
+        "name": "Guided Filter",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "gabor_filter",
+        "name": "Gabor Filter",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "log_filter",
+        "name": "Laplacian of Gaussian (LoG)",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "nlm_denoising",
+        "name": "Non-Local Means Denoising",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "anisotropic_diffusion",
+        "name": "Anisotropic Diffusion",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "distance_transform",
+        "name": "Distance Transform",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "watershed",
+        "name": "Watershed Segmentation",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "canny",
+        "name": "Canny Edge Detection",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "sobel",
+        "name": "Sobel Operator",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "scharr",
+        "name": "Scharr Operator",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "laplacian",
+        "name": "Laplacian",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "resize",
+        "name": "Resize",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "flip",
+        "name": "Flip",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "rotate",
+        "name": "Rotate",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "warp_affine",
+        "name": "Warp Affine",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "warp_perspective",
+        "name": "Warp Perspective",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "get_rotation_matrix_2d",
+        "name": "Get Rotation Matrix 2D",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "cvt_color_gray",
+        "name": "Convert to Grayscale",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "cvt_color_hsv",
+        "name": "RGB to HSV",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "cvt_color_lab",
+        "name": "RGB to Lab",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "cvt_color_ycrcb",
+        "name": "RGB to YCrCb",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "threshold",
+        "name": "Binary Threshold",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "adaptive_threshold",
+        "name": "Adaptive Threshold",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "calc_histogram",
+        "name": "Calculate Histogram",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "equalize_histogram",
+        "name": "Equalize Histogram",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "normalize_histogram",
+        "name": "Normalize Histogram",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "compare_histograms",
+        "name": "Compare Histograms",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "back_projection",
+        "name": "Back Projection",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "erode",
+        "name": "Erode",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "dilate",
+        "name": "Dilate",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "morphology_opening",
+        "name": "Morphological Opening",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "morphology_closing",
+        "name": "Morphological Closing",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "morphology_gradient",
+        "name": "Morphological Gradient",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "morphology_tophat",
+        "name": "Top Hat",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "morphology_blackhat",
+        "name": "Black Hat",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "find_contours",
+        "name": "Find Contours",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "approx_poly_dp",
+        "name": "Approximate Polygon",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "contour_area",
+        "name": "Contour Area",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "arc_length",
+        "name": "Arc Length",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "bounding_rect",
+        "name": "Bounding Rectangle",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "moments",
+        "name": "Image Moments",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "harris_corners",
+        "name": "Harris Corner Detection",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "good_features_to_track",
+        "name": "Good Features to Track",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "fast",
+        "name": "FAST Keypoint Detector",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "sift",
+        "name": "SIFT",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "orb",
+        "name": "ORB",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "brisk",
+        "name": "BRISK",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "akaze",
+        "name": "AKAZE",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "kaze",
+        "name": "KAZE",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "brute_force_matcher",
+        "name": "Brute Force Matcher",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "hough_lines",
+        "name": "Hough Lines (Standard)",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "hough_lines_p",
+        "name": "Hough Lines P (Probabilistic)",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "hough_circles",
+        "name": "Hough Circles",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "hog_descriptor",
+        "name": "HOG Descriptor",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "cascade_classifier",
+        "name": "Cascade Classifier",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "aruco_detector",
+        "name": "ArUco Marker Detection",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "qr_detector",
+        "name": "QR Code Detector",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "farneback_optical_flow",
+        "name": "Farneback Optical Flow",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "meanshift_tracker",
+        "name": "MeanShift Tracker",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "camshift_tracker",
+        "name": "CAMShift Tracker",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "mosse_tracker",
+        "name": "MOSSE Tracker",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "csrt_tracker",
+        "name": "CSRT Tracker",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "bg_subtractor_mog2",
+        "name": "Background Subtractor MOG2",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "bg_subtractor_knn",
+        "name": "Background Subtractor KNN",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "calibrate_camera",
+        "name": "Calibrate Camera",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "fisheye_calibration",
+        "name": "Fisheye Calibration",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "solve_pnp",
+        "name": "Solve PnP",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "stereo_calibration",
+        "name": "Stereo Calibration",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "stereo_rectification",
+        "name": "Stereo Rectification",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "compute_disparity",
+        "name": "Compute Disparity",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "find_homography",
+        "name": "Find Homography",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "svm_classifier",
+        "name": "SVM Classifier",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "decision_tree",
+        "name": "Decision Tree",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "random_forest",
+        "name": "Random Forest",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "knn",
+        "name": "K-Nearest Neighbors",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "neural_network",
+        "name": "Neural Network (MLP)",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "kmeans",
+        "name": "K-Means Clustering",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "merge_debevec",
+        "name": "Merge Debevec (HDR)",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "tonemap_drago",
+        "name": "Tonemap Drago",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "tonemap_reinhard",
+        "name": "Tonemap Reinhard",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "fast_nl_means",
+        "name": "Fast NL Means Denoising",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "inpaint",
+        "name": "Inpaint",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "super_resolution",
+        "name": "Super Resolution",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "panorama_stitcher",
+        "name": "Panorama Stitcher",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "feather_blender",
+        "name": "Feather Blender",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "multiband_blender",
+        "name": "Multi-band Blender",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "draw_line",
+        "name": "Draw Line",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "draw_rectangle",
+        "name": "Draw Rectangle",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "draw_circle",
+        "name": "Draw Circle",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "draw_ellipse",
+        "name": "Draw Ellipse",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "draw_polylines",
+        "name": "Draw Polylines",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "put_text",
+        "name": "Put Text",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "load_network",
+        "name": "Load Neural Network",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "blob_from_image",
+        "name": "Blob from Image",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "min_enclosing_circle",
+        "name": "Min Enclosing Circle",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "convex_hull",
+        "name": "Convex Hull",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "hu_moments",
+        "name": "Hu Moments",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      },
+      {
+        "id": "match_shapes",
+        "name": "Match Shapes",
+        "status": "ERROR",
+        "errorType": "PAGE_CRASH",
+        "error": "Failed to fetch dynamically imported module: http://localhost:3000/pkg/opencv_rust.js"
+      }
+    ]
+  }
+}

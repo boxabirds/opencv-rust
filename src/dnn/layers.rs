@@ -272,7 +272,7 @@ impl Layer for ActivationLayer {
             }
             ActivationType::Sigmoid => {
                 for val in data.iter_mut() {
-                    *val = 1.0 / (1.0 + (-*val).exp());
+                    *val = 1.0 / (1.0 + libm::expf(-*val));
                 }
             }
             ActivationType::Tanh => {
@@ -437,7 +437,7 @@ impl Layer for SoftmaxLayer {
             let mut sum = 0.0;
             for i in 0..num_classes {
                 let val = output.at(&[b, i])?;
-                let exp_val = (val - max_val).exp();
+                let exp_val = libm::expf(val - max_val);
                 output.set(&[b, i], exp_val)?;
                 sum += exp_val;
             }

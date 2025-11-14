@@ -174,7 +174,7 @@ fn create_gaussian_kernel(ksize: Size, sigma: f64) -> Result<Vec<f32>> {
 
     for i in -half..=half {
         let x = f64::from(i);
-        let value = (-x * x / (2.0 * sigma * sigma)).exp();
+        let value = libm::exp(-x * x / (2.0 * sigma * sigma));
         #[allow(clippy::cast_possible_truncation)]
         kernel.push(value as f32);
         sum += value;

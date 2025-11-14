@@ -1,0 +1,30 @@
+================================================================================
+AUTOMATED WASM ENDPOINT TEST SUITE
+================================================================================
+
+🚀 Launching browser...
+📄 Loading http://localhost:3000/test-suite.html...
+[vite] connecting...
+[vite] connected.
+⏳ Waiting for initialization...
+✓ Test suite initialized
+
+================================================================================
+RUNNING TESTS
+================================================================================
+
+❌ Page error: unreachable
+⚠️ Test timed out. Status: Running tests..., Progress: Testing: 6/102 operations (6%)
+
+================================================================================
+FATAL ERROR
+================================================================================
+Waiting failed
+Error: Waiting failed
+    at <instance_members_initializer> (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/common/WaitTask.js:21:21)
+    at new WaitTask (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/common/WaitTask.js:27:16)
+    at IsolatedWorld.waitForFunction (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/api/Realm.js:22:26)
+    at CdpFrame.waitForFunction (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/api/Frame.js:580:43)
+    at CdpFrame.<anonymous> (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/util/decorators.js:101:27)
+    at CdpPage.waitForFunction (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/api/Page.js:1433:37)
+    at runTestSuite (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/run-test-suite.js:73:18)

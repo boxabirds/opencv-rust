@@ -3,6 +3,9 @@ import init, {
   WasmMat,
   initGpu,
   isGpuAvailable,
+  setBackend,
+  getBackend,
+  getResolvedBackend,
   gaussianBlur as wasmGaussianBlur,
   resize as wasmResize,
   threshold as wasmThreshold,
@@ -187,74 +190,97 @@ function App() {
     let resultImage = null;
 
     try {
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`[${demo.id}] "${demo.name}" - Starting processing`);
+      console.log(`Parameters:`, JSON.stringify(demoParams, null, 2));
+      console.log(`${'='.repeat(80)}`);
+
       // Load image to ImageData
       const imageData = await imageToImageData(inputImage.dataURL);
-      console.log(`[${demo.id}] Input ImageData pixels:`, {
-        firstPixels: Array.from(imageData.data.slice(0, 16)),
-        someMiddle: Array.from(imageData.data.slice(1000, 1016))
-      });
+      console.log(`[${demo.id}] Input image: ${imageData.width}x${imageData.height}, ${imageData.data.length} bytes`);
 
       // Create WASM Mat
+      console.log(`[${demo.id}] Creating WasmMat...`);
       const srcMat = WasmMat.fromImageData(
         imageData.data,
         imageData.width,
         imageData.height,
         4
       );
+      console.log(`[${demo.id}] WasmMat created: ${srcMat.width}x${srcMat.height}, ${srcMat.channels} channels`);
 
-      // Process with GPU (if available)
+      // Always use GPU if available (CPU backend not fully implemented)
       if (gpuAvailable) {
-        console.log(`[${demo.id}] Starting GPU processing...`);
-        const startGpu = performance.now();
-        const gpuResult = await runDemo(demo.id, srcMat, demoParams);
-        const endGpu = performance.now();
-        gpuTime = endGpu - startGpu;
-        console.log(`[${demo.id}] GPU time: ${gpuTime}ms, result:`, gpuResult);
+        console.log(`[${demo.id}] ✓ Using GPU backend (WebGPU)`);
 
-        if (gpuResult) {
-          const resultData = gpuResult.getData();
-          console.log(`[${demo.id}] Converting to image URL...`, {
-            width: gpuResult.width,
-            height: gpuResult.height,
-            channels: gpuResult.channels,
-            dataLength: resultData.length,
-            firstPixels: Array.from(resultData.slice(0, 16)),
-            someMiddlePixels: Array.from(resultData.slice(1000, 1016))
-          });
-          resultImage = matToImageDataURL(gpuResult);
-          console.log(`[${demo.id}] Result image URL:`, resultImage ? `data:image/... (${resultImage.length} chars)` : 'NULL');
-          if (resultImage) {
-            console.log(`[${demo.id}] Data URL preview:`, resultImage.substring(0, 100));
+        try {
+          // Warmup run (to compile/cache GPU pipelines)
+          console.log(`[${demo.id}] Warmup run (compiling GPU shaders)...`);
+          const warmupResult = await runDemo(demo.id, srcMat, demoParams);
+          if (warmupResult) {
+            console.log(`[${demo.id}] Warmup result: ${warmupResult.width}x${warmupResult.height}`);
+            warmupResult.free();
           }
-          gpuResult.free();
-        } else {
-          console.warn(`[${demo.id}] GPU result is null/undefined`);
+
+          // Timed GPU run
+          console.log(`[${demo.id}] Starting timed GPU run...`);
+          const startGpu = performance.now();
+          const gpuResult = await runDemo(demo.id, srcMat, demoParams);
+          const endGpu = performance.now();
+          gpuTime = endGpu - startGpu;
+          console.log(`[${demo.id}] ✓ GPU processing complete in ${gpuTime.toFixed(2)}ms`);
+
+          if (gpuResult) {
+            console.log(`[${demo.id}] GPU result: ${gpuResult.width}x${gpuResult.height}, ${gpuResult.channels} channels`);
+            resultImage = matToImageDataURL(gpuResult);
+            console.log(`[${demo.id}] Converted to data URL: ${resultImage.length} chars`);
+            gpuResult.free();
+          } else {
+            console.error(`[${demo.id}] ✗ GPU result is null/undefined!`);
+            alert(`Operation "${demo.name}" returned null result. Check console for details.`);
+          }
+        } catch (gpuError) {
+          console.error(`[${demo.id}] ✗ GPU processing error:`, gpuError);
+          console.error(`[${demo.id}] Error stack:`, gpuError.stack);
+          alert(`GPU processing failed for "${demo.name}":\n\n${gpuError.message}\n\nCheck browser console for full details.`);
+          throw gpuError;
         }
-      }
+      } else {
+        // CPU fallback (single run, no warmup needed)
+        console.log(`[${demo.id}] Using CPU backend (GPU not available)`);
 
-      // Process with CPU for comparison
-      const startCpu = performance.now();
-      const cpuResult = await runDemo(demo.id, srcMat, demoParams);
-      const endCpu = performance.now();
-      cpuTime = endCpu - startCpu;
+        try {
+          const startCpu = performance.now();
+          const cpuResult = await runDemo(demo.id, srcMat, demoParams);
+          const endCpu = performance.now();
+          cpuTime = endCpu - startCpu;
+          console.log(`[${demo.id}] ✓ CPU processing complete in ${cpuTime.toFixed(2)}ms`);
 
-      if (cpuResult && !resultImage) {
-        resultImage = matToImageDataURL(cpuResult);
-      }
-      if (cpuResult) {
-        cpuResult.free();
+          if (cpuResult) {
+            resultImage = matToImageDataURL(cpuResult);
+            cpuResult.free();
+          } else {
+            console.error(`[${demo.id}] ✗ CPU result is null/undefined!`);
+            alert(`Operation "${demo.name}" returned null result. Check console for details.`);
+          }
+        } catch (cpuError) {
+          console.error(`[${demo.id}] ✗ CPU processing error:`, cpuError);
+          console.error(`[${demo.id}] Error stack:`, cpuError.stack);
+          alert(`CPU processing failed for "${demo.name}":\n\n${cpuError.message}\n\nCheck browser console for full details.`);
+          throw cpuError;
+        }
       }
 
       // Clean up source mat
       srcMat.free();
+      console.log(`[${demo.id}] Source mat cleaned up`);
 
       // Update UI
-      console.log(`[${demo.id}] About to update UI, resultImage:`, resultImage ? 'exists' : 'NULL');
       if (resultImage) {
-        console.log(`[${demo.id}] Calling setOutputImage...`);
+        console.log(`[${demo.id}] Updating UI with result...`);
         setOutputImage(resultImage);
         setPerformance(cpuTime, gpuTime);
-        console.log(`[${demo.id}] UI updated`);
+        console.log(`[${demo.id}] ✓ UI updated successfully`);
 
         // Add to history
         const thumbnail = await createThumbnail(resultImage);
@@ -267,24 +293,50 @@ function App() {
           outputThumbnail: thumbnail,
           processingTime: gpuTime || cpuTime
         });
+        console.log(`[${demo.id}] Added to history`);
       } else {
-        console.error(`[${demo.id}] No result image to display!`);
+        console.error(`[${demo.id}] ✗ No result image to display!`);
+        alert(`Operation "${demo.name}" completed but produced no output image.`);
       }
+
+      console.log(`[${demo.id}] ${'='.repeat(80)}`);
+      console.log(`[${demo.id}] ✓ Processing complete\n`);
     } catch (error) {
-      console.error('Processing failed:', error);
-      alert(`Processing failed: ${error.message}`);
+      console.error(`\n${'='.repeat(80)}`);
+      console.error(`[${demo.id}] ✗ OPERATION FAILED`);
+      console.error(`${'='.repeat(80)}`);
+      console.error(`Demo: ${demo.name} (${demo.id})`);
+      console.error(`Category: ${demo.category}`);
+      console.error(`Parameters:`, demoParams);
+      console.error(`Error type: ${error.name}`);
+      console.error(`Error message: ${error.message}`);
+      console.error(`Error stack:`, error.stack);
+      console.error(`${'='.repeat(80)}\n`);
+
+      const errorMsg = `Operation "${demo.name}" failed:\n\n` +
+        `Error: ${error.message}\n\n` +
+        `See browser console (F12) for full details including:\n` +
+        `- Input parameters\n` +
+        `- Error stack trace\n` +
+        `- GPU/WASM debug logs`;
+
+      alert(errorMsg);
     } finally {
       setProcessing(false);
     }
   };
 
   const runDemo = async (demoId, srcMat, params) => {
-    switch (demoId) {
-      case 'gaussian_blur': {
-        const ksize = params.ksize || 5;
-        const sigma = params.sigma || 1.5;
-        return await wasmGaussianBlur(srcMat, ksize, sigma);
-      }
+    try {
+      console.log(`[runDemo] Executing ${demoId} with params:`, params);
+
+      switch (demoId) {
+        case 'gaussian_blur': {
+          const ksize = params.ksize || 5;
+          const sigma = params.sigma || 1.5;
+          console.log(`[gaussian_blur] ksize=${ksize}, sigma=${sigma}`);
+          return await wasmGaussianBlur(srcMat, ksize, sigma);
+        }
 
       case 'resize': {
         const scale = params.scale || 0.5;
@@ -859,8 +911,25 @@ function App() {
       }
 
 
-      default:
-        throw new Error(`Unknown demo: ${demoId}`);
+        default:
+          console.error(`[runDemo] Unknown demo ID: ${demoId}`);
+          throw new Error(`Unknown demo: ${demoId}`);
+      }
+    } catch (error) {
+      console.error(`[runDemo] Error in ${demoId}:`, error);
+      console.error(`[runDemo] Error name: ${error.name}`);
+      console.error(`[runDemo] Error message: ${error.message}`);
+      console.error(`[runDemo] Error stack:`, error.stack);
+
+      // Try to extract WASM error details
+      if (error.message && error.message.includes('RuntimeError')) {
+        console.error(`[runDemo] WASM RuntimeError detected - likely a panic in Rust code`);
+      }
+      if (error.message && error.message.includes('unreachable')) {
+        console.error(`[runDemo] WASM unreachable instruction - unimplemented code path`);
+      }
+
+      throw error; // Re-throw to be caught by processImage
     }
   };
 
@@ -886,7 +955,7 @@ function App() {
 
         <main className="main-panel">
           <section className="controls-section">
-            <DemoControls />
+            <DemoControls onProcess={processImage} />
           </section>
 
           <section className="io-section">

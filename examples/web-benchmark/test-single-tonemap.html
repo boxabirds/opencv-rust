@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test Tonemap</title></head>
+<body>
+  <h1>Testing tonemapDrago</h1>
+  <div id="output"></div>
+  <script type="module">
+    import init, { WasmMat, tonemapDrago, setBackend } from './pkg/opencv_rust.js';
+
+    async function test() {
+      const output = document.getElementById('output');
+      try {
+        await init();
+        setBackend('cpu');
+
+        const width = 128, height = 128, channels = 4;
+        const data = new Uint8ClampedArray(width * height * channels);
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = 100;
+          data[i+1] = 150;
+          data[i+2] = 200;
+          data[i+3] = 255;
+        }
+
+        const mat = WasmMat.fromImageData(data, width, height, channels);
+        console.log('Created mat:', mat.width, 'x', mat.height);
+
+        console.log('Calling tonemapDrago...');
+        const result = await tonemapDrago(mat, 0.85);
+
+        console.log('Result:', result);
+        if (result) {
+          output.textContent = `✓ SUCCESS: ${result.width}x${result.height}`;
+          result.free();
+        } else {
+          output.textContent = '✗ FAILED: returned undefined/null';
+        }
+        mat.free();
+      } catch (e) {
+        output.textContent = `✗ ERROR: ${e.message}`;
+        console.error('Full error:', e);
+      }
+    }
+
+    test();
+  </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WASM Operation Test</title>
+</head>
+<body>
+    <div id="status">Loading...</div>
+    <pre id="results"></pre>
+
+    <script type="module">
+        const operations = [
+            // Filters
+            { name: 'gaussianBlur', args: [5, 1.5], needsRgba: true },
+            { name: 'boxBlur', args: [5], needsRgba: true },
+            { name: 'medianBlur', args: [5], needsRgba: true },
+            { name: 'bilateralFilter', args: [9, 75, 75], needsRgba: true },
+            { name: 'guidedFilter', args: [5, 0.1], needsRgba: true },
+            { name: 'gaborFilter', args: [0.1, 0, 3.0], needsRgba: true },
+            { name: 'logFilter', args: [5, 1.0], needsRgba: true },
+            { name: 'nlmDenoising', args: [10, 7, 21], needsRgba: true },
+            { name: 'anisotropicDiffusion', args: [10, 50, 0.1], needsRgba: true },
+            { name: 'distanceTransform', args: [2, 3], needsGray: true },
+            { name: 'watershed', args: [], needsGray: true },
+
+            // Edges
+            { name: 'canny', args: [50, 150, 3], needsGray: true },
+            { name: 'sobel', args: [1, 0, 3], needsGray: true },
+            { name: 'scharr', args: [1, 0], needsGray: true },
+            { name: 'laplacian', args: [3], needsGray: true },
+
+            // Transforms
+            { name: 'resize', args: [128, 128], needsRgba: true },
+            { name: 'flip', args: [1], needsRgba: true },
+            { name: 'rotate', args: [0], needsRgba: true },
+
+            // Color
+            { name: 'cvtColorGray', args: [], needsRgba: true },
+            { name: 'cvtColorHsv', args: [], needsRgba: true },
+            { name: 'cvtColorLab', args: [], needsRgba: true },
+            { name: 'cvtColorYCrCb', args: [], needsRgba: true },
+            { name: 'threshold', args: [127, 255, 0], needsGray: true },
+            { name: 'adaptiveThreshold', args: [255, 1, 0, 11, 2], needsGray: true },
+
+            // Morphology
+            { name: 'erode', args: [5, 0, 1], needsGray: true },
+            { name: 'dilate', args: [5, 0, 1], needsGray: true },
+            { name: 'morphologyOpening', args: [5, 0], needsGray: true },
+            { name: 'morphologyClosing', args: [5, 0], needsGray: true },
+            { name: 'morphologyGradient', args: [5], needsGray: true },
+            { name: 'morphologyTopHat', args: [9], needsGray: true },
+            { name: 'morphologyBlackHat', args: [9], needsGray: true },
+        ];
+
+        async function testOperations() {
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+
+            try {
+                status.textContent = 'Loading WASM...';
+                const wasmModule = await import('./pkg/opencv_rust.js');
+                await wasmModule.default();
+
+                status.textContent = 'Creating test data...';
+
+                // Create test image data
+                const size = 256;
+                const rgbaData = new Uint8Array(size * size * 4);
+                const grayData = new Uint8Array(size * size);
+
+                for (let i = 0; i < size * size; i++) {
+                    const value = (i * 17 + 128) % 256;
+                    grayData[i] = value;
+                    rgbaData[i * 4 + 0] = value;
+                    rgbaData[i * 4 + 1] = value;
+                    rgbaData[i * 4 + 2] = value;
+                    rgbaData[i * 4 + 3] = 255;
+                }
+
+                const rgbaMat = wasmModule.WasmMat.fromImageData(rgbaData, size, size, 4);
+                const grayMat = wasmModule.WasmMat.fromImageData(grayData, size, size, 1);
+
+                status.textContent = 'Testing operations...';
+
+                let output = 'Operation'.padEnd(30, ' ') + ' Status'.padEnd(15, ' ') + ' Error\n';
+                output += '='.repeat(80) + '\n';
+
+                const counts = { working: 0, notImplemented: 0, error: 0, missing: 0 };
+
+                for (const op of operations) {
+                    try {
+                        const mat = op.needsGray ? grayMat : rgbaMat;
+                        const fn = wasmModule[op.name];
+
+                        if (!fn) {
+                            output += op.name.padEnd(30, ' ') + '✗ MISSING'.padEnd(15, ' ') + 'Function not exported\n';
+                            counts.missing++;
+                            continue;
+                        }
+
+                        const res = await fn(mat, ...op.args);
+                        if (res && res.free) {
+                            res.free();
+                        }
+
+                        output += op.name.padEnd(30, ' ') + '✓ WORKING'.padEnd(15, ' ') + '\n';
+                        counts.working++;
+
+                    } catch (e) {
+                        const statusStr = e.message.includes('not implemented') ? '✗ STUB' : '✗ ERROR';
+                        output += op.name.padEnd(30, ' ') + statusStr.padEnd(15, ' ') + e.message + '\n';
+
+                        if (e.message.includes('not implemented')) {
+                            counts.notImplemented++;
+                        } else {
+                            counts.error++;
+                        }
+                    }
+                }
+
+                output += '\n' + '='.repeat(80) + '\n';
+                output += `\nSummary:\n`;
+                output += `  Working: ${counts.working}\n`;
+                output += `  Stubs (not implemented): ${counts.notImplemented}\n`;
+                output += `  Errors: ${counts.error}\n`;
+                output += `  Missing: ${counts.missing}\n`;
+
+                results.textContent = output;
+                status.textContent = 'Test complete!';
+
+                rgbaMat.free();
+                grayMat.free();
+
+            } catch (e) {
+                status.textContent = 'ERROR: ' + e.message;
+                results.textContent = e.stack;
+            }
+        }
+
+        testOperations();
+    </script>
+</body>
+</html>

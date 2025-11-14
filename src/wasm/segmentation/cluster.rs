@@ -27,7 +27,13 @@ pub async fn watershed_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let gray = if bgr.channels() > 1 {
         let mut g = Mat::new(bgr.rows(), bgr.cols(), 1, bgr.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&bgr, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if bgr.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&bgr, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {

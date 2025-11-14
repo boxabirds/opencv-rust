@@ -237,7 +237,7 @@ impl SIFT {
                 let mag = self.compute_gradient_magnitude(image, y, x)?;
                 let angle = self.compute_gradient_angle(image, y, x)?;
 
-                let weight = mag * (-(dx * dx + dy * dy) as f32 / (2.0 * radius as f32 * radius as f32)).exp();
+                let weight = mag * libm::expf(-(dx * dx + dy * dy) as f32 / (2.0 * radius as f32 * radius as f32));
 
                 let bin = ((angle * 180.0 / PI as f32 + 180.0) / 10.0) as usize % 36;
                 histogram[bin] += weight;

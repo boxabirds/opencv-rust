@@ -62,7 +62,7 @@ impl AdaBoostClassifier {
             for i in 0..n_samples {
                 let prediction = best_classifier.predict(&features[i]);
                 let correct = if prediction == labels[i] { 1.0 } else { -1.0 };
-                weights[i] *= (-alpha * correct).exp();
+                weights[i] *= libm::exp(-alpha * correct);
             }
 
             // Normalize weights

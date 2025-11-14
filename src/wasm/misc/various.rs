@@ -15,7 +15,13 @@ pub async fn distance_transform_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> 
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -55,7 +61,13 @@ pub async fn hough_lines_wasm(
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -112,7 +124,13 @@ pub async fn hough_lines_p_wasm(
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -153,7 +171,13 @@ pub async fn hough_circles_wasm(
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -186,7 +210,13 @@ pub async fn log_filter_wasm(src: &WasmMat, ksize: i32, sigma: f64) -> Result<Wa
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -241,9 +271,32 @@ pub async fn inpaint_wasm(src: &WasmMat, radius: i32) -> Result<WasmMat, JsValue
 #[wasm_bindgen(js_name = tonemapDrago)]
 pub async fn tonemap_drago_wasm(src: &WasmMat, bias: f64) -> Result<WasmMat, JsValue> {
     use crate::photo::hdr::TonemapDrago;
+    use crate::core::{Mat, MatDepth};
+
+    // Convert U8 to F32 if needed for testing
+    let hdr_mat = if src.inner.depth() == MatDepth::U8 {
+        let mut f32_mat = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::F32)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        let u8_data = src.inner.data();
+        let f32_bytes = f32_mat.data_mut();
+        let f32_slice = unsafe {
+            std::slice::from_raw_parts_mut(
+                f32_bytes.as_mut_ptr() as *mut f32,
+                u8_data.len()
+            )
+        };
+
+        for i in 0..u8_data.len() {
+            f32_slice[i] = f32::from(u8_data[i]) / 255.0;
+        }
+        f32_mat
+    } else {
+        src.inner.clone()
+    };
 
     let tonemap = TonemapDrago::new().with_bias(bias as f32);
-    let dst = tonemap.process(&src.inner)
+    let dst = tonemap.process(&hdr_mat)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -254,9 +307,32 @@ pub async fn tonemap_drago_wasm(src: &WasmMat, bias: f64) -> Result<WasmMat, JsV
 #[wasm_bindgen(js_name = tonemapReinhard)]
 pub async fn tonemap_reinhard_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::photo::hdr::TonemapReinhard;
+    use crate::core::{Mat, MatDepth};
+
+    // Convert U8 to F32 if needed for testing
+    let hdr_mat = if src.inner.depth() == MatDepth::U8 {
+        let mut f32_mat = Mat::new(src.inner.rows(), src.inner.cols(), src.inner.channels(), MatDepth::F32)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        let u8_data = src.inner.data();
+        let f32_bytes = f32_mat.data_mut();
+        let f32_slice = unsafe {
+            std::slice::from_raw_parts_mut(
+                f32_bytes.as_mut_ptr() as *mut f32,
+                u8_data.len()
+            )
+        };
+
+        for i in 0..u8_data.len() {
+            f32_slice[i] = f32::from(u8_data[i]) / 255.0;
+        }
+        f32_mat
+    } else {
+        src.inner.clone()
+    };
 
     let tonemap = TonemapReinhard::new();
-    let dst = tonemap.process(&src.inner)
+    let dst = tonemap.process(&hdr_mat)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     Ok(WasmMat { inner: dst })
@@ -275,7 +351,13 @@ pub async fn brute_force_matcher_wasm(src: &WasmMat, n_features: usize) -> Resul
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -338,6 +420,7 @@ pub async fn super_resolution_wasm(src: &WasmMat, scale: f32) -> Result<WasmMat,
 #[wasm_bindgen(js_name = mergeDebevec)]
 pub async fn merge_debevec_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::photo::hdr::MergeDebevec;
+    use crate::core::{Mat, MatDepth};
 
     // For demo, use same image with different exposures (simulated)
     let images = vec![src.inner.clone()];
@@ -347,7 +430,25 @@ pub async fn merge_debevec_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     let hdr = merge.process(&images, &times)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    Ok(WasmMat { inner: hdr })
+    // Convert F32 HDR output back to U8 for testing
+    let mut u8_mat = Mat::new(hdr.rows(), hdr.cols(), hdr.channels(), MatDepth::U8)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let f32_bytes = hdr.data();
+    let f32_slice = unsafe {
+        std::slice::from_raw_parts(
+            f32_bytes.as_ptr() as *const f32,
+            f32_bytes.len() / 4
+        )
+    };
+    let u8_data = u8_mat.data_mut();
+
+    for i in 0..u8_data.len().min(f32_slice.len()) {
+        let val = (f32_slice[i] * 255.0).clamp(0.0, 255.0);
+        u8_data[i] = val as u8;
+    }
+
+    Ok(WasmMat { inner: u8_mat })
 }
 
 

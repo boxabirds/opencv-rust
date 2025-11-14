@@ -187,7 +187,13 @@ pub async fn guided_filter_wasm(
     let guide = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -238,7 +244,13 @@ pub async fn gabor_filter_wasm(
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -248,11 +260,10 @@ pub async fn gabor_filter_wasm(
     let mut dst = Mat::new(gray.rows(), gray.cols(), 1, gray.depth())
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Backend dispatch (CPU implementation for complex filter)
     crate::backend_dispatch! {
         gpu => {
-            // Gabor filter uses CPU implementation
-            gabor_filter(&gray, &mut dst, ksize, sigma, theta, lambda, gamma, psi)
+            crate::gpu::ops::gabor_filter_gpu_async(&gray, &mut dst, ksize, sigma, theta, lambda, gamma, psi)
+                .await
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
         }
         cpu => {

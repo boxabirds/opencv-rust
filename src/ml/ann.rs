@@ -222,7 +222,7 @@ impl AnnMlp {
 
     fn activate(&self, x: f64) -> f64 {
         match self.activation {
-            ActivationFunction::Sigmoid => 1.0 / (1.0 + (-x).exp()),
+            ActivationFunction::Sigmoid => 1.0 / (1.0 + libm::exp(-x)),
             ActivationFunction::Tanh => x.tanh(),
             ActivationFunction::ReLU => x.max(0.0),
             ActivationFunction::LeakyReLU => {

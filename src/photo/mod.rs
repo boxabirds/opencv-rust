@@ -153,7 +153,7 @@ pub fn fast_nl_means_denoising(
                             half_template,
                         )?;
 
-                        let weight = (-similarity / (h * h)).exp();
+                        let weight = libm::expf(-similarity / (h * h));
 
                         #[allow(clippy::cast_sign_loss)]
                         let y_usize = y as usize;

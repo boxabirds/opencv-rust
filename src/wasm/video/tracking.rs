@@ -47,7 +47,13 @@ pub async fn farneback_optical_flow_wasm(src: &WasmMat) -> Result<WasmMat, JsVal
     let gray = if src.inner.channels() > 1 {
         let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, src.inner.depth())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        cvt_color(&src.inner, &mut g, ColorConversionCode::BgrToGray)
+        // Use correct color conversion based on number of channels
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         g
     } else {
@@ -140,21 +146,39 @@ pub async fn camshift_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
 pub async fn mosse_tracker_wasm(src: &WasmMat) -> Result<WasmMat, JsValue> {
     use crate::video::advanced_tracking::MOSSETracker;
     use crate::imgproc::drawing::rectangle;
-    use crate::core::types::{Rect, Scalar};
+    use crate::imgproc::color::cvt_color;
+    use crate::core::types::{Rect, Scalar, ColorConversionCode};
+    use crate::core::{Mat, MatDepth};
+
+    // Convert to grayscale if needed
+    let gray = if src.inner.channels() > 1 {
+        let mut g = Mat::new(src.inner.rows(), src.inner.cols(), 1, MatDepth::U8)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let conversion_code = if src.inner.channels() == 4 {
+            ColorConversionCode::RgbaToGray
+        } else {
+            ColorConversionCode::BgrToGray
+        };
+        cvt_color(&src.inner, &mut g, conversion_code)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        g
+    } else {
+        src.inner.clone()
+    };
 
     // Initialize tracker with center region
-    let w = src.inner.cols() as i32;
-    let h = src.inner.rows() as i32;
+    let w = gray.cols() as i32;
+    let h = gray.rows() as i32;
     let initial_bbox = Rect::new(w / 4, h / 4, w / 2, h / 2);
 
     let mut tracker = MOSSETracker::new();
-    tracker.init(&src.inner, initial_bbox)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-    
-    let result_bbox = tracker.update(&src.inner)
+    tracker.init(&gray, initial_bbox)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-    // Draw tracked region
+    let result_bbox = tracker.update(&gray)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Draw tracked region on original image
     let mut result = src.inner.clone();
     let color = Scalar::new(255.0, 255.0, 0.0, 255.0);
     let _ = rectangle(&mut result, result_bbox, color, 2);

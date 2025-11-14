@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Single Operation</title>
+</head>
+<body>
+    <h1>Testing: <span id="opName"></span></h1>
+    <div id="status">Loading...</div>
+    <pre id="result"></pre>
+
+    <script type="module">
+        const params = new URLSearchParams(window.location.search);
+        const opName = params.get('op') || 'gaussianBlur';
+        const needsGray = params.get('gray') === 'true';
+
+        document.getElementById('opName').textContent = opName;
+
+        async function test() {
+            const status = document.getElementById('status');
+            const result = document.getElementById('result');
+
+            try {
+                status.textContent = 'Loading WASM...';
+                const wasmModule = await import('./pkg/opencv_rust.js');
+                await wasmModule.default();
+
+                status.textContent = 'Creating test data...';
+
+                const size = 256;
+                const rgbaData = new Uint8Array(size * size * 4);
+                const grayData = new Uint8Array(size * size);
+
+                for (let i = 0; i < size * size; i++) {
+                    const value = (i * 17 + 128) % 256;
+                    grayData[i] = value;
+                    rgbaData[i * 4 + 0] = value;
+                    rgbaData[i * 4 + 1] = value;
+                    rgbaData[i * 4 + 2] = value;
+                    rgbaData[i * 4 + 3] = 255;
+                }
+
+                const rgbaMat = wasmModule.WasmMat.fromImageData(rgbaData, size, size, 4);
+                const grayMat = wasmModule.WasmMat.fromImageData(grayData, size, size, 1);
+                const mat = needsGray ? grayMat : rgbaMat;
+
+                status.textContent = `Testing ${opName}...`;
+
+                const fn = wasmModule[opName];
+                if (!fn) {
+                    throw new Error(`Function ${opName} not found`);
+                }
+
+                const res = await fn(mat, 5, 1.5);  // Default args
+                if (res && res.free) {
+                    res.free();
+                }
+
+                result.textContent = `✓ SUCCESS: ${opName} works!`;
+                status.textContent = 'Complete';
+
+                rgbaMat.free();
+                grayMat.free();
+
+            } catch (e) {
+                result.textContent = `✗ ERROR: ${e.message}\n\n${e.stack}`;
+                status.textContent = 'Error';
+            }
+        }
+
+        test();
+    </script>
+</body>
+</html>

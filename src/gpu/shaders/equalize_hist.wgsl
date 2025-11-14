@@ -11,7 +11,7 @@
 struct Params {
     width: u32,
     height: u32,
-    pass: u32,  // 0 = compute histogram, 1 = compute CDF, 2 = apply equalization
+    pass_type: u32,  // 0 = compute histogram, 1 = compute CDF, 2 = apply equalization
     _pad: u32,
 }
 

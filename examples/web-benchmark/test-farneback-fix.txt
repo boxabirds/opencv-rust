@@ -1,0 +1,24 @@
+================================================================================
+AUTOMATED WASM ENDPOINT TEST SUITE
+================================================================================
+
+🚀 Launching browser...
+📄 Loading http://localhost:3001/test-suite.html...
+[vite] connecting...
+[vite] connected.
+⏳ Waiting for initialization...
+✓ Test suite initialized
+
+================================================================================
+RUNNING TESTS
+================================================================================
+
+
+================================================================================
+FATAL ERROR
+================================================================================
+Attempted to use detached Frame 'B2529FB0A0F46933D6B9D8AFF4B2A394'.
+Error: Attempted to use detached Frame 'B2529FB0A0F46933D6B9D8AFF4B2A394'.
+    at CdpFrame.<anonymous> (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/util/decorators.js:99:23)
+    at CdpPage.evaluate (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/node_modules/puppeteer-core/lib/esm/puppeteer/api/Page.js:814:43)
+    at runTestSuite (file:///Users/julian/expts/opencv-rust/examples/web-benchmark/run-test-suite.js:79:40)

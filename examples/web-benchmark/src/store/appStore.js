@@ -24,6 +24,11 @@ export const useAppStore = create((set, get) => ({
   history: [],
   maxHistory: 20,
 
+  // Animation state
+  isAnimating: false,
+  animationProgress: 0,
+  animationTotal: 0,
+
   // Actions
   setWasmLoaded: (loaded) => set({ wasmLoaded: loaded }),
   setGpuAvailable: (available) => set({ gpuAvailable: available }),
@@ -75,4 +80,11 @@ export const useAppStore = create((set, get) => ({
   }),
 
   clearHistory: () => set({ history: [] }),
+
+  setAnimating: (isAnimating) => set({ isAnimating }),
+
+  setAnimationProgress: (progress, total) => set({
+    animationProgress: progress,
+    animationTotal: total
+  }),
 }));

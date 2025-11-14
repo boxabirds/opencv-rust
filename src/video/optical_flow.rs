@@ -138,6 +138,23 @@ pub fn calc_optical_flow_farneback(
         ));
     }
 
+    // Try GPU first
+    #[cfg(feature = "gpu")]
+    {
+        use crate::gpu::GpuContext;
+        if GpuContext::is_available() {
+            let gpu_result = GpuContext::with_gpu(|ctx| {
+                futures::executor::block_on(crate::gpu::optical_flow::calc_optical_flow_farneback_gpu(
+                    ctx, prev, next, winsize as u32, 5
+                ))
+            });
+            if let Some(Ok(result)) = gpu_result {
+                return Ok(result);
+            }
+            // Fall through to CPU on error
+        }
+    }
+
     // Create flow matrix (2 channels for x and y flow)
     let mut flow = Mat::new(prev.rows(), prev.cols(), 2, MatDepth::U8)?;
 

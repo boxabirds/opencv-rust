@@ -225,7 +225,7 @@ impl SuperResolutionExample {
 
                 #[allow(clippy::cast_precision_loss)]
                 let weight_val = (dx * dx + dy * dy) as f32;
-                let weight = (-weight_val / 8.0).exp();
+                let weight = libm::expf(-weight_val / 8.0);
                 sum += f32::from(src.at(y, x)?[ch]) * weight;
                 count += 1;
             }

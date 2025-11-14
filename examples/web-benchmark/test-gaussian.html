@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gaussian Blur Test</title>
+</head>
+<body>
+  <h1>Gaussian Blur Test</h1>
+  <div id="status">Initializing...</div>
+  <script type="module">
+    // Import WASM module ONCE at page load (just like App.jsx does)
+    import init, { WasmMat, gaussianBlur, initGpu } from './pkg/opencv_rust.js';
+
+    async function runTest() {
+      const statusEl = document.getElementById('status');
+
+      try {
+        // Step 1: Initialize WASM
+        statusEl.textContent = 'Step 1: Initializing WASM...';
+        console.log('Initializing WASM...');
+        await init();
+        console.log('✓ WASM initialized');
+
+        // Step 2: Initialize WebGPU
+        statusEl.textContent = 'Step 2: Initializing WebGPU...';
+        console.log('Initializing WebGPU...');
+        const gpuAvailable = await initGpu();
+        console.log(`✓ GPU available: ${gpuAvailable}`);
+
+        // Step 3: Create test image
+        statusEl.textContent = 'Step 3: Creating test image...';
+        console.log('Creating test image...');
+        const width = 1024, height = 1024, channels = 4;
+        const data = new Uint8ClampedArray(width * height * channels).fill(128);
+        console.log(`Image data: ${data.length} bytes`);
+
+        // Step 4: Create WasmMat
+        statusEl.textContent = 'Step 4: Creating WasmMat...';
+        console.log('Creating WasmMat...');
+        const mat = WasmMat.fromImageData(data, width, height, channels);
+        console.log(`✓ Mat created: ${mat.width}x${mat.height}, ${mat.channels} channels`);
+
+        // Step 5: Warmup run
+        statusEl.textContent = 'Step 5: Warmup run...';
+        console.log('Running warmup...');
+        const warmup = await gaussianBlur(mat, 5, 1.5);
+        console.log(`✓ Warmup done: ${warmup.width}x${warmup.height}`);
+        warmup.free();
+
+        // Step 6: Actual test
+        statusEl.textContent = 'Step 6: Running Gaussian blur...';
+        console.log('Running actual test...');
+        const start = performance.now();
+        const blurred = await gaussianBlur(mat, 5, 1.5);
+        const end = performance.now();
+        console.log(`✓ Gaussian blur succeeded in ${(end - start).toFixed(2)}ms`);
+        console.log(`✓ Result: ${blurred.width}x${blurred.height}`);
+
+        blurred.free();
+        mat.free();
+
+        statusEl.textContent = `✓ SUCCESS! Gaussian blur completed in ${(end - start).toFixed(2)}ms`;
+        statusEl.style.color = 'green';
+      } catch (error) {
+        console.error('✗ TEST FAILED:', error);
+        console.error('Stack:', error.stack);
+        statusEl.textContent = `✗ FAILED: ${error.message}`;
+        statusEl.style.color = 'red';
+      }
+    }
+
+    runTest();
+  </script>
+</body>
+</html>

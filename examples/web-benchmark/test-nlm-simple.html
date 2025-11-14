@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NLM Denoising Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        #output {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>NLM Denoising Test</h1>
+    <div id="output">Loading WASM module...</div>
+
+    <script type="module">
+        import init, { WasmMat, nlmDenoising } from '../../pkg/opencv_rust.js';
+
+        const output = document.getElementById('output');
+
+        function log(msg, type = 'info') {
+            const line = document.createElement('div');
+            line.className = type;
+            line.textContent = msg;
+            output.appendChild(line);
+            console.log(msg);
+        }
+
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+
+        async function runTest() {
+            try {
+                clearOutput();
+                log('Initializing WASM module...');
+
+                const startInit = performance.now();
+                await init();
+                const endInit = performance.now();
+
+                log(`✓ WASM initialized in ${(endInit - startInit).toFixed(2)}ms`, 'success');
+
+                // Create a small test image (32x32 grayscale)
+                const width = 32;
+                const height = 32;
+                log(`Creating test image ${width}x${height}...`);
+
+                const imageData = new Uint8ClampedArray(width * height * 4);
+
+                // Fill with a simple pattern plus some noise
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const i = (y * width + x) * 4;
+                        const base = (x + y) % 256;
+                        const noise = Math.random() * 20 - 10; // +/- 10
+                        const gray = Math.max(0, Math.min(255, base + noise));
+
+                        imageData[i] = gray;
+                        imageData[i + 1] = gray;
+                        imageData[i + 2] = gray;
+                        imageData[i + 3] = 255;
+                    }
+                }
+
+                log('✓ Test image created', 'success');
+
+                // Convert to WasmMat
+                log('Creating WasmMat from image data...');
+                const srcMat = WasmMat.fromImageData(imageData, width, height, 4);
+                log('✓ WasmMat created', 'success');
+
+                // Test parameters
+                const h = 10;
+                const templateWindowSize = 3;
+                const searchWindowSize = 7;
+
+                log(`\nCalling nlmDenoising with:`);
+                log(`  - Image size: ${width}x${height}`);
+                log(`  - h: ${h}`);
+                log(`  - template_window_size: ${templateWindowSize}`);
+                log(`  - search_window_size: ${searchWindowSize}`);
+
+                log('\nStarting function call...');
+                const startFunc = performance.now();
+
+                // Set a timeout to detect hangs
+                let completed = false;
+                const timeout = setTimeout(() => {
+                    if (!completed) {
+                        log('✗ TIMEOUT: Function hung after 5 seconds', 'error');
+                    }
+                }, 5000);
+
+                try {
+                    const resultMat = nlmDenoising(srcMat, h, templateWindowSize, searchWindowSize);
+                    completed = true;
+                    clearTimeout(timeout);
+
+                    const endFunc = performance.now();
+                    const duration = endFunc - startFunc;
+
+                    log(`✓ Function completed in ${duration.toFixed(2)}ms`, 'success');
+
+                    // Verify result
+                    if (!resultMat) {
+                        log('✗ Result is null/undefined', 'error');
+                    } else if (!(resultMat instanceof WasmMat)) {
+                        log(`✗ Result is not WasmMat, got: ${typeof resultMat}`, 'error');
+                    } else {
+                        log(`✓ Result is WasmMat`, 'success');
+
+                        // Convert back to ImageData to verify
+                        const resultData = resultMat.toImageData();
+                        log(`  - Width: ${resultData.width}`);
+                        log(`  - Height: ${resultData.height}`);
+                        log(`  - Data length: ${resultData.data.length}`);
+
+                        if (resultData.width === width && resultData.height === height) {
+                            log('✓ Dimensions match', 'success');
+                        } else {
+                            log('✗ Dimensions mismatch', 'error');
+                        }
+
+                        if (resultData.data.length === width * height * 4) {
+                            log('✓ Data length correct', 'success');
+                        } else {
+                            log('✗ Data length incorrect', 'error');
+                        }
+
+                        // Clean up
+                        resultMat.free();
+                    }
+
+                    // Clean up source mat
+                    srcMat.free();
+
+                    log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    log('✓ TEST PASSED', 'success');
+                    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                } catch (funcError) {
+                    completed = true;
+                    clearTimeout(timeout);
+                    log(`✗ Function threw error: ${funcError.message}`, 'error');
+                    log(`Stack: ${funcError.stack}`, 'error');
+                    throw funcError;
+                }
+
+            } catch (error) {
+                log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                log('✗ TEST FAILED', 'error');
+                log(`Error: ${error.message}`, 'error');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            }
+        }
+
+        // Run test on load
+        runTest();
+    </script>
+</body>
+</html>

@@ -66,6 +66,9 @@ pub mod morphology_tophat;
 pub mod morphology_blackhat;
 pub mod calc_histogram;
 
+// Batch 5 operations - New GPU implementations
+pub mod gabor_filter;
+
 // Export sync versions for native
 #[cfg(not(target_arch = "wasm32"))]
 pub use blur::gaussian_blur_gpu;
@@ -185,6 +188,8 @@ pub use morphology_tophat::morphology_tophat_gpu;
 pub use morphology_blackhat::morphology_blackhat_gpu;
 #[cfg(not(target_arch = "wasm32"))]
 pub use calc_histogram::calc_histogram_gpu;
+#[cfg(not(target_arch = "wasm32"))]
+pub use gabor_filter::gabor_filter_gpu;
 
 // Export async versions for WASM
 pub use blur::gaussian_blur_gpu_async;
@@ -246,3 +251,4 @@ pub use morphology_gradient::morphology_gradient_gpu_async;
 pub use morphology_tophat::morphology_tophat_gpu_async;
 pub use morphology_blackhat::morphology_blackhat_gpu_async;
 pub use calc_histogram::calc_histogram_gpu_async;
+pub use gabor_filter::gabor_filter_gpu_async;

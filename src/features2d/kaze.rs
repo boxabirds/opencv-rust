@@ -166,7 +166,7 @@ impl KAZE {
         let k_sq = (k * k) as f32;
         match self.diffusivity {
             DiffusivityType::PmG1 => {
-                (-grad_mag_sq / k_sq).exp()
+                libm::expf(-grad_mag_sq / k_sq)
             }
             DiffusivityType::PmG2 => {
                 1.0 / (1.0 + grad_mag_sq / k_sq)
@@ -176,7 +176,7 @@ impl KAZE {
                 if grad_mag_sq == 0.0 {
                     1.0
                 } else {
-                    1.0 - (-(lambda / grad_mag_sq).powf(4.0)).exp()
+                    1.0 - libm::expf(-(lambda / grad_mag_sq).powf(4.0))
                 }
             }
             DiffusivityType::Charbonnier => {
@@ -390,7 +390,7 @@ impl KAZE {
 
                 // Gaussian weighting for orientation histogram
                 #[allow(clippy::cast_possible_wrap, clippy::cast_precision_loss)]
-                let weight = mag * (-(dx * dx + dy * dy) as f32 / (2.0 * radius as f32 * radius as f32)).exp();
+                let weight = mag * libm::expf(-(dx * dx + dy * dy) as f32 / (2.0 * radius as f32 * radius as f32));
 
                 // Convert angle to histogram bin
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test All exp() Fixes</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    .test { margin: 5px 0; }
+    .pass { color: green; }
+    .fail { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Testing All exp() Fixes</h1>
+  <div id="status">Running tests...</div>
+  <div id="results"></div>
+
+  <script type="module">
+    import init, {
+      WasmMat,
+      initGpu,
+      gaussianBlur,
+      exp as expOp,
+      gaborFilter,
+      neuralNetwork,
+      svmClassifier,
+      tonemapDrago,
+      tonemapReinhard,
+      mergeDebevec,
+      mosseTracker
+    } from './pkg/opencv_rust.js';
+
+    const results = [];
+    const resultsDiv = document.getElementById('results');
+    const statusDiv = document.getElementById('status');
+
+    function addResult(operation, success, message, sourceFile) {
+      results.push({ operation, success, message, sourceFile });
+      const div = document.createElement('div');
+      div.className = `test ${success ? 'pass' : 'fail'}`;
+      div.textContent = `${success ? '✓' : '✗'} ${operation}: ${message}`;
+      if (sourceFile) {
+        div.title = `Tests: ${sourceFile}`;
+      }
+      resultsDiv.appendChild(div);
+    }
+
+    async function runTests() {
+      try {
+        // Initialize WASM
+        console.log('Initializing WASM...');
+        await init();
+        console.log('✓ WASM initialized');
+
+        // Initialize GPU
+        console.log('Initializing GPU...');
+        const gpuAvailable = await initGpu();
+        console.log(`✓ GPU available: ${gpuAvailable}`);
+
+        // Create test image (256x256, RGBA)
+        const width = 256, height = 256, channels = 4;
+        const data = new Uint8ClampedArray(width * height * channels);
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = 128;     // R
+          data[i+1] = 128;   // G
+          data[i+2] = 128;   // B
+          data[i+3] = 255;   // A
+        }
+
+        // Test 1: Gaussian Blur - uses exp() in Gaussian kernel computation
+        // Source: imgproc/filter.rs (already uses libm::exp)
+        try {
+          console.log('Testing gaussianBlur...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await gaussianBlur(mat, 5, 1.5);
+          if (result && result.width === width && result.height === height) {
+            addResult('gaussianBlur', true, `${result.width}x${result.height}`, 'imgproc/filter.rs');
+          } else {
+            addResult('gaussianBlur', false, 'Invalid result', 'imgproc/filter.rs');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('gaussianBlur', false, e.message, 'imgproc/filter.rs');
+        }
+
+        // Test 2: Exponential operation - direct exp() operation
+        // Source: FIXED in core/operations.rs:528
+        try {
+          console.log('Testing exp...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await expOp(mat);
+          if (result && result.width === width && result.height === height) {
+            addResult('exp', true, `${result.width}x${result.height}`, 'core/operations.rs:528');
+          } else {
+            addResult('exp', false, 'Invalid result', 'core/operations.rs:528');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('exp', false, e.message, 'core/operations.rs:528');
+        }
+
+        // Test 3: Gabor Filter - uses exp() in Gaussian component
+        // Source: imgproc/advanced_filter.rs:487 (already uses libm::exp)
+        try {
+          console.log('Testing gaborFilter...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await gaborFilter(mat, 5, 1.0, 0.0, 4.0, 0.5, 0.0);
+          if (result && result.width === width && result.height === height) {
+            addResult('gaborFilter', true, `${result.width}x${result.height}`, 'imgproc/advanced_filter.rs:487');
+          } else {
+            addResult('gaborFilter', false, 'Invalid result', 'imgproc/advanced_filter.rs:487');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('gaborFilter', false, e.message, 'imgproc/advanced_filter.rs:487');
+        }
+
+        // Test 4: Neural Network - uses exp() in sigmoid activation
+        // Source: FIXED in ml/ann.rs:225
+        try {
+          console.log('Testing neuralNetwork...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await neuralNetwork(mat);
+          if (result && result.width === width && result.height === height) {
+            addResult('neuralNetwork', true, `${result.width}x${result.height}`, 'ml/ann.rs:225');
+          } else {
+            addResult('neuralNetwork', false, 'Invalid result', 'ml/ann.rs:225');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('neuralNetwork', false, e.message, 'ml/ann.rs:225');
+        }
+
+        // Test 5: SVM Classifier - uses exp() in RBF kernel
+        // Source: FIXED in ml/svm.rs:206
+        try {
+          console.log('Testing svmClassifier...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await svmClassifier(mat);
+          if (result && result.width === width && result.height === height) {
+            addResult('svmClassifier', true, `${result.width}x${result.height}`, 'ml/svm.rs:206');
+          } else {
+            addResult('svmClassifier', false, 'Invalid result', 'ml/svm.rs:206');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('svmClassifier', false, e.message, 'ml/svm.rs:206');
+        }
+
+        // Test 6: Tonemap Drago - uses exp() in HDR tone mapping
+        // Source: FIXED in photo/hdr.rs:207
+        try {
+          console.log('Testing tonemapDrago...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await tonemapDrago(mat, 0.85);
+          if (result && result.width === width && result.height === height) {
+            addResult('tonemapDrago', true, `${result.width}x${result.height}`, 'photo/hdr.rs:207');
+          } else {
+            addResult('tonemapDrago', false, 'Invalid result', 'photo/hdr.rs:207');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('tonemapDrago', false, e.message, 'photo/hdr.rs:207');
+        }
+
+        // Test 7: Tonemap Reinhard - uses exp() in HDR tone mapping
+        // Source: FIXED in photo/hdr.rs:207
+        try {
+          console.log('Testing tonemapReinhard...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await tonemapReinhard(mat);
+          if (result && result.width === width && result.height === height) {
+            addResult('tonemapReinhard', true, `${result.width}x${result.height}`, 'photo/hdr.rs:207');
+          } else {
+            addResult('tonemapReinhard', false, 'Invalid result', 'photo/hdr.rs:207');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('tonemapReinhard', false, e.message, 'photo/hdr.rs:207');
+        }
+
+        // Test 8: Merge Debevec - uses exp() in HDR merging
+        // Source: FIXED in photo/hdr.rs:77
+        try {
+          console.log('Testing mergeDebevec...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await mergeDebevec(mat);
+          if (result && result.width === width && result.height === height) {
+            addResult('mergeDebevec', true, `${result.width}x${result.height}`, 'photo/hdr.rs:77');
+          } else {
+            addResult('mergeDebevec', false, 'Invalid result', 'photo/hdr.rs:77');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('mergeDebevec', false, e.message, 'photo/hdr.rs:77');
+        }
+
+        // Test 9: MOSSE Tracker - uses exp() in Gaussian window
+        // Source: FIXED in video/advanced_tracking.rs:370
+        try {
+          console.log('Testing mosseTracker...');
+          const mat = WasmMat.fromImageData(data, width, height, channels);
+          const result = await mosseTracker(mat);
+          if (result && result.width === width && result.height === height) {
+            addResult('mosseTracker', true, `${result.width}x${result.height}`, 'video/advanced_tracking.rs:370');
+          } else {
+            addResult('mosseTracker', false, 'Invalid result', 'video/advanced_tracking.rs:370');
+          }
+          if (result) result.free();
+          mat.free();
+        } catch (e) {
+          addResult('mosseTracker', false, e.message, 'video/advanced_tracking.rs:370');
+        }
+
+        // Summary
+        const passed = results.filter(r => r.success).length;
+        const failed = results.filter(r => !r.success).length;
+
+        statusDiv.textContent = `Complete: ${passed}/9 passed, ${failed} failed`;
+        statusDiv.style.color = failed > 0 ? 'red' : 'green';
+
+        // Export results for Puppeteer
+        window.testResults = {
+          status: failed > 0 ? 'FAILED' : 'PASSED',
+          total: 9,
+          passed,
+          failed,
+          results
+        };
+
+        console.log(`✓ All tests complete: ${passed}/9 passed`);
+
+        // Note: Operations NOT tested (internal/not exposed):
+        // - dnn/layers.rs:275 (Sigmoid) - internal DNN layer
+        // - dnn/layers.rs:440 (Softmax) - internal DNN layer
+        // - ml/boost.rs:65 (AdaBoost) - not exposed as WASM export
+        // - photo/super_resolution.rs:228 - not exposed as direct WASM export
+        // - stitching/blending.rs:316 (FeatherBlender) - WASM wrapper uses different implementation
+
+      } catch (error) {
+        console.error('Test error:', error);
+        statusDiv.textContent = `ERROR: ${error.message}`;
+        statusDiv.style.color = 'red';
+        window.testResults = {
+          status: 'ERROR',
+          results,
+          error: error.message
+        };
+      }
+    }
+
+    runTests();
+  </script>
+</body>
+</html>

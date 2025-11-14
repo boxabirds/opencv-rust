@@ -203,7 +203,7 @@ impl SVM {
             .map(|(a, b)| (a - b).powi(2))
             .sum();
 
-        (-self.gamma * dist_sq).exp()
+        libm::exp(-self.gamma * dist_sq)
     }
 
     fn sigmoid_kernel(&self, x1: &[f64], x2: &[f64]) -> f64 {

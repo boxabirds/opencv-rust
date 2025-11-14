@@ -74,7 +74,7 @@ impl MergeDebevec {
                     }
 
                     let hdr_val = if weight_sum > 0.0 {
-                        (weighted_sum / weight_sum).exp()
+                        libm::expf(weighted_sum / weight_sum)
                     } else {
                         0.0
                     };
@@ -204,7 +204,7 @@ impl TonemapReinhard {
 
         #[allow(clippy::cast_precision_loss)]
         let count_f32 = count as f32;
-        let l_avg = (log_sum / count_f32).exp();
+        let l_avg = libm::expf(log_sum / count_f32);
         let alpha = 0.18; // Key value
 
         // Apply Reinhard tone mapping

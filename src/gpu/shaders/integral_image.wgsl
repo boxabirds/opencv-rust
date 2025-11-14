@@ -8,7 +8,7 @@
 struct Params {
     width: u32,
     height: u32,
-    pass: u32,  // 0 = horizontal scan, 1 = vertical scan
+    pass_type: u32,  // 0 = horizontal scan, 1 = vertical scan
     _pad: u32,
 }
 

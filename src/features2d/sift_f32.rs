@@ -113,7 +113,7 @@ impl SIFTF32 {
         for i in 0..kernel_size {
             #[allow(clippy::cast_precision_loss)]
             let x = i as f32 - radius as f32;
-            kernel[i] = (-x * x / (2.0 * sigma * sigma)).exp();
+            kernel[i] = libm::expf(-x * x / (2.0 * sigma * sigma));
             sum += kernel[i];
         }
         for val in &mut kernel {

@@ -123,8 +123,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let idx = y * params.width + x;
 
     // If pixel is zero, distance is 0
-    if (input[idx] == 0u) {
-        write_byte(&output, idx, 0.0);
+    if (read_byte(&input, y * params.width + x) == 0u) {
+        output[idx] = 0.0;
         return;
     }
 
@@ -138,12 +138,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             let px = clamp(i32(x) + dx, 0, i32(params.width) - 1);
             let neighbor_idx = u32(py) * params.width + u32(px);
 
-            if (input[neighbor_idx] == 0u) {
+            if (read_byte(&input, neighbor_idx) == 0u) {
                 let dist = sqrt(f32(dx * dx + dy * dy));
                 min_dist = min(min_dist, dist);
             }
         }
     }
 
-    write_byte(&output, idx, min_dist);
+    output[idx] = min_dist;
 }

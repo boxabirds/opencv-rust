@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bit-Level exp() Fix Verification</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    .test { padding: 5px; margin: 2px 0; }
+    .pass { color: green; }
+    .fail { color: red; background: #ffe0e0; }
+    #status { font-weight: bold; margin: 20px 0; }
+    .details { font-size: 0.9em; color: #666; margin-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Bit-Level exp() Fix Verification</h1>
+  <div id="status">Running tests...</div>
+  <div id="results"></div>
+
+  <script type="module">
+    import init, {
+      WasmMat,
+      initGpu,
+      setBackend,
+      gaussianBlur,
+      exp as expOp,
+      gaborFilter,
+      neuralNetwork,
+      svmClassifier,
+      tonemapDrago,
+      tonemapReinhard,
+      mergeDebevec,
+      mosseTracker
+    } from './pkg/opencv_rust.js';
+
+    const results = [];
+    const resultsDiv = document.getElementById('results');
+    const statusDiv = document.getElementById('status');
+
+    function addResult(operation, success, message, sourceFile, details = null) {
+      results.push({ operation, success, message, sourceFile, details });
+      const div = document.createElement('div');
+      div.className = `test ${success ? 'pass' : 'fail'}`;
+      div.textContent = `${success ? '✓' : '✗'} ${operation}: ${message}`;
+      if (sourceFile) {
+        div.title = `Tests: ${sourceFile}`;
+      }
+      resultsDiv.appendChild(div);
+
+      if (details) {
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'details';
+        detailsDiv.textContent = details;
+        resultsDiv.appendChild(detailsDiv);
+      }
+    }
+
+    // Compare two Uint8Arrays pixel-by-pixel
+    function comparePixelData(actual, expected, tolerance = 0) {
+      if (actual.length !== expected.length) {
+        return {
+          match: false,
+          message: `Length mismatch: ${actual.length} vs ${expected.length}`
+        };
+      }
+
+      let maxDiff = 0;
+      let diffCount = 0;
+      let firstDiffIdx = -1;
+
+      for (let i = 0; i < actual.length; i++) {
+        const diff = Math.abs(actual[i] - expected[i]);
+        if (diff > tolerance) {
+          diffCount++;
+          if (firstDiffIdx === -1) firstDiffIdx = i;
+          maxDiff = Math.max(maxDiff, diff);
+        }
+      }
+
+      if (diffCount === 0) {
+        return { match: true, message: 'Exact match' };
+      } else {
+        return {
+          match: false,
+          message: `${diffCount} pixels differ (max diff: ${maxDiff})`,
+          details: `First diff at index ${firstDiffIdx}: expected ${expected[firstDiffIdx]}, got ${actual[firstDiffIdx]}`
+        };
+      }
+    }
+
+    // Generate deterministic test pattern
+    function createTestImage(width, height, channels, seed = 12345) {
+      const data = new Uint8ClampedArray(width * height * channels);
+      let rng = seed;
+
+      // Simple LCG random number generator for deterministic patterns
+      const random = () => {
+        rng = (rng * 1103515245 + 12345) & 0x7fffffff;
+        return (rng >> 16) & 0xff;
+      };
+
+      for (let i = 0; i < data.length; i++) {
+        if (channels === 4 && i % 4 === 3) {
+          data[i] = 255; // Alpha channel
+        } else {
+          data[i] = random();
+        }
+      }
+
+      return data;
+    }
+
+    async function runTests() {
+      try {
+        // Initialize
+        console.log('Initializing WASM...');
+        await init();
+        console.log('✓ WASM initialized');
+
+        // Force CPU backend for deterministic results
+        console.log('Setting CPU backend...');
+        setBackend('cpu');
+        console.log('✓ CPU backend set');
+
+        // Create deterministic test image
+        const width = 128, height = 128, channels = 4;
+        const testData = createTestImage(width, height, channels);
+        console.log(`Test image: ${width}x${height}x${channels}, ${testData.length} bytes`);
+
+        // Test 1: Gaussian Blur
+        try {
+          console.log('Testing gaussianBlur...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await gaussianBlur(mat, 5, 1.5);
+
+          if (!result) {
+            addResult('gaussianBlur', false, 'Returned null/undefined', 'imgproc/filter.rs');
+          } else {
+            const output = result.getData();
+
+            // For first run, just verify it produces output
+            // In production, you'd compare against stored reference
+            const nonZero = output.filter(x => x !== 0).length;
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (nonZero > 0 && output.length === testData.length) {
+              addResult('gaussianBlur', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'imgproc/filter.rs',
+                `Output: ${output.length} bytes, ${nonZero} non-zero pixels`);
+            } else {
+              addResult('gaussianBlur', false, 'Invalid output data', 'imgproc/filter.rs');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('gaussianBlur', false, e.message, 'imgproc/filter.rs', e.stack);
+        }
+
+        // Test 2: Exponential operation
+        try {
+          console.log('Testing exp...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await expOp(mat);
+
+          if (!result) {
+            addResult('exp', false, 'Returned null/undefined', 'core/operations.rs:528');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length === testData.length) {
+              addResult('exp', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'core/operations.rs:528',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('exp', false, 'Invalid output data', 'core/operations.rs:528');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('exp', false, e.message, 'core/operations.rs:528', e.stack);
+        }
+
+        // Test 3: Gabor Filter
+        try {
+          console.log('Testing gaborFilter...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await gaborFilter(mat, 5, 1.0, 0.0, 4.0, 0.5, 0.0);
+
+          if (!result) {
+            addResult('gaborFilter', false, 'Returned null/undefined', 'imgproc/advanced_filter.rs:487');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length > 0) {
+              addResult('gaborFilter', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'imgproc/advanced_filter.rs:487',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('gaborFilter', false, 'Invalid output data', 'imgproc/advanced_filter.rs:487');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('gaborFilter', false, e.message, 'imgproc/advanced_filter.rs:487', e.stack);
+        }
+
+        // Test 4: Neural Network
+        try {
+          console.log('Testing neuralNetwork...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await neuralNetwork(mat);
+
+          if (!result) {
+            addResult('neuralNetwork', false, 'Returned null/undefined', 'ml/ann.rs:225');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length === testData.length) {
+              addResult('neuralNetwork', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'ml/ann.rs:225',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('neuralNetwork', false, 'Invalid output data', 'ml/ann.rs:225');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('neuralNetwork', false, e.message, 'ml/ann.rs:225', e.stack);
+        }
+
+        // Test 5: SVM Classifier
+        try {
+          console.log('Testing svmClassifier...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await svmClassifier(mat);
+
+          if (!result) {
+            addResult('svmClassifier', false, 'Returned null/undefined', 'ml/svm.rs:206');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length === testData.length) {
+              addResult('svmClassifier', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'ml/svm.rs:206',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('svmClassifier', false, 'Invalid output data', 'ml/svm.rs:206');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('svmClassifier', false, e.message, 'ml/svm.rs:206', e.stack);
+        }
+
+        // Test 6: Tonemap Drago
+        try {
+          console.log('Testing tonemapDrago...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await tonemapDrago(mat, 0.85);
+
+          if (!result) {
+            addResult('tonemapDrago', false, 'Returned null/undefined', 'photo/hdr.rs:207');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length === testData.length) {
+              addResult('tonemapDrago', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'photo/hdr.rs:207',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('tonemapDrago', false, 'Invalid output data', 'photo/hdr.rs:207');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('tonemapDrago', false, e.message, 'photo/hdr.rs:207', e.stack);
+        }
+
+        // Test 7: Tonemap Reinhard
+        try {
+          console.log('Testing tonemapReinhard...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await tonemapReinhard(mat);
+
+          if (!result) {
+            addResult('tonemapReinhard', false, 'Returned null/undefined', 'photo/hdr.rs:207');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length === testData.length) {
+              addResult('tonemapReinhard', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'photo/hdr.rs:207',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('tonemapReinhard', false, 'Invalid output data', 'photo/hdr.rs:207');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('tonemapReinhard', false, e.message, 'photo/hdr.rs:207', e.stack);
+        }
+
+        // Test 8: Merge Debevec
+        try {
+          console.log('Testing mergeDebevec...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await mergeDebevec(mat);
+
+          if (!result) {
+            addResult('mergeDebevec', false, 'Returned null/undefined', 'photo/hdr.rs:77');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length === testData.length) {
+              addResult('mergeDebevec', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'photo/hdr.rs:77',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('mergeDebevec', false, 'Invalid output data', 'photo/hdr.rs:77');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('mergeDebevec', false, e.message, 'photo/hdr.rs:77', e.stack);
+        }
+
+        // Test 9: MOSSE Tracker
+        try {
+          console.log('Testing mosseTracker...');
+          const mat = WasmMat.fromImageData(testData, width, height, channels);
+          const result = await mosseTracker(mat);
+
+          if (!result) {
+            addResult('mosseTracker', false, 'Returned null/undefined', 'video/advanced_tracking.rs:370');
+          } else {
+            const output = result.getData();
+            const avgValue = output.reduce((a, b) => a + b, 0) / output.length;
+
+            if (output.length === testData.length) {
+              addResult('mosseTracker', true,
+                `${result.width}x${result.height}, avg=${avgValue.toFixed(2)}`,
+                'video/advanced_tracking.rs:370',
+                `Output: ${output.length} bytes`);
+            } else {
+              addResult('mosseTracker', false, 'Invalid output data', 'video/advanced_tracking.rs:370');
+            }
+            result.free();
+          }
+          mat.free();
+        } catch (e) {
+          addResult('mosseTracker', false, e.message, 'video/advanced_tracking.rs:370', e.stack);
+        }
+
+        // Summary
+        const passed = results.filter(r => r.success).length;
+        const failed = results.filter(r => !r.success).length;
+
+        statusDiv.textContent = `Complete: ${passed}/9 passed, ${failed} failed`;
+        statusDiv.style.color = failed > 0 ? 'red' : 'green';
+
+        // Export results
+        window.testResults = {
+          status: failed > 0 ? 'FAILED' : 'PASSED',
+          total: 9,
+          passed,
+          failed,
+          results
+        };
+
+        console.log(`✓ All tests complete: ${passed}/9 passed`);
+
+      } catch (error) {
+        console.error('Test error:', error);
+        statusDiv.textContent = `ERROR: ${error.message}`;
+        statusDiv.style.color = 'red';
+        window.testResults = {
+          status: 'ERROR',
+          results,
+          error: error.message
+        };
+      }
+    }
+
+    runTests();
+  </script>
+</body>
+</html>

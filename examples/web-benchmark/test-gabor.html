@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gabor Filter Unit Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    .log { margin: 5px 0; }
+    .error { color: #f48771; }
+    .success { color: #4ec9b0; }
+    .info { color: #dcdcaa; }
+  </style>
+</head>
+<body>
+  <h1>Gabor Filter Unit Test</h1>
+  <div id="log"></div>
+
+  <script type="module">
+    import init, { WasmMat } from '../../pkg/opencv_rust.js';
+
+    const log = (msg, type = 'info') => {
+      const div = document.createElement('div');
+      div.className = `log ${type}`;
+      div.textContent = msg;
+      document.getElementById('log').appendChild(div);
+      console.log(msg);
+    };
+
+    async function testGabor() {
+      try {
+        log('Initializing WASM...', 'info');
+        await init();
+        log('✓ WASM initialized', 'success');
+
+        // Create a tiny test image
+        const width = 32;
+        const height = 32;
+        const channels = 4;
+        const size = width * height * channels;
+        const data = new Uint8Array(size);
+
+        // Fill with gradient
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = (y * width + x) * channels;
+            data[idx + 0] = (x / width) * 255;
+            data[idx + 1] = (y / height) * 255;
+            data[idx + 2] = 128;
+            data[idx + 3] = 255;
+          }
+        }
+
+        log(`Creating WasmMat (${width}x${height}, ${channels} channels)...`, 'info');
+        const srcMat = WasmMat.fromImageData(data, width, height, channels);
+        log(`✓ WasmMat created: ${srcMat.width}x${srcMat.height}`, 'success');
+
+        // Test Gabor filter
+        const ksize = 21;
+        const sigma = 3.0;
+        const theta = 0;
+        const lambda = 1.0 / 0.1;
+        const gamma = 0.5;
+        const psi = 0;
+
+        log('', 'info');
+        log('Testing Gabor filter...', 'info');
+        log(`  ksize: ${ksize}`, 'info');
+        log(`  sigma: ${sigma}`, 'info');
+        log(`  theta: ${theta}`, 'info');
+        log(`  lambda: ${lambda}`, 'info');
+        log(`  gamma: ${gamma}`, 'info');
+        log(`  psi: ${psi}`, 'info');
+        log('', 'info');
+
+        log('Calling gaborFilter...', 'info');
+        const start = performance.now();
+
+        // Add timeout
+        const timeoutMs = 5000;
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
+        });
+
+        const module = await import('../../pkg/opencv_rust.js');
+        const resultPromise = module.gaborFilter(srcMat, ksize, sigma, theta, lambda, gamma, psi);
+
+        const result = await Promise.race([resultPromise, timeoutPromise]);
+        const duration = performance.now() - start;
+
+        log(`✓ Gabor filter completed in ${duration.toFixed(2)}ms`, 'success');
+        log(`  Result: ${result.width}x${result.height}`, 'success');
+
+        srcMat.free();
+        result.free();
+
+      } catch (error) {
+        const duration = performance.now() - start;
+        log(`✗ Gabor filter failed`, 'error');
+        log(`  Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    testGabor();
+  </script>
+</body>
+</html>

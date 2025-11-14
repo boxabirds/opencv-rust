@@ -35,7 +35,7 @@ pub fn bilateral_filter(
             let dist = f64::from(i * i + j * j);
             let i_idx = usize::try_from(i + radius).unwrap_or(0);
             let j_idx = usize::try_from(j + radius).unwrap_or(0);
-            spatial_kernel[i_idx][j_idx] = (dist * space_coeff).exp();
+            spatial_kernel[i_idx][j_idx] = libm::exp(dist * space_coeff);
         }
     }
 
@@ -85,7 +85,7 @@ pub fn bilateral_filter(
                         // Combined weight
                         let i_idx = usize::try_from(i + radius).unwrap_or(0);
                         let j_idx = usize::try_from(j + radius).unwrap_or(0);
-                        let weight = spatial_kernel[i_idx][j_idx] * (color_dist * color_coeff).exp();
+                        let weight = spatial_kernel[i_idx][j_idx] * libm::exp(color_dist * color_coeff);
 
                         for ch in 0..channels {
                             sum[ch] += f64::from(src_data[neighbor_idx + ch]) * weight;
@@ -484,9 +484,8 @@ fn generate_gabor_kernel(
             let x_theta = f64::from(x) * theta.cos() + f64::from(y) * theta.sin();
             let y_theta = f64::from(-x) * theta.sin() + f64::from(y) * theta.cos();
 
-            let gaussian = (-(x_theta * x_theta / (2.0 * sigma_x * sigma_x)
-                + y_theta * y_theta / (2.0 * sigma_y * sigma_y)))
-                .exp();
+            let gaussian = libm::exp(-(x_theta * x_theta / (2.0 * sigma_x * sigma_x)
+                + y_theta * y_theta / (2.0 * sigma_y * sigma_y)));
 
             let sinusoid = (2.0 * std::f64::consts::PI * x_theta / lambda + psi).cos();
 
@@ -569,7 +568,7 @@ fn generate_log_kernel(ksize: i32, sigma: f64) -> Vec<Vec<f64>> {
             let r2 = x2 + y2;
 
             // LoG formula: -1/(π*σ^4) * (1 - r²/(2σ²)) * exp(-r²/(2σ²))
-            let gaussian = (-r2 / (2.0 * sigma2)).exp();
+            let gaussian = libm::exp(-r2 / (2.0 * sigma2));
             let laplacian = (1.0 - r2 / (2.0 * sigma2)) * gaussian;
             let y_idx = usize::try_from(y + half).unwrap_or(0);
             let x_idx = usize::try_from(x + half).unwrap_or(0);
@@ -646,7 +645,7 @@ pub fn non_local_means_denoising(
                     patch_dist /= patch_count_f32;
 
                     // Compute weight
-                    let weight = (-patch_dist / h2).exp();
+                    let weight = libm::expf(-patch_dist / h2);
 
                     let search_pixel = src.at(search_row, search_col)?;
                     for ch in 0..src.channels() {
